@@ -1,15 +1,56 @@
-{
-  "file": "test.glb",
-  "width": 420,
-  "height": 560,
-  "targetHeight": 2.6,
-  "camera": {
-    "fov": 35,
-    "position": [0, 1.4, 5]
+[
+  {
+    "file": "test.glb",
+    "width": 420,
+    "height": 560,
+    "targetHeight": 2.6,
+    "camera": {
+      "fov": 35,
+      "position": [
+        0,
+        1.4,
+        5
+      ]
+    },
+    "model": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": 1
+    }
   },
-  "model": {
-    "position": [0, 0, 0],
-    "rotation": [0, 0, 0],
-    "scale": 1
+  {
+    "file": "nezha.glb",
+    "width": 420,
+    "height": 560,
+    "targetHeight": 2.6,
+    "camera": {
+      "fov": 35,
+      "position": [
+        0,
+        1.4,
+        5
+      ]
+    },
+    "model": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": 1
+    }
   }
-}
+]

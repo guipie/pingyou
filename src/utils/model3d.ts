@@ -154,7 +154,7 @@ class Model3d {
     this.initRenderer()
     this.destroyModel()
 
-    this.config = await this.loadConfig(path)
+    // this.config = await this.loadConfigs(path)
 
     const file = await this.findModelFile(path, this.config)
 
@@ -173,14 +173,18 @@ class Model3d {
     }
   }
 
-  private async loadConfig(path: string) {
+  public async loadConfigs(path: string) {
     const configPath = join(path, 'model3d.json')
 
     try {
-      return JSON5.parse(await readTextFile(configPath)) as Model3dConfig
+      return JSON5.parse(await readTextFile(configPath)) as Model3dConfig[]
     } catch {
-      return {}
+      return []
     }
+  }
+
+  public isBinary3d(path: string) {
+    return path.toLowerCase().endsWith('.glb') || path.toLowerCase().endsWith('.vrm')
   }
 
   private async findModelFile(path: string, config: Model3dConfig) {

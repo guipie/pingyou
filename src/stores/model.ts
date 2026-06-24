@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 
+import * as model3dUtil from '@/utils/model3d'
 import { join } from '@/utils/path'
 
 export type ModelEngine = 'live2d' | '3d'
@@ -38,19 +39,31 @@ export const useModelStore = defineStore('model', () => {
     }))
     const presetModels = filter(models.value, { isPreset: true })
 
-    const modes: ModelMode[] = ['model3d', 'gamepad', 'keyboard', 'standard']
+    const modesLive2d: ModelMode[] = ['gamepad', 'keyboard', 'standard']
 
-    for (const mode of modes) {
+    for (const mode of modesLive2d) {
       const matched = find(presetModels, { mode })
       nextModels.unshift({
         id: matched?.id ?? nanoid(),
         mode,
-        engine: mode === 'model3d' ? '3d' : 'live2d',
+        engine: 'live2d',
         isPreset: true,
         path: join(modelsPath, mode),
       })
     }
-
+    // 加载model 3 d下所有glb文件
+    const configs = await model3dUtil.default.loadConfigs(join(modelsPath, 'model3d'))
+    for (const c of configs) {
+      if (c.file && /\.(?:glb|gltf|vrm)$/i.test(c.file)) {
+        nextModels.unshift({
+          id: nanoid() + c.file,
+          mode: 'model3d',
+          engine: '3d',
+          isPreset: true,
+          path: join(modelsPath, 'model3d', c.file!),
+        })
+      }
+    }
     const matched = find(nextModels, { id: currentModel.value?.id })
     currentModel.value = matched ?? nextModels[0]
     console.warn('所有模型：', models.value)

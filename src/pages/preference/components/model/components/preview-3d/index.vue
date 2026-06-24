@@ -6,8 +6,6 @@ import type {
 } from 'three'
 
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { readDir, readTextFile } from '@tauri-apps/plugin-fs'
-import JSON5 from 'json5'
 import {
   AmbientLight,
   Box3,
@@ -25,7 +23,7 @@ import {
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
-import { join } from '@/utils/path'
+import model3d from '@/utils/model3d'
 
 interface Model3dConfig {
   file?: string
@@ -82,8 +80,8 @@ async function load() {
   if (!canvas) return
 
   try {
-    const config = await loadConfig()
-    const file = await findModelFile(config)
+    const configs = await model3d.loadConfigs()
+    const file = find(configs, { path: props.path })
 
     if (!file) throw new Error('3D model file not found')
 
@@ -108,43 +106,6 @@ async function load() {
   } catch {
     failed.value = true
   }
-}
-
-async function loadConfig() {
-  try {
-    return JSON5.parse(await readTextFile(join(props.path, 'model3d.json'))) as Model3dConfig
-  } catch {
-    return {}
-  }
-}
-
-async function findModelFile(config: Model3dConfig) {
-  if (config.file) return join(props.path, config.file)
-
-  const files = await findModelFiles(props.path)
-
-  return files[0]
-}
-
-async function findModelFiles(path: string): Promise<string[]> {
-  const entries = await readDir(path).catch(() => [])
-  const files: string[] = []
-
-  for (const entry of entries) {
-    const entryPath = join(path, entry.name)
-
-    if (entry.isDirectory) {
-      files.push(...await findModelFiles(entryPath))
-    } else if (/\.(?:glb|gltf|vrm)$/i.test(entry.name)) {
-      files.push(entryPath)
-    }
-  }
-
-  return files.sort((a, b) => Number(isBinary3d(b)) - Number(isBinary3d(a)))
-}
-
-function isBinary3d(path: string) {
-  return path.toLowerCase().endsWith('.glb') || path.toLowerCase().endsWith('.vrm')
 }
 
 function loadGltf(path: string) {
