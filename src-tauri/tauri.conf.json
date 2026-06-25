@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "BongoCat",
+  "productName": "屏友",
   "version": "../package.json",
-  "identifier": "com.ayangweb.BongoCat",
+  "identifier": "com.guipie.Pingyou",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "BongoCat",
+        "title": "屏友",
         "url": "index.html/#/",
         "shadow": false,
         "alwaysOnTop": true,
@@ -41,7 +41,9 @@
       "assetProtocol": {
         "enable": true,
         "scope": {
-          "allow": ["**/*"],
+          "allow": [
+            "**/*"
+          ],
           "requireLiteralLeadingDot": false
         }
       }
@@ -51,8 +53,15 @@
     "active": true,
     "category": "Entertainment",
     "createUpdaterArtifacts": true,
-    "targets": ["nsis", "dmg", "app", "appimage", "deb", "rpm"],
-    "shortDescription": "BongoCat",
+    "targets": [
+      "nsis",
+      "dmg",
+      "app",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "shortDescription": "Pingyou",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -60,7 +69,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["assets/tray.png", "assets/models"]
+    "resources": [
+      "assets/tray.png",
+      "assets/models"
+    ]
   },
   "plugins": {
     "updater": {

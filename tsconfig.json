@@ -1,16 +1,18 @@
 {
+  "$schema": "https://www.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2020",
     "jsx": "preserve",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "useDefineForClassFields": true,
 
-    "baseUrl": ".",
+    // "baseUrl": "./*",
     "module": "ESNext",
     /* Bundler mode */
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
+      /* End of bundler mode */
     },
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,

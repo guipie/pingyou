@@ -1,6 +1,9 @@
 {
-  "identifier": "com.ayangweb.BongoCat",
+  "identifier": "com.guipie.Pingyou",
   "bundle": {
-    "resources": ["assets/tray-mac.png", "assets/models"]
+    "resources": [
+      "assets/tray-mac.png",
+      "assets/models"
+    ]
   }
 }

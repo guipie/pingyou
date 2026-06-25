@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid'
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 
-import * as model3dUtil from '@/utils/model3d'
+import Model3d from '@/utils/model3d'
 import { join } from '@/utils/path'
 
 export type ModelEngine = 'live2d' | '3d'
@@ -29,7 +29,7 @@ export const useModelStore = defineStore('model', () => {
   const currentMotions = ref<Array<[string, MotionInfo[]]>>([])
   const currentExpressions = ref<ExpressionInfo[]>([])
   const shortcuts = reactive<Record<string, string>>({})
-
+  const model3d = new Model3d()
   const init = async () => {
     const modelsPath = await resolveResource('assets/models')
 
@@ -52,11 +52,11 @@ export const useModelStore = defineStore('model', () => {
       })
     }
     // 加载model 3 d下所有glb文件
-    const configs = await model3dUtil.default.loadConfigs(join(modelsPath, 'model3d'))
+    const configs = await model3d.loadConfigs()
     for (const c of configs) {
-      if (c.file && /\.(?:glb|gltf|vrm)$/i.test(c.file)) {
+      if (c.file && /\.(?:glb|gltf|vrm|fbx)$/i.test(c.file)) {
         nextModels.unshift({
-          id: nanoid() + c.file,
+          id: c.file,
           mode: 'model3d',
           engine: '3d',
           isPreset: true,

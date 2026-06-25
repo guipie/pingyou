@@ -155,7 +155,11 @@ async function handleOpenFolder(path: string) {
             @click="handleToggle(data)"
           >
             <template #cover>
-              <Preview3d :path="data.path" />
+              <Preview3d
+                :id="data.id"
+                :key="data.id"
+                :path="data.path"
+              />
             </template>
 
             <template #actions>
@@ -165,8 +169,7 @@ async function handleOpenFolder(path: string) {
               />
 
               <i
-                class="i-lucide:folder-open"
-                @click.stop="handleOpenFolder(data.path)"
+                class="i-lucide:play"
               />
 
               <template v-if="!data.isPreset">

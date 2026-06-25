@@ -81,9 +81,9 @@ const menus = computed(() => [
       <div class="flex flex-col items-center gap-2">
         <div class="b-1 b-solid b-border-sec rounded-2xl">
           <img
-            class="size-15"
+            class="size-16 rounded-2xl"
             data-tauri-drag-region
-            src="/logo.png"
+            src="/logo-dark.png"
           >
         </div>
 

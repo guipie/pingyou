@@ -1,14 +1,18 @@
 {
-  "identifier": "com.ayangweb.BongoCat",
+  "identifier": "com.guipie.Pingyou",
   "bundle": {
     "linux": {
       "deb": {
-        "depends": ["gstreamer1.0-plugins-good"],
-        "desktopTemplate": "./BongoCat.desktop"
+        "depends": [
+          "gstreamer1.0-plugins-good"
+        ],
+        "desktopTemplate": "./Pingyou.desktop"
       },
       "rpm": {
-        "depends": ["gstreamer1-plugins-good"],
-        "desktopTemplate": "./BongoCat.desktop"
+        "depends": [
+          "gstreamer1-plugins-good"
+        ],
+        "desktopTemplate": "./Pingyou.desktop"
       }
     }
   }

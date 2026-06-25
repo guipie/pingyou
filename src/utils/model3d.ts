@@ -3,11 +3,13 @@ import type {
   AnimationClip,
   Material,
   Object3D,
+  Object3DEventMap,
   Texture,
 } from 'three'
 
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { readDir, readTextFile } from '@tauri-apps/plugin-fs'
+import { resolveResource } from '@tauri-apps/api/path'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import JSON5 from 'json5'
 import {
   AmbientLight,
@@ -18,6 +20,7 @@ import {
   DirectionalLight,
   Euler,
   Group,
+  LoadingManager,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -29,13 +32,14 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import type { ModelSize } from '@/composables/useModel'
 
 import { getCursorMonitor } from '@/utils/monitor'
 
-import { join } from './path'
+import { getFileName, join } from './path'
 
 interface LoadResult {
   width: number
@@ -46,8 +50,8 @@ interface LoadResult {
 
 interface Model3dConfig {
   file?: string
-  width?: number
-  height?: number
+  // width?: number
+  // height?: number
   targetHeight?: number
   camera?: {
     fov?: number
@@ -112,9 +116,9 @@ class Model3d {
   private renderer: WebGLRenderer | null = null
   private scene: Scene | null = null
   private camera: PerspectiveCamera | null = null
-  private model: Group | null = null
+  public model: Group | null = null
   private controls: ModelControls | null = null
-  private config: Model3dConfig = {}
+  public config: Model3dConfig = {}
   private mixer: AnimationMixer | null = null
   private frameId = 0
   private clock = new Clock()
@@ -124,11 +128,15 @@ class Model3d {
   private rightPressed = false
   private lookTarget = new Vector3()
   private stickTilt = new Vector2()
-
-  private initRenderer() {
+  // 实例化赋值
+  // constructor(inModel:Group,config:) {
+  //   this.config = config
+  //   this.model = inModel
+  // }
+  private initRenderer(canvasId?: string) {
     if (this.renderer) return
 
-    const canvas = document.getElementById('model3dCanvas') as HTMLCanvasElement
+    const canvas = document.getElementById(canvasId ?? 'model3dCanvas') as HTMLCanvasElement
 
     this.renderer = new WebGLRenderer({
       alpha: true,
@@ -150,15 +158,16 @@ class Model3d {
     this.scene.add(ambient, keyLight)
   }
 
-  public async load(path: string): Promise<LoadResult> {
-    this.initRenderer()
+  public async load(path: string, canvasId?: string): Promise<LoadResult> {
+    this.config = await this.loadConfig(path) ?? {}
+    this.initRenderer(canvasId)
     this.destroyModel()
 
     // this.config = await this.loadConfigs(path)
 
-    const file = await this.findModelFile(path, this.config)
+    // const file = await this.findModelFile(path, this.config)
 
-    this.model = file ? await this.loadGltf(file) : this.createFallbackModel()
+    this.model = await this.load3DModel(path)
     this.scene?.add(this.model)
     this.fitModel()
     this.bindControls()
@@ -166,16 +175,16 @@ class Model3d {
     this.startLoop()
 
     return {
-      width: this.config.width ?? DEFAULT_MODEL_SIZE.width,
-      height: this.config.height ?? DEFAULT_MODEL_SIZE.height,
+      width: DEFAULT_MODEL_SIZE.width,
+      height: DEFAULT_MODEL_SIZE.height,
       motions: {},
       expressions: [],
     }
   }
 
-  public async loadConfigs(path: string) {
+  public async loadConfigs() {
+    const path = await resolveResource('assets/models/model3d')
     const configPath = join(path, 'model3d.json')
-
     try {
       return JSON5.parse(await readTextFile(configPath)) as Model3dConfig[]
     } catch {
@@ -183,38 +192,56 @@ class Model3d {
     }
   }
 
+  public async loadConfig(path: string) {
+    const file = await getFileName(path)
+    const configs = await this.loadConfigs()
+    try {
+      return configs.find(config => config.file === file) ?? null
+    } catch {
+      return null
+    }
+  }
+
   public isBinary3d(path: string) {
     return path.toLowerCase().endsWith('.glb') || path.toLowerCase().endsWith('.vrm')
   }
 
-  private async findModelFile(path: string, config: Model3dConfig) {
-    if (config.file) return join(path, config.file)
+  // private async findModelFile(path: string, config: Model3dConfig) {
+  //   if (config.file) return join(path, config.file)
 
-    const files = await this.findModelFiles(path)
+  //   const files = await this.findModelFiles(path)
 
-    return files[0] ?? ''
-  }
+  //   return files[0] ?? ''
+  // }
 
-  private async findModelFiles(path: string): Promise<string[]> {
-    const entries = await readDir(path).catch(() => [])
-    const files: string[] = []
+  // private async findModelFiles(path: string): Promise<string[]> {
+  //   const entries = await readDir(path).catch(() => [])
+  //   const files: string[] = []
 
-    for (const entry of entries) {
-      const entryPath = join(path, entry.name)
+  //   for (const entry of entries) {
+  //     const entryPath = join(path, entry.name)
 
-      if (entry.isDirectory) {
-        files.push(...await this.findModelFiles(entryPath))
-      } else if (/\.(?:glb|gltf|vrm)$/i.test(entry.name)) {
-        files.push(entryPath)
-      }
+  //     if (entry.isDirectory) {
+  //       files.push(...await this.findModelFiles(entryPath))
+  //     } else if (/\.(?:glb|gltf|vrm)$/i.test(entry.name)) {
+  //       files.push(entryPath)
+  //     }
+  //   }
+
+  //   return files.sort((a, b) => {
+  //     const aIsBinary = a.toLowerCase().endsWith('.glb') || a.toLowerCase().endsWith('.vrm')
+  //     const bIsBinary = b.toLowerCase().endsWith('.glb') || b.toLowerCase().endsWith('.vrm')
+
+  //     return Number(bIsBinary) - Number(aIsBinary)
+  //   })
+  // }
+  public async load3DModel(path: string) {
+    const isFbx = path.toLowerCase().endsWith('.fbx')
+    if (isFbx) {
+      return await this.loadFbx(path) ?? this.createFallbackModel()
+    } else {
+      return await this.loadGltf(path) ?? this.createFallbackModel()
     }
-
-    return files.sort((a, b) => {
-      const aIsBinary = a.toLowerCase().endsWith('.glb') || a.toLowerCase().endsWith('.vrm')
-      const bIsBinary = b.toLowerCase().endsWith('.glb') || b.toLowerCase().endsWith('.vrm')
-
-      return Number(bIsBinary) - Number(aIsBinary)
-    })
   }
 
   private loadGltf(path: string) {
@@ -237,6 +264,97 @@ class Model3d {
         },
         undefined,
         reject,
+      )
+    })
+  }
+
+  /**
+   * 加载 FBX 模型的方法
+   * @param path 模型文件的完整路径或名称（例如: 'models/fbx/Samba Dancing.fbx' 或传递 asset 拼装）
+   */
+  private loadFbx(path: string): Promise<Group<Object3DEventMap>> {
+    const manager = new LoadingManager()
+    const loader = new FBXLoader(manager)
+    return new Promise((resolve, reject) => {
+      loader.load(
+        convertFileSrc(path),
+        (group) => {
+          // 1. 清理并销毁旧模型（垃圾回收，防止内存泄漏）
+          if (this.model) {
+            this.model.traverse((child: any) => {
+              if (child.isSkinnedMesh) {
+                child.skeleton.dispose()
+              }
+              if (child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material]
+                materials.forEach((material: any) => {
+                  if (material.map) material.map.dispose()
+                  material.dispose()
+                })
+              }
+              if (child.geometry) {
+                child.geometry.dispose()
+              }
+            })
+            // 从场景中移除旧的（如果需要在方法内部管理场景，可加上这句：this.scene.remove(this.object);）
+          }
+
+          // 2. 赋予新对象
+          // this.model = group;
+
+          // 3. 处理缩放 (提取路径中的关键字来匹配你的 scales 规则)
+          // 示例：如果是 'models/fbx/warrior/Warrior.fbx'，匹配 'warrior/Warrior'
+          const scales = new Map<string, number>()
+          scales.set('warrior/Warrior', 100)
+          scales.set('archer/ArcherRi01', 100)
+          scales.set('stanford-bunny', 0.001)
+          scales.set('Head_69', 100)
+          const matchKey = Object.keys(Object.fromEntries(scales)).find(key => path.includes(key))
+          const scale = matchKey ? scales.get(matchKey) : 1
+          group.scale.setScalar(scale || 1)
+
+          // 4. 处理动画 Mixer
+          if (group.animations && group.animations.length) {
+            this.mixer = new AnimationMixer(group)
+            const action = this.mixer.clipAction(group.animations[0])
+            action.play()
+          } else {
+            this.mixer = null
+          }
+
+          // 5. 处理阴影与 GUI Morph 变形目标（GUI 部分可选，根据你类中是否有 guiMorphsFolder 决定）
+          // if (this.guiMorphsFolder) {
+          //     this.guiMorphsFolder.children.forEach((child: any) => child.destroy());
+          //     this.guiMorphsFolder.hide();
+          // }
+
+          group.traverse((child: any) => {
+            if (child.isMesh) {
+              child.castShadow = true
+              child.receiveShadow = true
+
+              // if (child.morphTargetDictionary && this.guiMorphsFolder) {
+              //     this.guiMorphsFolder.show();
+              //     const meshFolder = this.guiMorphsFolder.addFolder(child.name || child.uuid);
+              //     Object.keys(child.morphTargetDictionary).forEach((key) => {
+              //         meshFolder.add(child.morphTargetInfluences, child.morphTargetDictionary[key], 0, 1, 0.01);
+              //     });
+              // }
+            }
+          })
+
+          // 6. 成功返回模型对象
+          resolve(group as Group<Object3DEventMap>)
+        },
+        // 进度回调（可选）
+        (xhr) => {
+          console.warn(`${xhr.loaded / xhr.total * 100}% loaded`)
+        },
+        // 失败回调
+        (error) => {
+          console.error('An error happened while loading FBX:', error)
+          reject(error)
+        },
       )
     })
   }
@@ -321,35 +439,58 @@ class Model3d {
     return root
   }
 
-  private fitModel() {
+  public fitModel() {
     if (!this.model || !this.camera) return
 
+    // 1. 获取模型的真实包围盒与尺寸
     const box = new Box3().setFromObject(this.model)
     const size = box.getSize(new Vector3())
-    const center = box.getCenter(new Vector3())
-    const targetHeight = this.config.targetHeight ?? 2.6
-    const scale = size.y ? targetHeight / size.y : 1
+    // const center = box.getCenter(new Vector3())
 
-    this.model.position.sub(center)
-    this.model.scale.setScalar(scale * (this.config.model?.scale ?? 1))
-    this.model.position.y += targetHeight / 2 - 0.05
+    // console.log('模型原始大小 size:', size)
+    // console.log('模型原始中心 center:', center)
 
+    // 2. 计算缩放比：根据配置的 targetHeight（默认2.0）自适应缩放到合适的大小
+    const targetHeight = this.config.targetHeight ?? 2.0
+    // 如果模型高度有效，缩放比 = 期望高度 / 实际高度
+    let scale = size.y ? targetHeight / size.y : 1
+
+    // 叠加上 json 配置文件里自定义的 model.scale
+    scale *= (this.config.model?.scale ?? 1)
+    this.model.scale.setScalar(scale)
+
+    // 3. 重新对齐位置（让模型的底部/脚底，对准世界坐标系的 Y = 0 附近）
+    // 这样无论模型原始是一百米还是一米，缩放后其脚底都在原点，方便 Pingyou 做各种动作
+    this.model.position.set(0, 0, 0) // 先归零
+
+    // 核心对齐公式：将模型挪到原点，并让脚底着地
+    // 模型缩放后的实际最低点是 (box.min.y * scale)，我们要把它抬到 0
+    this.model.position.y = -box.min.y * scale
+
+    // 4. 应用配置文件（json）中的 model.position 偏移
     if (this.config.model?.position) {
       this.model.position.add(new Vector3(...this.config.model.position))
     }
 
+    // 5. 应用配置文件中的 model.rotation 旋转
     if (this.config.model?.rotation) {
       this.model.rotation.set(...this.config.model.rotation)
     }
 
+    // 6. 应用配置文件中的相机参数
     if (this.config.camera?.fov) {
       this.camera.fov = this.config.camera.fov
-      this.camera.updateProjectionMatrix()
     }
 
     if (this.config.camera?.position) {
       this.camera.position.set(...this.config.camera.position)
     }
+
+    // 重新计算相机的投影矩阵
+    this.camera.updateProjectionMatrix()
+
+    // console.log('自适应调整后模型位置:', this.model.position)
+    // console.log('自适应调整后模型缩放:', this.model.scale)
   }
 
   private bindControls() {
@@ -555,6 +696,6 @@ class Model3d {
   }
 }
 
-const model3d = new Model3d()
+// const model3d = new Model3d()
 
-export default model3d
+export default Model3d

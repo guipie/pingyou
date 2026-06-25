@@ -10,7 +10,7 @@ import { ref } from 'vue'
 
 import { useCatStore } from '@/stores/cat'
 import { useModelStore } from '@/stores/model'
-import model3d from '@/utils/model3d'
+import Model3d from '@/utils/model3d'
 import { getCursorMonitor } from '@/utils/monitor'
 import { isMac } from '@/utils/platform'
 
@@ -19,7 +19,7 @@ import live2d from '../utils/live2d'
 const appWindow = getCurrentWebviewWindow()
 const digitKeys = '1234567890'.split('') as readonly string[]
 const letterKeys = 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('') as readonly string[]
-
+const model3d = new Model3d()
 export interface ModelSize {
   width: number
   height: number

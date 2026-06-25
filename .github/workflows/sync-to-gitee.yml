@@ -15,5 +15,5 @@ jobs:
           dst: gitee/ayangweb
           dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
           dst_token: ${{ secrets.GITEE_TOKEN }}
-          static_list: BongoCat
+          static_list: Pingyou
           force_update: true

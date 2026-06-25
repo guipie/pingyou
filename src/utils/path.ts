@@ -1,4 +1,4 @@
-import { sep } from '@tauri-apps/api/path'
+import { basename, sep } from '@tauri-apps/api/path'
 
 export function join(...paths: string[]) {
   const joinPaths = paths.map((path, index) => {
@@ -10,4 +10,9 @@ export function join(...paths: string[]) {
   })
 
   return joinPaths.join(sep())
+}
+
+// 根据路径获取文件名称
+export async function getFileName(path: string) {
+  return basename(path)
 }

@@ -24,7 +24,7 @@ import { useGeneralStore } from '@/stores/general.ts'
 import { useModelStore } from '@/stores/model'
 import { isImage } from '@/utils/is'
 import live2d from '@/utils/live2d'
-import model3d from '@/utils/model3d'
+import Model3d from '@/utils/model3d'
 import { join } from '@/utils/path'
 import { isWindows } from '@/utils/platform'
 import { clearObject } from '@/utils/shared'
@@ -40,7 +40,7 @@ const resizing = ref(false)
 const backgroundImagePath = ref<string>()
 const { stickActive } = useGamepad()
 const currentEngine = computed(() => modelStore.currentModel?.engine ?? 'live2d')
-
+const model3d = new Model3d()
 onMounted(startListening)
 
 onUnmounted(handleDestroy)
