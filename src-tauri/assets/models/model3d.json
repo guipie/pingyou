@@ -1,0 +1,27 @@
+[
+  {
+    "file": "nezha.glb",
+    "targetHeight": 2.1,
+    "camera": {
+      "fov": 35,
+      "position": [
+        0,
+        1.4,
+        5
+      ]
+    },
+    "model": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": 1
+    }
+  }
+]

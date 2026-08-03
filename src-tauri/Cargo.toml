@@ -1,0 +1,73 @@
+[package]
+name = "pingyou"
+version = "1.1.0"
+description = "A Tauri App"
+authors = ["ayangweb"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "bongo_cat_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { workspace = true, features = [
+  "tray-icon",
+  "protocol-asset",
+  "macos-private-api",
+  "image-png",
+] }
+serde = { workspace = true, features = ["derive"] }
+sysinfo = "0.39.6" # 硬件检测 
+ollama-rs = { version = "0.3.5", features = ["stream"] }
+serde_json.workspace = true
+# 确保版本与你使用的 @tauri-apps/plugin-http npm 包版本兼容
+# Keep the HTTP client stateless. The default `cookies` feature opens a cache
+# file during startup, which can fail with EACCES after an elevation change.
+tauri-plugin-http = { version = "2", default-features = false, features = [
+  "rustls-tls",
+  "http2",
+  "charset",
+] }
+# 下载large model
+reqwest = { version = "0.13.4", features = ["stream"] }
+tokio = { version = "1.0", features = ["full", "fs"] }
+zip = "2.0"                                             # 用于 Windows 解压 zip 包
+
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-custom-window.workspace = true
+tauri-plugin-admin-status.workspace = true
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-pinia = "3"
+tauri-plugin-log = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-prevent-default = "1"
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-macos-permissions = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+fs_extra = "1"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-locale = "2"
+rdev = { git = "https://github.com/kunkunsh/rdev" }
+gilrs = { git = "https://github.com/ayangweb/gilrs", default-features = false, features = [
+  "xinput",
+] }
+futures-util = "0.3.33"
+
+[target."cfg(target_os = \"macos\")".dependencies]
+tauri-nspanel.workspace = true
+
+[features]
+cargo-clippy = []

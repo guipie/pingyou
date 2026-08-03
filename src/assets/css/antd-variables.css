@@ -1,0 +1,32 @@
+/* d:\work\pingyou\src\assets\css\antd-variables.css */
+:root {
+  /* Ant Design 基础变量 */
+  --ant-border-radius-sm: 4px;
+  --ant-border-radius-md: 6px;
+  --ant-border-radius-lg: 8px;
+  --ant-border-radius-xl: 12px;
+  --ant-border-radius-full: 9999px;
+
+  /* 常用间距变量 */
+  --ant-spacing-xs: 4px;
+  --ant-spacing-sm: 8px;
+  --ant-spacing-md: 16px;
+  --ant-spacing-lg: 24px;
+  --ant-spacing-xl: 32px;
+
+  /* 常用颜色变量 */
+  --ant-color-primary: #1890ff;
+  --ant-color-success: #52c41a;
+  --ant-color-warning: #faad14;
+  --ant-color-error: #f5222d;
+  --ant-color-white: #ffffff;
+
+  /* 文字颜色 */
+  --ant-color-text-primary: rgba(0, 0, 0, 0.85);
+  --ant-color-text-secondary: rgba(0, 0, 0, 0.65);
+  --ant-color-text-placeholder: rgba(0, 0, 0, 0.45);
+
+  /* 背景颜色 */
+  --ant-color-bg-primary: #ffffff;
+  --ant-color-bg-secondary: #f5f5f5;
+}

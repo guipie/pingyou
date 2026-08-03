@@ -1,0 +1,9 @@
+{
+  "identifier": "com.guipie.Pingyou",
+  "bundle": {
+    "resources": [
+      "assets/tray-mac.png",
+      "assets/models"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+# 忽略 assets/models 下的 .tmp 文件
+assets/models/**/*.tmp 
+assets/models/*dev.glb
+assets/models/*dev.fbx
