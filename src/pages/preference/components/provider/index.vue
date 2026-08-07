@@ -1,37 +1,40 @@
 <script setup lang="ts">
-import type { UploadEmits, UploadProps } from 'antdv-next'
+import { RedoOutlined, SettingOutlined } from '@antdv-next/icons'
+import { Button, message, Popconfirm, Tag } from 'antdv-next'
+import { computed, onUnmounted, ref } from 'vue'
 
-import { PlusOutlined, RedoOutlined, SettingOutlined } from '@antdv-next/icons'
-import { Button, Input, message, Modal, Popconfirm, Switch, Tag, TextArea, Upload } from 'antdv-next'
-import { computed, ref } from 'vue'
-
-import type { AIProvider } from '@/stores/shard/provider-shard.ts'
+import type { AIProvider } from '@/stores/shard/provider-shard'
 
 import ProList from '@/components/pro-list/index.vue'
 import PyAvatar from '@/components/py-avatar.vue'
+import { LISTEN_KEY } from '@/constants'
+import { RoutersName } from '@/router/roters'
 import { useProviderStore } from '@/stores/aiprovider'
-import { getImgBase64 } from '@/utils/path.ts'
+import { openNewWindow } from '@/utils/win-manager'
 
 import Setting from './components/setting.vue'
 import Ollama from './ollama.vue'
 
-type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
 const providerStore = useProviderStore()
 
 // 设置弹框状态
 const settingOpen = ref(false)
 const settingProvider = ref<AIProvider | null>(null)
 const providers = computed(() => providerStore.stateProviders)
-// 添加自定义模型弹框状态
-const addModalOpen = ref(false)
-const addForm = ref({
-  provider: '',
-  value: '',
-  avatar: '',
-  desc: '',
-  baseUrl: '',
-  apiKey: '',
-  isNeedProxy: false,
+
+// 监听来自 add 子窗口的供应商添加事件
+let unlistenAdd: (() => void) | null = null
+
+import('@tauri-apps/api/event').then(({ listen }) => {
+  listen(LISTEN_KEY.PROVIDER_ADDED, () => {
+    providerStore.initDbProviders()
+  }).then((fn) => {
+    unlistenAdd = fn
+  })
+})
+
+onUnmounted(() => {
+  unlistenAdd?.()
 })
 
 function openSetting(provider: AIProvider) {
@@ -39,62 +42,26 @@ function openSetting(provider: AIProvider) {
   settingOpen.value = true
 }
 
+/** 在新窗口中打开"添加自定义模型"表单，方便用户自由切换窗口复制地址/密钥 */
 function handleOpenAddModal() {
-  addForm.value = {
-    provider: '',
-    value: '',
-    avatar: '',
-    desc: '',
-    baseUrl: '',
-    apiKey: '',
-    isNeedProxy: false,
-  }
-  addModalOpen.value = true
+  openNewWindow(RoutersName.ProviderAdd, {
+    title: '添加自定义模型',
+    width: 520,
+    height: 640,
+  })
 }
 
-function handleAddProvider() {
-  const { provider, value, baseUrl } = addForm.value
-
-  if (!provider.trim()) {
-    message.warning('请输入供应商名称')
-    return
-  }
-  if (!value.trim()) {
-    message.warning('请输入供应商标识')
-    return
-  }
-  if (!baseUrl.trim()) {
-    message.warning('请输入 Base URL')
-    return
-  }
-
-  const existProvider = providerStore.stateProviders.find((p: AIProvider) => p.value === value.trim())
-  if (existProvider) {
-    message.warning('该供应商标识已存在，请更换')
-    return
-  }
-
-  const newProvider: AIProvider = {
-    provider: provider.trim(),
-    value: value.trim(),
-    avatar: addForm.value.avatar.trim() || provider.trim().charAt(0),
-    desc: addForm.value.desc.trim() || '自定义供应商',
-    baseUrl: baseUrl.trim(),
-    isCustom: true,
-    apiKey: addForm.value.apiKey.trim(),
-    isNeedProxy: addForm.value.isNeedProxy,
-    defaultModel: '',
-    models: [],
-  }
-  providerStore.addProvider(newProvider)
-  message.success(`已添加自定义供应商：${newProvider.provider}`)
-  addModalOpen.value = false
+/** "使用本地大模型"按钮回调：打开预填了 Ollama 地址和模型名的添加窗口 */
+function handleUseLocalModel(payload: { baseUrl: string, modelName: string, modelId: string, provider: string }) {
+  const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}`
+  openNewWindow(RoutersName.ProviderAdd, {
+    title: '添加本地大模型',
+    width: 520,
+    height: 700,
+    query,
+  })
 }
-const avatarChange: UploadEmits['change'] = async (info) => {
-  if (info.file) {
-    addForm.value.avatar = await getImgBase64(info.file as FileType)
-  }
-}
+
 function handleRemoveProvider(provider: AIProvider) {
   providerStore.removeProvider(provider.provider)
   message.success(`已移除供应商：${provider.provider}`)
@@ -122,7 +89,7 @@ function handleRemoveProvider(provider: AIProvider) {
         <div
           class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
         >
-          <Ollama />
+          <Ollama @use-local-model="handleUseLocalModel" />
         </div>
         <!-- 添加自定义模型卡片 -->
         <div
@@ -159,12 +126,6 @@ function handleRemoveProvider(provider: AIProvider) {
                 >
                   已配置
                 </Tag>
-                <!-- <Tag
-                  v-if="provider.isNeedProxy"
-                  color="orange"
-                >
-                  需代理
-                </Tag> -->
               </div>
             </div>
           </div>
@@ -208,16 +169,6 @@ function handleRemoveProvider(provider: AIProvider) {
               设置
             </Button>
 
-            <!-- <Button
-              color="green"
-              :disabled="!provider.apiKey"
-              size="small"
-              variant="solid"
-              @click="handleUseProvider(provider)"
-            >
-              使用
-            </Button> -->
-
             <Popconfirm
               v-if="provider.isCustom"
               description="确定要移除该供应商吗？"
@@ -246,133 +197,5 @@ function handleRemoveProvider(provider: AIProvider) {
       v-model:open="settingOpen"
       :provider="settingProvider"
     />
-
-    <!-- 添加自定义模型弹框 -->
-    <Modal
-      v-model:open="addModalOpen"
-      centered
-      :footer="null"
-      title="添加自定义模型"
-      :width="520"
-    >
-      <div class="flex flex-col gap-4 pt-2">
-        <div class="flex gap-5">
-          <Upload
-            accept=".png,.jpg,.jpeg"
-            action="/"
-            :before-upload="() => false"
-            class="avatar-uploader"
-            list-type="picture-card"
-            name="avatar"
-            :show-upload-list="false"
-            style="width: 86px; height: 86px;"
-            @change="avatarChange"
-          >
-            <PyAvatar
-              v-if="addForm.avatar"
-              cus-style="width: 66px; height: 66px;"
-              :url="addForm.avatar"
-            />
-            <button
-              v-else
-              style="border: 0; background: none"
-              type="button"
-            >
-              <PlusOutlined />
-              <div style="margin-top: 8px">
-                头像
-              </div>
-            </button>
-          </Upload>
-          <!-- 供应商名称 -->
-          <div class="flex flex-1 flex-col justify-evenly gap-1.5">
-            <label class="text-3.5 font-medium">
-              供应商名称
-              <span class="text-red-5">*</span>
-            </label>
-            <Input
-              v-model:value="addForm.provider"
-              placeholder="如：DeepSeek、硅基流动"
-            />
-          </div>
-        </div>
-
-        <!-- 供应商标识 -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">
-            供应商标识
-            <span class="text-red-5">*</span>
-          </label>
-          <Input
-            v-model:value="addForm.value"
-            placeholder="唯一英文标识，如：deepseek"
-          />
-        </div>
-
-        <!-- 头像 URL（可选）
-        <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">头像 URL（可选）</label>
-          <Input
-            v-model:value="addForm.avatar"
-            placeholder="图片链接或 UnoCSS 图标名，如 i-lucide:bot"
-          />
-        </div> -->
-
-        <!-- Base URL -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">
-            Base URL
-            <span class="text-red-5">*</span>
-          </label>
-          <Input
-            v-model:value="addForm.baseUrl"
-            placeholder="如：https://api.deepseek.com/v1/chat/completions"
-          />
-        </div>
-
-        <!-- API Key -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">API Key（可选）</label>
-          <Input.Password
-            v-model:value="addForm.apiKey"
-            placeholder="也可在添加后通过设置按钮填写"
-          />
-        </div>
-
-        <!-- 是否需要代理 -->
-        <div class="flex items-center justify-between bg-[--ant-color-fill-quaternary] p-3 rounded-lg">
-          <div>
-            <div class="text-3.5 font-medium">
-              需要代理
-            </div>
-            <div class="mt-0.5 text-2.5 color-text-quaternary">
-              若接口需要科学上网访问，请开启
-            </div>
-          </div>
-          <Switch v-model:checked="addForm.isNeedProxy" />
-        </div>
-
-        <!-- 描述 -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">描述（可选）</label>
-          <TextArea
-            v-model:value="addForm.desc"
-            placeholder="简短描述该供应商"
-            :rows="4"
-          />
-        </div>
-        <!-- 确认按钮 -->
-        <Button
-          block
-          type="primary"
-          @click="handleAddProvider"
-        >
-          添加供应商
-        </Button>
-      </div>
-    </Modal>
   </div>
 </template>
-
-<style scoped>
-</style>

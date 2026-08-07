@@ -63,6 +63,15 @@
         "resizable": false,
         "width": 200,
         "height": 300
+      },
+      {
+        "label": "provider-add",
+        "title": "添加自定义模型",
+        "url": "/#/provider-add",
+        "visible": false,
+        "shadow": false,
+        "decorations": false,
+        "resizable": true
       }
     ],
     "security": {

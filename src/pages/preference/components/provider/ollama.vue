@@ -6,9 +6,13 @@ import { listen } from '@tauri-apps/api/event'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { message } from '@tauri-apps/plugin-dialog'
 import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from 'antdv-next'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import type { DownloadPayload, HardwareReport, InitStep } from '@/stores/shard/app-shard'
+
+const emit = defineEmits<{
+  (e: 'useLocalModel', payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
+}>()
 
 interface CleanupPayload {
   success: boolean
@@ -24,8 +28,13 @@ interface LocalModel {
 // 持久化到 localStorage 的下载状态
 interface PersistedDownloadState {
   step: string
-  progress: number
+  /** Rust 侧原始进度 (0-100%) */
+  rawProgress: number
+  /** 前端合并后的展示进度 (0-100%) */
+  displayProgress: number
   status: string
+  /** 下载阶段: "engine" | "model" */
+  phase: string
 }
 
 const STORAGE_KEY = 'ollama_download_state'
@@ -35,10 +44,13 @@ const [messageApi, ContextHolder] = AntdMessage.useMessage()
 // 引擎服务地址（与 Rust 启动参数配置的端口保持一致）
 const OLLAMA_HOST = 'http://127.0.0.1:11435/v1/chat/completions'
 
-// 新增 completed 状态
 const step = ref<InitStep | 'completed'>('checking')
 const downloadProgress = ref<number>(0)
 const downloadStatusText = ref<string>('正在准备下载通道...')
+/** 当前下载阶段: 空字符串表示未开始 */
+const downloadPhase = ref<string>('')
+/** 是否处于暂停状态 */
+const isPaused = ref<boolean>(false)
 
 const isCleaning = ref<boolean>(false)
 const cleanupStatusText = ref<string>('正在准备清理环境...')
@@ -52,13 +64,37 @@ const hardwareInfo = ref<HardwareReport>({
   recommend_model: '',
 })
 
+// ─── 合并进度：引擎 0-50%，模型 50-100%，永不回退 ─────────────
+
+/**
+ * 将 Rust 侧的两个独立阶段 (engine 0-100%, model 0-100%)
+ * 合并为前端展示的单一进度条 (0-100%)，确保刷新后不会跳动。
+ *
+ *   引擎阶段:  raw 0-100%  →  display 0-50%
+ *   模型阶段:  raw 0-100%  →  display 50-100%
+ */
+function computeDisplayProgress(raw: number, phase: string): number {
+  if (phase === 'model') {
+    return 50 + (raw / 100) * 50
+  }
+  // engine 阶段 (或未知阶段也按 engine 处理)
+  return (raw / 100) * 50
+}
+
+/** 展示用的进度 (0-100)，只增不减 */
+const displayProgress = computed(() => {
+  return computeDisplayProgress(downloadProgress.value, downloadPhase.value)
+})
+
 // ─── localStorage 持久化 ──────────────────────────────────────────
 
 function saveDownloadState() {
   const state: PersistedDownloadState = {
     step: step.value,
-    progress: downloadProgress.value,
+    rawProgress: downloadProgress.value,
+    displayProgress: displayProgress.value,
     status: downloadStatusText.value,
+    phase: downloadPhase.value,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
@@ -79,7 +115,6 @@ function loadPersistedState(): PersistedDownloadState | null {
 
 // ─── 工具函数 ──────────────────────────────────────────────────────
 
-// 字节大小转换格式化
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
@@ -88,7 +123,6 @@ function formatSize(bytes: number): string {
   return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
 }
 
-// 复制 API 地址到剪贴板
 async function copyHost() {
   try {
     await navigator.clipboard.writeText(OLLAMA_HOST)
@@ -98,7 +132,6 @@ async function copyHost() {
   }
 }
 
-// 🟢 加载已下载的模型列表，返回布尔值代表是否有可用模型
 async function fetchLocalModels(): Promise<boolean> {
   try {
     const models = await invoke<LocalModel[]>('list_local_models')
@@ -116,15 +149,19 @@ async function fetchLocalModels(): Promise<boolean> {
 let unlistenFn: UnlistenFn | null = null
 let cleanupUnlistenFn: UnlistenFn | null = null
 
-// 开始监听下载进度（抽取为独立函数，便于刷新后重新绑定）
 async function startProgressListener() {
-  // 避免重复监听
   if (unlistenFn) return
 
   unlistenFn = await listen<DownloadPayload>('download-progress', (event) => {
     const payload = event.payload
     downloadProgress.value = payload.progress
     downloadStatusText.value = payload.status
+
+    // 首次收到事件时记录阶段（避免 phase 为空导致进度计算错误）
+    if (payload.phase && payload.phase !== downloadPhase.value) {
+      downloadPhase.value = payload.phase
+    }
+
     // 实时持久化到 localStorage
     saveDownloadState()
   })
@@ -158,33 +195,35 @@ onMounted(async () => {
       const saved = loadPersistedState()
       if (saved && saved.step === 'downloading') {
         step.value = 'downloading'
-        downloadProgress.value = saved.progress
+        downloadProgress.value = saved.rawProgress
+        downloadPhase.value = saved.phase || 'engine'
         downloadStatusText.value = saved.status
       } else {
         step.value = 'downloading'
+        // 无持久化数据时，从 0 开始
+        downloadProgress.value = 0
+        downloadPhase.value = 'engine'
       }
       // 重新绑定进度监听
       await startProgressListener()
       return
     }
 
-    // 检查是否有之前持久化的下载状态（可能刚完成但还未来得及清理）
+    // 检查持久化状态（可能刚完成）
     const saved = loadPersistedState()
     if (saved && saved.step === 'downloading') {
-      // 下载可能已完成（Rust 侧 is_downloading 返回 false），尝试验证模型
       const hasModels = await fetchLocalModels()
       if (hasModels) {
         step.value = 'completed'
         clearDownloadState()
       } else {
-        // 下载可能失败或取消，回到 ready
         step.value = 'ready'
         clearDownloadState()
       }
       return
     }
 
-    // 正常检测流程
+    // 正常检测
     const hasModels = await fetchLocalModels()
     if (hasModels) {
       step.value = 'completed'
@@ -212,11 +251,12 @@ onUnmounted(() => {
 async function handleInit(): Promise<void> {
   step.value = 'downloading'
   downloadProgress.value = 0
+  downloadPhase.value = 'engine'
   downloadStatusText.value = '正在准备初始化通道...'
+  isPaused.value = false
   saveDownloadState()
 
   try {
-    // 绑定进度监听
     await startProgressListener()
 
     // 1. 拉起引擎
@@ -226,7 +266,7 @@ async function handleInit(): Promise<void> {
     // 2. 下载模型
     await invoke<void>('download_model', { model_name: hardwareInfo.value.recommend_model })
 
-    // 3. 下载完成后，验证本地是否真的存在模型
+    // 3. 验证
     downloadStatusText.value = '正在校验本地模型完整性...'
     saveDownloadState()
 
@@ -243,27 +283,88 @@ async function handleInit(): Promise<void> {
     }
   } catch (err) {
     const errMsg = String(err)
-    // 区分「用户主动取消」和「真正的错误」
     if (errMsg.includes('已被用户取消') || errMsg.includes('cancelled')) {
-      messageApi.info('下载已取消')
+      messageApi.info('下载已取消，临时文件已清理')
     } else {
       message(`初始化失败: ${err}`)
     }
     step.value = 'ready'
+    isPaused.value = false
     clearDownloadState()
   } finally {
     stopProgressListener()
   }
 }
 
-// ★ 取消下载
-async function handleCancel() {
+// ★ 暂停下载
+async function handlePause() {
   try {
-    await invoke<void>('cancel_download')
-    messageApi.info('正在取消下载...')
+    await invoke<void>('pause_download')
+    isPaused.value = true
+    messageApi.info('下载已暂停')
+    saveDownloadState()
   } catch (err) {
-    console.error('取消下载失败:', err)
+    console.error('暂停失败:', err)
   }
+}
+
+// ★ 继续下载
+async function handleResume() {
+  try {
+    await invoke<void>('resume_download')
+    isPaused.value = false
+    messageApi.info('继续下载中...')
+    saveDownloadState()
+  } catch (err) {
+    console.error('继续下载失败:', err)
+  }
+}
+
+// ★ 取消下载（Rust 侧会清理临时文件）
+async function handleCancel() {
+  Modal.confirm({
+    title: '确定要取消下载吗？',
+    content: '取消后将删除所有已下载的临时文件，恢复至初始状态。',
+    okText: '确认取消',
+    okType: 'danger',
+    cancelText: '继续下载',
+    onOk: async () => {
+      try {
+        // 如果暂停中，先恢复再取消（避免死锁）
+        if (isPaused.value) {
+          await invoke<void>('resume_download')
+        }
+        await invoke<void>('cancel_download')
+        messageApi.info('下载已取消，临时文件已清理')
+        step.value = 'ready'
+        isPaused.value = false
+        clearDownloadState()
+      } catch (err) {
+        console.error('取消下载失败:', err)
+        // 即使出错也重置状态
+        step.value = 'ready'
+        isPaused.value = false
+        clearDownloadState()
+      }
+    },
+    onCancel: () => {
+      // 用户点了"继续下载"，不做任何操作
+    },
+  })
+}
+
+// ─── 使用本地大模型 ────────────────────────────────────────────
+
+function handleUseLocalModel() {
+  const firstModel = localModels.value[0]
+  const modelName = firstModel?.name || hardwareInfo.value.recommend_model || 'local-model'
+
+  emit('useLocalModel', {
+    baseUrl: OLLAMA_HOST,
+    modelName,
+    modelId: modelName,
+    provider: '本地大模型',
+  })
 }
 
 // ─── 清理 / 停止 ──────────────────────────────────────────────────
@@ -348,8 +449,8 @@ async function stopModels(): Promise<void> {
 <template>
   <ContextHolder />
   <div class="relative h-full w-full overflow-auto">
-    <div class="flex flex-col items-center justify-center gap-6 bg-slate-50">
-      <div class="max-w-md w-full border border-slate-100 rounded-xl p-4 shadow-md bg-white">
+    <div class="flex flex-col items-center justify-center gap-6">
+      <div class="max-w-md w-full border border-slate-100 rounded-xl p-4 shadow-md">
         <!-- 状态 1：正在检测 -->
         <div
           v-if="step === 'checking'"
@@ -378,7 +479,7 @@ async function stopModels(): Promise<void> {
           v-else-if="step === 'ready'"
           class="animate-fade-in text-center"
         >
-          <div class="bg-blue-50 text-blue-600 mx-auto mb-4 h-16 w-16 flex items-center justify-center rounded-full">
+          <div class="text-blue-600 mx-auto mb-4 h-16 w-16 flex items-center justify-center rounded-full">
             <div class="i-carbon-cpu text-32px" />
           </div>
           <h3 class="mb-2 text-18px text-slate-800 font-bold">
@@ -387,7 +488,7 @@ async function stopModels(): Promise<void> {
           <p class="mb-6 text-14px text-slate-500 leading-relaxed">
             检测到系统内存为 <span class="text-blue-600 font-bold">{{ hardwareInfo.total_memory_gb }}GB</span>。<br>
             我们将为您一键安装最适合您电脑的极速轻量模型：<br>
-            <span class="mx-auto mt-2 block w-fit bg-slate-100 px-2 py-0.5 text-12px text-slate-700 font-mono rounded">
+            <span class="mx-auto mt-2 block w-fit px-2 py-0.5 text-12px text-slate-700 font-mono rounded">
               {{ hardwareInfo.recommend_model }}
             </span>
           </p>
@@ -401,26 +502,58 @@ async function stopModels(): Promise<void> {
           </Button>
         </div>
 
-        <!-- 状态 4：正在下载 -->
+        <!-- 状态 4：正在下载 / 已暂停 -->
         <div
           v-else-if="step === 'downloading'"
           class="animate-fade-in"
         >
-          <h4 class="mb-1 text-16px text-slate-800 font-bold">
-            正在初始化本地引擎
-          </h4>
+          <div class="mb-1 flex items-center gap-2">
+            <h4 class="text-16px text-slate-800 font-bold">
+              {{ isPaused ? '下载已暂停' : '正在初始化本地引擎' }}
+            </h4>
+            <Tag
+              v-if="isPaused"
+              color="warning"
+            >
+              已暂停
+            </Tag>
+            <Tag
+              v-else
+              color="processing"
+            >
+              {{ downloadPhase === 'model' ? '模型下载中' : '引擎下载中' }}
+            </Tag>
+          </div>
           <p class="mb-6 text-12px text-slate-400 font-mono">
-            {{ downloadStatusText }}
+            {{ isPaused ? '下载已暂停，点击"继续下载"恢复' : downloadStatusText }}
           </p>
 
           <Progress
-            :percent="Math.round(downloadProgress)"
-            status="active"
+            :percent="Math.round(displayProgress)"
+            :status="isPaused ? 'normal' : 'active'"
             :stroke-color="{ '0%': '#108ee9', '100%': '#87d068' }"
           />
 
-          <!-- ★ 取消下载按钮 -->
-          <div class="mt-4 flex justify-center">
+          <!-- 操作按钮组 -->
+          <div class="mt-4 flex items-center justify-center gap-3">
+            <!-- 暂停状态：显示"继续下载" -->
+            <Button
+              v-if="isPaused"
+              size="small"
+              type="primary"
+              @click="handleResume"
+            >
+              继续下载
+            </Button>
+            <!-- 下载中状态：显示"暂停下载" -->
+            <Button
+              v-else
+              size="small"
+              @click="handlePause"
+            >
+              暂停下载
+            </Button>
+            <!-- 取消下载始终显示 -->
             <Button
               danger
               size="small"
@@ -446,12 +579,11 @@ async function stopModels(): Promise<void> {
             </Tag>
           </div>
 
-          <!-- 服务地址配置卡片 -->
-          <div class="mb-6 border border-slate-200 bg-slate-50 p-4 rounded-lg">
+          <div class="mb-6 border border-slate-200 p-4 rounded-lg">
             <div class="mb-1 text-12px text-slate-500 font-medium">
               Ollama API 基础地址 (Base URL):
             </div>
-            <div class="flex items-center justify-between border px-3 py-2 text-13px text-slate-700 font-mono bg-white rounded">
+            <div class="flex items-center justify-between border px-3 py-2 text-13px text-slate-700 font-mono rounded">
               <span class="select-text">{{ OLLAMA_HOST }}</span>
               <Button
                 size="small"
@@ -463,7 +595,6 @@ async function stopModels(): Promise<void> {
             </div>
           </div>
 
-          <!-- 可用模型列表 -->
           <div>
             <div class="mb-3 flex items-center justify-between text-14px text-slate-800 font-bold">
               <span>已加载的本地模型</span>
@@ -503,7 +634,7 @@ async function stopModels(): Promise<void> {
           </div>
         </div>
         <div
-          class="flex justify-between"
+          class="flex flex-wrap justify-between gap-2"
         >
           <Button
             v-if="step === 'completed'"
@@ -523,6 +654,14 @@ async function stopModels(): Promise<void> {
             @click="stopModels"
           >
             停止运行
+          </Button>
+          <Button
+            v-if="step === 'completed'"
+            size="small"
+            type="primary"
+            @click="handleUseLocalModel"
+          >
+            使用本地大模型
           </Button>
         </div>
       </div>

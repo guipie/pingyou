@@ -9,7 +9,7 @@ import type { RoutersName } from '@/router/roters'
 import { LISTEN_KEY } from '@/constants'
 
 // tauri的路由封装 统一管理
-export async function openNewWindow(routerName: RoutersName, options?: { title?: string, width?: number, height?: number, minHeight?: number }) {
+export async function openNewWindow(routerName: RoutersName, options?: { title?: string, width?: number, height?: number, minHeight?: number, query?: string }) {
   // 检查窗口是否已经存在，避免重复打开
   const existingWindow = await WebviewWindow.getByLabel(routerName)
 
@@ -34,7 +34,7 @@ export async function openNewWindow(routerName: RoutersName, options?: { title?:
       // 直接访问 /path 可能需要后端支持或特定的 Tauri 配置。
       // 对于单页应用，通常加载 index.html 然后通过 JS 路由跳转，
       // 但 Tauri WebviewWindow 可以直接指定 URL。
-      url: `/#/${routerName}`,
+      url: `/#/${routerName}${options?.query ?? ''}`,
       resizable: true,
       decorations: true,
     })

@@ -9,6 +9,8 @@ export interface HardwareReport {
 export interface DownloadPayload {
   progress: number
   status: string
+  /** 下载阶段: "engine" | "model"，前端据此合并进度避免刷新跳动 */
+  phase: string
 }
 
 // 定义当前 UI 视图的步骤状态

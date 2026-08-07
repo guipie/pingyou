@@ -6,6 +6,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::time::{sleep, Duration};
 
 // 远程配置文件地址（发布前可改为官方可信源）
 const CONFIG_URL: &str = "https://hz.hkzh56.com/ollama.json";
@@ -19,6 +20,9 @@ fn engine_child() -> &'static Mutex<Option<Child>> {
 // 全局取消标志：前端调用 cancel_download 后置为 true，下载循环检测到后中断
 static CANCEL_DOWNLOAD: AtomicBool = AtomicBool::new(false);
 
+// 全局暂停标志：前端调用 pause_download 后置为 true，下载循环阻塞等待
+static PAUSE_DOWNLOAD: AtomicBool = AtomicBool::new(false);
+
 // 全局下载状态标志：用于前端刷新后查询是否有正在进行的下载
 static DOWNLOAD_ACTIVE: AtomicBool = AtomicBool::new(false);
 
@@ -26,6 +30,8 @@ static DOWNLOAD_ACTIVE: AtomicBool = AtomicBool::new(false);
 struct DownloadPayload {
     progress: f64,
     status: String,
+    /// 下载阶段: "engine" | "model"，用于前端合并进度避免刷新跳动
+    phase: String,
 }
 
 // 严格对应你提供的 JSON 嵌套层级结构
@@ -61,10 +67,14 @@ fn get_engine_binary_name() -> &'static str {
 }
 
 // 发送下载进度事件，失败仅记录日志，不 panic
-fn emit_progress(app_handle: &AppHandle, progress: f64, status: String) {
+fn emit_progress(app_handle: &AppHandle, progress: f64, status: String, phase: &str) {
     if let Err(e) = app_handle.emit(
         "download-progress",
-        DownloadPayload { progress, status },
+        DownloadPayload {
+            progress,
+            status,
+            phase: phase.to_string(),
+        },
     ) {
         log::warn!("发送下载进度事件失败: {}", e);
     }
@@ -98,7 +108,9 @@ fn extract_zip_blocking(zip_path: std::path::PathBuf, engine_dir: std::path::Pat
     Ok(())
 }
 
-// 检查是否已被取消，若取消则返回错误
+// ─── 下载循环中的状态检查 ─────────────────────────────────────────
+
+/// 检查取消标志，若已取消返回错误
 fn check_cancelled() -> Result<(), String> {
     if CANCEL_DOWNLOAD.load(Ordering::SeqCst) {
         Err("下载已被用户取消".to_string())
@@ -107,13 +119,69 @@ fn check_cancelled() -> Result<(), String> {
     }
 }
 
+/// 检查暂停标志，若暂停则循环 sleep 直到恢复或取消
+async fn wait_if_paused() -> Result<(), String> {
+    while PAUSE_DOWNLOAD.load(Ordering::SeqCst) {
+        // 暂停期间也要检查取消
+        check_cancelled()?;
+        sleep(Duration::from_millis(300)).await;
+    }
+    Ok(())
+}
+
 // ─── 对外暴露的命令 ────────────────────────────────────────────────
 
-/// 前端调用此命令取消正在进行的下载
+/// 前端调用此命令暂停正在进行的下载
 #[tauri::command]
-pub fn cancel_download() {
-    log::info!("[OLLAMA] 收到前端取消下载请求");
+pub fn pause_download() {
+    log::info!("[OLLAMA] 收到前端暂停下载请求");
+    PAUSE_DOWNLOAD.store(true, Ordering::SeqCst);
+}
+
+/// 前端调用此命令恢复暂停的下载
+#[tauri::command]
+pub fn resume_download() {
+    log::info!("[OLLAMA] 收到前端恢复下载请求");
+    PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
+}
+
+/// 前端调用此命令取消下载，并清理所有临时文件
+#[tauri::command]
+pub async fn cancel_download(app_handle: AppHandle) -> Result<(), String> {
+    log::info!("[OLLAMA] 收到前端取消下载请求，将清理临时文件");
+
+    // 先设置取消标志，并清除暂停（避免死锁）
     CANCEL_DOWNLOAD.store(true, Ordering::SeqCst);
+    PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
+
+    // 清理临时下载文件
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    let engine_dir = app_dir.join("engine");
+
+    // 删除引擎临时 zip（如果存在）
+    let temp_zip = engine_dir.join("ollama_temp.zip");
+    if temp_zip.exists() {
+        if let Err(e) = tokio::fs::remove_file(&temp_zip).await {
+            log::warn!("[OLLAMA] 删除临时zip失败: {}", e);
+        } else {
+            log::info!("[OLLAMA] 已清理临时zip: {:?}", temp_zip);
+        }
+    }
+
+    // 如果引擎二进制不存在（说明引擎还没下载完），清理整个 engine 目录
+    let engine_bin = engine_dir.join(get_engine_binary_name());
+    if !engine_bin.exists() && engine_dir.exists() {
+        if let Err(e) = tokio::fs::remove_dir_all(&engine_dir).await {
+            log::warn!("[OLLAMA] 清理未完成引擎目录失败: {}", e);
+        } else {
+            log::info!("[OLLAMA] 已清理未完成的引擎目录");
+        }
+    }
+
+    Ok(())
 }
 
 /// 前端刷新后调用此命令查询是否有下载正在进行（用于恢复 UI 状态）
@@ -125,8 +193,9 @@ pub fn is_downloading() -> bool {
 // 1. 后台静默拉起内置的 Ollama 环境（若不存在则全自动下载解压）
 #[tauri::command]
 pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
-    // 重置取消标志并标记下载激活
+    // 重置取消/暂停标志并标记下载激活
     CANCEL_DOWNLOAD.store(false, Ordering::SeqCst);
+    PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
     DOWNLOAD_ACTIVE.store(true, Ordering::SeqCst);
 
     // 使用 defer 风格的 guard：函数退出时清理状态
@@ -134,6 +203,7 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
     impl Drop for CleanupGuard {
         fn drop(&mut self) {
             DOWNLOAD_ACTIVE.store(false, Ordering::SeqCst);
+            PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
         }
     }
     let _guard = CleanupGuard;
@@ -159,7 +229,7 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
 
     // 检查本地是否已经下载过引擎组件
     if !engine_path.exists() {
-        emit_progress(&app_handle, 0.0, "正在安全请求云端环境配置...".to_string());
+        emit_progress(&app_handle, 0.0, "正在安全请求云端环境配置...".to_string(), "engine");
 
         let client = reqwest::Client::new();
         let config = client
@@ -209,6 +279,8 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
         let mut last_emitted_progress = 0.0;
 
         while let Some(item) = stream.next().await {
+            // ★ 暂停检查：阻塞等待直到恢复或取消
+            wait_if_paused().await?;
             // ★ 取消检查
             check_cancelled()?;
 
@@ -232,6 +304,7 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
                     &app_handle,
                     progress,
                     format!("正在高速下载AI核心组件: {:.1}%", progress),
+                    "engine",
                 );
                 tokio::task::yield_now().await;
             }
@@ -241,10 +314,11 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
 
         // 如果是 Windows 常见的 ZIP 包，用 spawn_blocking 解压
         if is_zip {
-            // ★ 解压前再次检查取消
+            // ★ 解压前检查
+            wait_if_paused().await?;
             check_cancelled()?;
 
-            emit_progress(&app_handle, 99.5, "正在解压并深度优化本地 AI 显卡加速环境...".to_string());
+            emit_progress(&app_handle, 99.5, "正在解压并深度优化本地 AI 显卡加速环境...".to_string(), "engine");
 
             let zip_path = temp_download_path.clone();
             let engine_dir_for_unzip = engine_dir.clone();
@@ -265,7 +339,7 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
         }
     }
 
-    // 智能检测真实的 ollama.exe 路径（防止官方压缩包解压后带有目录嵌套）
+    // 智能检测真实的 ollama 路径（防止官方压缩包解压后带有目录嵌套）
     let mut real_engine_path = engine_path.clone();
     if !real_engine_path.exists() {
         if let Ok(entries) = std::fs::read_dir(&engine_dir) {
@@ -279,10 +353,11 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
         }
     }
 
-    // ★ 启动引擎前再次检查取消
+    // ★ 启动引擎前检查
+    wait_if_paused().await?;
     check_cancelled()?;
 
-    emit_progress(&app_handle, 99.9, "内核环境就绪，正在激活大模型通道...".to_string());
+    emit_progress(&app_handle, 100.0, "内核环境就绪，正在激活大模型通道...".to_string(), "engine");
 
     let model_dir_str = model_dir.to_string_lossy().to_string();
     log::info!("[OLLAMA] 模型存放绝对路径设置为: {}", model_dir_str);
@@ -320,6 +395,7 @@ pub async fn download_model(app_handle: AppHandle, model_name: String) -> Result
     impl Drop for CleanupGuard {
         fn drop(&mut self) {
             DOWNLOAD_ACTIVE.store(false, Ordering::SeqCst);
+            PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
         }
     }
     let _guard = CleanupGuard;
@@ -344,6 +420,8 @@ pub async fn download_model(app_handle: AppHandle, model_name: String) -> Result
     let mut downloaded_any_chunk = false;
 
     while let Some(res) = stream.next().await {
+        // ★ 暂停检查
+        wait_if_paused().await?;
         // ★ 取消检查
         check_cancelled()?;
 
@@ -363,6 +441,7 @@ pub async fn download_model(app_handle: AppHandle, model_name: String) -> Result
                         &app_handle,
                         progress,
                         format!("正在高速下载AI大模型: {:.1}%", progress),
+                        "model",
                     );
                     tokio::task::yield_now().await;
                 }
@@ -371,6 +450,7 @@ pub async fn download_model(app_handle: AppHandle, model_name: String) -> Result
                     &app_handle,
                     last_emitted_progress,
                     status.message.clone(),
+                    "model",
                 );
             }
         }
@@ -383,7 +463,7 @@ pub async fn download_model(app_handle: AppHandle, model_name: String) -> Result
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    emit_progress(&app_handle, 100.0, "模型初始化成功！".to_string());
+    emit_progress(&app_handle, 100.0, "模型初始化成功！".to_string(), "model");
     Ok(())
 }
 

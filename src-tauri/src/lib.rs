@@ -41,6 +41,8 @@ pub fn run() {
             utils::sys_info::check_hardware,
             ollama::ollama_manager::start_ollama_engine,
             ollama::ollama_manager::download_model,
+            ollama::ollama_manager::pause_download,
+            ollama::ollama_manager::resume_download,
             ollama::ollama_manager::cancel_download,
             ollama::ollama_manager::is_downloading,
             ollama::ollama_manager::stop_ollama_engine,

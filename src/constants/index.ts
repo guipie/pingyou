@@ -16,6 +16,8 @@ export const LISTEN_KEY = {
   // 气泡窗方向/内容同步事件
   WINDOW_POSITION: 'window-position',
   WINDOW_MESSAGE: 'window-message',
+  // 自定义供应商添加成功事件
+  PROVIDER_ADDED: 'provider-added',
 }
 
 export const INVOKE_KEY = {
