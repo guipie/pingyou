@@ -5,7 +5,7 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { availableMonitors } from '@tauri-apps/api/window'
 import { useDebounceFn } from '@vueuse/core'
 import { isNumber } from 'es-toolkit/compat'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { WINDOW_LABEL } from '@/constants'
 import { useAppStore } from '@/stores/app'
@@ -21,13 +21,23 @@ export function useWindowState() {
   const appStore = useAppStore()
   const catStore = useCatStore()
   const isRestored = ref(false)
+  const unlistenFns: Array<() => void> = []
 
   onMounted(() => {
-    appWindow.onMoved(onChange)
+    appWindow.onMoved(onChange).then(fn => unlistenFns.push(fn)).catch(e => console.error('[useWindowState] onMoved 失败:', e))
+    appWindow.onResized(onChange).then(fn => unlistenFns.push(fn)).catch(e => console.error('[useWindowState] onResized 失败:', e))
+    appWindow.onScaleChanged(clampToMonitor).then(fn => unlistenFns.push(fn)).catch(e => console.error('[useWindowState] onScaleChanged 失败:', e))
+  })
 
-    appWindow.onResized(onChange)
-
-    appWindow.onScaleChanged(clampToMonitor)
+  onUnmounted(() => {
+    for (const unlisten of unlistenFns) {
+      try {
+        unlisten()
+      } catch (e) {
+        console.error('[useWindowState] unlisten 失败:', e)
+      }
+    }
+    unlistenFns.length = 0
   })
 
   const clampToMonitor = useDebounceFn(async () => {

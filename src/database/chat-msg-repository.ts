@@ -1,5 +1,7 @@
 import type { TauriAIChatMessage } from '@/stores/shard/chat-shard'
 
+import { safeJsonParse } from '@/utils/safe'
+
 import { BaseRepository } from './db'
 import { DbTables } from './dbtables'
 
@@ -14,8 +16,8 @@ class ChatMsgRepository extends BaseRepository<TauriAIChatMessage> {
   async saveMessage(conversationId: string, msg: TauriAIChatMessage): Promise<boolean> {
     const db = await this.getDB()
     const result = await db.execute(
-      `INSERT OR REPLACE INTO ${this.tableName} 
-      (id, conversation_id, role, question, answer, error, file, options, timestamp, timestamp_answer) 
+      `INSERT OR REPLACE INTO ${this.tableName}
+      (id, conversation_id, role, question, answer, error, file, options, timestamp, timestamp_answer)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [msg.id, conversationId, msg.role, msg.question, msg.answer, (msg.error ? String(msg.error) : ''), (msg.file ? JSON.stringify(msg.file) : ''), (msg.options ? JSON.stringify(msg.options) : ''), msg.timestamp, msg.timestampAnswer],
     )
@@ -35,23 +37,33 @@ class ChatMsgRepository extends BaseRepository<TauriAIChatMessage> {
     beforeTimestamp: number = Date.now(),
   ): Promise<TauriAIChatMessage[]> {
     const db = await this.getDB()
-    // 查询早于某个时间点的 X 条记录，按时间倒序
-    return await db.select<TauriAIChatMessage[]>(
-      `SELECT * FROM ${this.tableName} 
-       WHERE conversation_id = $1 AND timestamp < $2 
-       ORDER BY timestamp  DESC 
+    const rows = await db.select<any[]>(
+      `SELECT * FROM ${this.tableName}
+       WHERE conversation_id = $1 AND timestamp < $2
+       ORDER BY timestamp  DESC
        LIMIT $3`,
       [conversationId, beforeTimestamp, limit],
     )
+    // file/options 是 JSON 字符串，需安全解析
+    return rows.map(row => ({
+      ...row,
+      file: safeJsonParse(row.file, undefined),
+      options: safeJsonParse(row.options, undefined),
+    })) as TauriAIChatMessage[]
   }
 
   // 扩展方法：搜索聊天记录（按提问/回答内容）
   async searchMessages(keyword: string): Promise<TauriAIChatMessage[]> {
     const db = await this.getDB()
-    return await db.select<TauriAIChatMessage[]>(
+    const rows = await db.select<any[]>(
       `SELECT * FROM ${this.tableName} WHERE question LIKE $1 OR answer LIKE $1 ORDER BY timestamp DESC`,
       [`%${keyword}%`],
     )
+    return rows.map(row => ({
+      ...row,
+      file: safeJsonParse(row.file, undefined),
+      options: safeJsonParse(row.options, undefined),
+    })) as TauriAIChatMessage[]
   }
 }
 

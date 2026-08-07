@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, shallowRef } from 'vue';
+import { onMounted, onUnmounted, shallowRef } from 'vue'
 
-import Model3d from '@/utils/model3d';
+import Model3d from '@/utils/model3d'
 
 const props = defineProps<{
   id: string

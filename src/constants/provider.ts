@@ -1,6 +1,12 @@
 import type { AIProvider } from '@/stores/shard/provider-shard'
 
-export const DataProviders: AIProvider[] = [
+/**
+ * 内置默认供应商列表（仅作为首次启动时写入数据库的种子数据）。
+ * 运行时的供应商数据统一从数据库读取，不再依赖此静态常量。
+ *
+ * 注意：此文件是代码常量，不是数据文件；数据存储统一落在 SQLite。
+ */
+export const DefaultProviders: AIProvider[] = [
   {
     provider: '深度求索',
     value: 'deepseek',
@@ -31,6 +37,12 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
     isCustom: false,
     isNeedProxy: false,
+    defaultModel: 'doubao-pro-32k',
+    models: [
+      { name: 'Doubao-pro-32k', desc: '', modelId: 'doubao-pro-32k' },
+      { name: 'Doubao-pro-128k', desc: '', modelId: 'doubao-pro-128k' },
+      { name: 'Doubao-lite-32k', desc: '', modelId: 'doubao-lite-32k' },
+    ],
   },
   {
     provider: '阿里巴巴',
@@ -40,6 +52,12 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     isCustom: false,
     isNeedProxy: false,
+    defaultModel: 'qwen-plus',
+    models: [
+      { name: 'Qwen-Plus', desc: '', modelId: 'qwen-plus' },
+      { name: 'Qwen-Turbo', desc: '', modelId: 'qwen-turbo' },
+      { name: 'Qwen-Max', desc: '', modelId: 'qwen-max' },
+    ],
   },
   {
     provider: 'google',
@@ -49,6 +67,11 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     isCustom: false,
     isNeedProxy: true,
+    defaultModel: 'gemini-1.5-flash',
+    models: [
+      { name: 'Gemini-1.5-Flash', desc: '', modelId: 'gemini-1.5-flash' },
+      { name: 'Gemini-1.5-Pro', desc: '', modelId: 'gemini-1.5-pro' },
+    ],
   },
   {
     provider: 'openai',
@@ -58,6 +81,11 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://api.openai.com/v1/chat/completions',
     isCustom: false,
     isNeedProxy: true,
+    defaultModel: 'gpt-4o-mini',
+    models: [
+      { name: 'GPT-4o-mini', desc: '', modelId: 'gpt-4o-mini' },
+      { name: 'GPT-4o', desc: '', modelId: 'gpt-4o' },
+    ],
   },
   {
     provider: 'anthropic',
@@ -67,6 +95,11 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://api.anthropic.com/v1/messages',
     isCustom: false,
     isNeedProxy: true,
+    defaultModel: 'claude-3-5-sonnet-20241022',
+    models: [
+      { name: 'Claude-3.5-Sonnet', desc: '', modelId: 'claude-3-5-sonnet-20241022' },
+      { name: 'Claude-3.5-Haiku', desc: '', modelId: 'claude-3-5-haiku-20241022' },
+    ],
   },
   {
     provider: '智谱ai',
@@ -76,6 +109,12 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
     isCustom: false,
     isNeedProxy: false,
+    defaultModel: 'glm-4-flash',
+    models: [
+      { name: 'GLM-4-Flash', desc: '', modelId: 'glm-4-flash' },
+      { name: 'GLM-4', desc: '', modelId: 'glm-4' },
+      { name: 'GLM-4-Air', desc: '', modelId: 'glm-4-air' },
+    ],
   },
   {
     provider: '月之暗面',
@@ -85,6 +124,12 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://api.moonshot.cn/v1/chat/completions',
     isCustom: false,
     isNeedProxy: false,
+    defaultModel: 'moonshot-v1-8k',
+    models: [
+      { name: 'Moonshot-v1-8k', desc: '', modelId: 'moonshot-v1-8k' },
+      { name: 'Moonshot-v1-32k', desc: '', modelId: 'moonshot-v1-32k' },
+      { name: 'Moonshot-v1-128k', desc: '', modelId: 'moonshot-v1-128k' },
+    ],
   },
   {
     provider: 'Minimax',
@@ -94,5 +139,10 @@ export const DataProviders: AIProvider[] = [
     baseUrl: 'https://api.minimax.chat/v1/v1/chat/completions',
     isCustom: false,
     isNeedProxy: false,
+    defaultModel: 'abab6.5-chat',
+    models: [
+      { name: 'abab6.5-chat', desc: '', modelId: 'abab6.5-chat' },
+      { name: 'abab6.5s-chat', desc: '', modelId: 'abab6.5s-chat' },
+    ],
   },
 ]

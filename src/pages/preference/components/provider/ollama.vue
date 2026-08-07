@@ -7,7 +7,6 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { message } from '@tauri-apps/plugin-dialog'
 import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from 'antdv-next'
 import { onMounted, onUnmounted, ref } from 'vue'
-// import { useI18n } from 'vue-i18n'
 
 import type { DownloadPayload, HardwareReport, InitStep } from '@/stores/shard/app-shard'
 
@@ -22,8 +21,15 @@ interface LocalModel {
   size: number
 }
 
-// const { t } = useI18n()
-// const routerSetting = useRouteSettingStore()
+// 持久化到 localStorage 的下载状态
+interface PersistedDownloadState {
+  step: string
+  progress: number
+  status: string
+}
+
+const STORAGE_KEY = 'ollama_download_state'
+
 const [messageApi, ContextHolder] = AntdMessage.useMessage()
 
 // 引擎服务地址（与 Rust 启动参数配置的端口保持一致）
@@ -46,6 +52,33 @@ const hardwareInfo = ref<HardwareReport>({
   recommend_model: '',
 })
 
+// ─── localStorage 持久化 ──────────────────────────────────────────
+
+function saveDownloadState() {
+  const state: PersistedDownloadState = {
+    step: step.value,
+    progress: downloadProgress.value,
+    status: downloadStatusText.value,
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+function clearDownloadState() {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+function loadPersistedState(): PersistedDownloadState | null {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as PersistedDownloadState
+  } catch {
+    return null
+  }
+}
+
+// ─── 工具函数 ──────────────────────────────────────────────────────
+
 // 字节大小转换格式化
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -64,6 +97,7 @@ async function copyHost() {
     messageApi.error('复制失败，请手动复制')
   }
 }
+
 // 🟢 加载已下载的模型列表，返回布尔值代表是否有可用模型
 async function fetchLocalModels(): Promise<boolean> {
   try {
@@ -76,7 +110,35 @@ async function fetchLocalModels(): Promise<boolean> {
     return false
   }
 }
-// 🟢 页面加载时的检测
+
+// ─── 事件监听 ──────────────────────────────────────────────────────
+
+let unlistenFn: UnlistenFn | null = null
+let cleanupUnlistenFn: UnlistenFn | null = null
+
+// 开始监听下载进度（抽取为独立函数，便于刷新后重新绑定）
+async function startProgressListener() {
+  // 避免重复监听
+  if (unlistenFn) return
+
+  unlistenFn = await listen<DownloadPayload>('download-progress', (event) => {
+    const payload = event.payload
+    downloadProgress.value = payload.progress
+    downloadStatusText.value = payload.status
+    // 实时持久化到 localStorage
+    saveDownloadState()
+  })
+}
+
+function stopProgressListener() {
+  if (unlistenFn) {
+    unlistenFn()
+    unlistenFn = null
+  }
+}
+
+// ─── 生命周期 ──────────────────────────────────────────────────────
+
 onMounted(async () => {
   try {
     const report = await invoke<HardwareReport>('check_hardware')
@@ -84,15 +146,52 @@ onMounted(async () => {
 
     if (report.status === 'Low' || report.total_memory_gb < 4) {
       step.value = 'unsupported'
-    } else {
-      // 尝试检查当前是否已有在运行的引擎和模型
+      clearDownloadState()
+      return
+    }
+
+    // ★ 刷新恢复：检查是否有正在进行的下载
+    const isActive = await invoke<boolean>('is_downloading').catch(() => false)
+
+    if (isActive) {
+      // Rust 侧有下载正在进行 → 恢复 downloading 状态
+      const saved = loadPersistedState()
+      if (saved && saved.step === 'downloading') {
+        step.value = 'downloading'
+        downloadProgress.value = saved.progress
+        downloadStatusText.value = saved.status
+      } else {
+        step.value = 'downloading'
+      }
+      // 重新绑定进度监听
+      await startProgressListener()
+      return
+    }
+
+    // 检查是否有之前持久化的下载状态（可能刚完成但还未来得及清理）
+    const saved = loadPersistedState()
+    if (saved && saved.step === 'downloading') {
+      // 下载可能已完成（Rust 侧 is_downloading 返回 false），尝试验证模型
       const hasModels = await fetchLocalModels()
       if (hasModels) {
         step.value = 'completed'
+        clearDownloadState()
       } else {
-        // 如果没有模型，一律保持在准备界面，引导用户点击“一键开启”
+        // 下载可能失败或取消，回到 ready
         step.value = 'ready'
+        clearDownloadState()
       }
+      return
+    }
+
+    // 正常检测流程
+    const hasModels = await fetchLocalModels()
+    if (hasModels) {
+      step.value = 'completed'
+      clearDownloadState()
+    } else {
+      step.value = 'ready'
+      clearDownloadState()
     }
   } catch (err) {
     message('硬件环境检测失败，请重启软件')
@@ -101,25 +200,24 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (unlistenFn) unlistenFn()
-  if (cleanupUnlistenFn) cleanupUnlistenFn()
+  stopProgressListener()
+  if (cleanupUnlistenFn) {
+    cleanupUnlistenFn()
+    cleanupUnlistenFn = null
+  }
 })
 
-let unlistenFn: UnlistenFn | null = null
-let cleanupUnlistenFn: UnlistenFn | null = null
+// ─── 下载流程 ──────────────────────────────────────────────────────
 
 async function handleInit(): Promise<void> {
   step.value = 'downloading'
+  downloadProgress.value = 0
+  downloadStatusText.value = '正在准备初始化通道...'
+  saveDownloadState()
 
   try {
-    downloadStatusText.value = '正在准备初始化通道...'
-
-    // 监听进度
-    unlistenFn = await listen<DownloadPayload>('download-progress', (event) => {
-      const payload = event.payload
-      downloadProgress.value = payload.progress
-      downloadStatusText.value = payload.status
-    })
+    // 绑定进度监听
+    await startProgressListener()
 
     // 1. 拉起引擎
     downloadStatusText.value = '正在拉起内核引擎...'
@@ -128,28 +226,47 @@ async function handleInit(): Promise<void> {
     // 2. 下载模型
     await invoke<void>('download_model', { model_name: hardwareInfo.value.recommend_model })
 
-    // 3. 下载完成后，验证本地是否真的存在模型！
+    // 3. 下载完成后，验证本地是否真的存在模型
     downloadStatusText.value = '正在校验本地模型完整性...'
+    saveDownloadState()
+
     const hasModels = await fetchLocalModels()
 
     if (hasModels) {
       messageApi.success('AI 引擎与模型部署成功！')
-      step.value = 'completed' // 只有真正校验到了模型，才进入完成状态
+      step.value = 'completed'
+      clearDownloadState()
     } else {
-      // 🟢 兜底处理：如果进度到了 100% 但查出来依然没有模型
       messageApi.error('模型加载异常，未检测到有效模型，请尝试重新初始化')
       step.value = 'ready'
+      clearDownloadState()
     }
   } catch (err) {
-    step.value = 'ready'
-    message(`初始化失败: ${err}`)
-  } finally {
-    if (unlistenFn) {
-      unlistenFn()
-      unlistenFn = null
+    const errMsg = String(err)
+    // 区分「用户主动取消」和「真正的错误」
+    if (errMsg.includes('已被用户取消') || errMsg.includes('cancelled')) {
+      messageApi.info('下载已取消')
+    } else {
+      message(`初始化失败: ${err}`)
     }
+    step.value = 'ready'
+    clearDownloadState()
+  } finally {
+    stopProgressListener()
   }
 }
+
+// ★ 取消下载
+async function handleCancel() {
+  try {
+    await invoke<void>('cancel_download')
+    messageApi.info('正在取消下载...')
+  } catch (err) {
+    console.error('取消下载失败:', err)
+  }
+}
+
+// ─── 清理 / 停止 ──────────────────────────────────────────────────
 
 function cleanupModels() {
   Modal.confirm({
@@ -174,6 +291,7 @@ function cleanupModels() {
 
         localModels.value = []
         step.value = 'ready'
+        clearDownloadState()
       } catch (err) {
         message(`深度清理失败: ${err}`)
         console.error(err)
@@ -211,6 +329,7 @@ async function stopModels(): Promise<void> {
 
         localModels.value = []
         step.value = 'ready'
+        clearDownloadState()
       } catch (err) {
         message(`深度清理失败: ${err}`)
         console.error(err)
@@ -228,21 +347,7 @@ async function stopModels(): Promise<void> {
 
 <template>
   <ContextHolder />
-  <div class="relative w-full overflow-auto">
-    <!-- <div>
-      <Button
-        color="primary"
-        variant="text"
-        @click="routerSetting.backHome(2)"
-      >
-        <i class="i-lucide:arrow-left" />
-        {{ t('common.buttons.back') }}
-      </Button>
-      <span class="text-5 font-medium">
-        本地模型一键配置
-      </span>
-    </div> -->
-
+  <div class="relative h-full w-full overflow-auto">
     <div class="flex flex-col items-center justify-center gap-6 bg-slate-50">
       <div class="max-w-md w-full border border-slate-100 rounded-xl p-4 shadow-md bg-white">
         <!-- 状态 1：正在检测 -->
@@ -313,9 +418,21 @@ async function stopModels(): Promise<void> {
             status="active"
             :stroke-color="{ '0%': '#108ee9', '100%': '#87d068' }"
           />
+
+          <!-- ★ 取消下载按钮 -->
+          <div class="mt-4 flex justify-center">
+            <Button
+              danger
+              size="small"
+              type="link"
+              @click="handleCancel"
+            >
+              取消下载
+            </Button>
+          </div>
         </div>
 
-        <!-- 🟢 状态 5（新）：引擎已就绪，展现服务地址与可用模型列表 -->
+        <!-- 状态 5：引擎已就绪 -->
         <div
           v-else-if="step === 'completed'"
           class="animate-fade-in"
@@ -409,48 +526,6 @@ async function stopModels(): Promise<void> {
           </Button>
         </div>
       </div>
-
-      <!-- 清理瘦身工具面板 -->
-      <!-- <div
-        v-if="step === 'ready' || step === 'completed' || isCleaning"
-        class="max-w-md w-full animate-fade-in border border-slate-100 rounded-xl p-6 shadow-sm bg-white"
-      >
-        <div class="flex items-start gap-4">
-          <div class="h-10 w-10 flex shrink-0 items-center justify-center bg-rose-50 text-rose-500 rounded-lg">
-            <div class="i-carbon-trash-can text-22px" />
-          </div>
-          <div>
-            <h4 class="mb-1 text-15px text-slate-800 font-bold">
-              本地存储空间管理
-            </h4>
-            <p class="text-12px text-slate-400 leading-relaxed">
-              清理后，本地所有的内核与已下载模型文件将被移除。
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-5 flex flex-col gap-3">
-          <div
-            v-if="isCleaning"
-            class="border border-slate-100 bg-slate-50 p-3 rounded-lg"
-          >
-            <div class="flex items-center gap-2 text-12px text-slate-600 font-mono">
-              <Spin size="small" />
-              <span>{{ cleanupStatusText }}</span>
-            </div>
-          </div>
-
-          <Button
-            class="h-9 w-full font-medium rounded-lg"
-            danger
-            :loading="isCleaning"
-            type="primary"
-            @click="showConfirmModal"
-          >
-            一键彻底清除本地模型 (回收空间)
-          </Button>
-        </div>
-      </div> -->
     </div>
   </div>
 </template>

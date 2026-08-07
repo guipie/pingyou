@@ -39,22 +39,60 @@ const { darkAlgorithm, defaultAlgorithm } = theme
 const { locale } = useI18n()
 
 onMounted(async () => {
-  await appStore.$tauri.start()
-  await appStore.init()
-  await modelStore.$tauri.start()
-  await modelStore.init()
-  await catStore.$tauri.start()
-  catStore.init()
-  await generalStore.$tauri.start()
-  await generalStore.init()
-  await shortcutStore.$tauri.start()
-  await restoreState()
+  // 每个 store 的 $tauri.start() 从磁盘恢复持久化状态，可能因文件损坏/EOF 失败。
+  // 单独 try-catch，失败时记录日志并继续使用默认状态，避免单个 store 失败导致整个应用白屏。
+  try {
+    await appStore.$tauri.start()
+    await appStore.init()
+  } catch (e) {
+    console.error('[startup] appStore 恢复失败:', e)
+  }
+  try {
+    await modelStore.$tauri.start()
+    await modelStore.init()
+  } catch (e) {
+    console.error('[startup] modelStore 恢复失败:', e)
+  }
+  try {
+    await catStore.$tauri.start()
+    catStore.init()
+  } catch (e) {
+    console.error('[startup] catStore 恢复失败:', e)
+  }
+  try {
+    await generalStore.$tauri.start()
+    await generalStore.init()
+  } catch (e) {
+    console.error('[startup] generalStore 恢复失败:', e)
+  }
+  try {
+    await shortcutStore.$tauri.start()
+  } catch (e) {
+    console.error('[startup] shortcutStore 恢复失败:', e)
+  }
+  try {
+    await restoreState()
+  } catch (e) {
+    console.error('[startup] 窗口状态恢复失败:', e)
+  }
 
-  await chatStore.$tauri.start()
-  await chatStore.initStore()
-  await providerStore.$tauri.start()
-  await providerStore.initDbProviders()
-  await routerStore.$tauri.start()
+  try {
+    await chatStore.$tauri.start()
+    await chatStore.initStore()
+  } catch (e) {
+    console.error('[startup] chatStore 恢复失败:', e)
+  }
+  try {
+    await providerStore.$tauri.start()
+    await providerStore.initDbProviders()
+  } catch (e) {
+    console.error('[startup] providerStore 恢复失败:', e)
+  }
+  try {
+    await routerStore.$tauri.start()
+  } catch (e) {
+    console.error('[startup] routerStore 恢复失败:', e)
+  }
 })
 
 watch(() => generalStore.appearance.language, (value) => {

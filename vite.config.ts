@@ -35,6 +35,16 @@ export default defineConfig(async () => ({
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ['**/src-tauri/**'],
     },
+    // 4. 预转换所有页面组件，确保 UnoCSS 在任何 webview 请求 virtual:uno.css 前完成 class 扫描
+    //    解决 Tauri 多窗口并发请求时的 race condition（否则部分页面的 UnoCSS class 丢失，需刷新才恢复）
+    warmup: {
+      clientFiles: [
+        './src/pages/main/index.vue',
+        './src/pages/preference/index.vue',
+        './src/pages/winchat/index.vue',
+        './src/pages/winchat/msg.vue',
+      ],
+    },
   },
   build: {
     outDir: 'dist',

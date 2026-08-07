@@ -1,6 +1,8 @@
 export const GITHUB_LINK = 'https://github.com/guipie/pingyou'
 
-export const UPGRADE_LINK_ACCESS_KEY = 'xDbrq2rOoRThDqKOHL2ZRA'
+// 升级服务访问密钥已迁移至 src/config/index.ts（UPDATER_ACCESS_KEY），
+// 真正敏感的密钥不应硬编码在 constants 中被打包进前端 bundle。
+// 如需使用，请从 '@/config' 导入 UPDATER_ACCESS_KEY。
 
 export const LISTEN_KEY = {
   SHOW_WINDOW: 'show-window',

@@ -49,6 +49,8 @@ export function useDevice() {
   const smoothedCursorPoint = ref<CursorPoint>()
   const scaleFactor = ref(1)
   const { handlePress, handleRelease, handleMouseChange, handleMouseMove } = useModel()
+  // 收集需要清理的 unlisten 函数与定时器，在 onUnmounted 中统一释放
+  const unlistenFns: Array<() => void> = []
 
   const tickerCallback = (ticker: Ticker) => {
     const destination = latestCursorPoint.value
@@ -78,15 +80,30 @@ export function useDevice() {
   onMounted(async () => {
     scaleFactor.value = isMac ? await appWindow.scaleFactor() : 1
 
-    appWindow.onScaleChanged(({ payload }) => {
+    const unlistenScale = await appWindow.onScaleChanged(({ payload }) => {
       if (!isMac) return
 
       scaleFactor.value = payload.scaleFactor
     })
+    unlistenFns.push(unlistenScale)
   })
 
   onUnmounted(() => {
     Ticker.shared.remove(tickerCallback)
+    // 清理所有事件监听器
+    for (const unlisten of unlistenFns) {
+      try {
+        unlisten()
+      } catch (e) {
+        console.error('[useDevice] unlisten 失败:', e)
+      }
+    }
+    unlistenFns.length = 0
+    // 清理所有未触发的释放定时器，避免组件卸载后仍修改状态
+    for (const timer of releaseTimers.values()) {
+      clearTimeout(timer)
+    }
+    releaseTimers.clear()
   })
 
   watch(() => catStore.model.ignoreMouse, (value) => {

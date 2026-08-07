@@ -148,6 +148,10 @@ export class BaseRepository<T> {
   }
 
   async deleteByKey(key: string, val: string | number): Promise<boolean> {
+    // 白名单校验列名，防止通过 key 拼接制造 SQL 注入（与 findByKey 保持一致）
+    if (!/^[a-z_]\w*$/i.test(key)) {
+      throw new Error(`Invalid column name: ${key}`)
+    }
     const db = await this.getDB()
     const result = await db.execute(
       `DELETE FROM ${this.tableName} WHERE ${key} = $1`,
@@ -160,5 +164,24 @@ export class BaseRepository<T> {
   async findAll(): Promise<T[]> {
     const db = await this.getDB()
     return await db.select<T[]>(`SELECT * FROM ${this.tableName}`)
+  }
+
+  // 在事务中执行多个写操作，保证原子性；任一步失败则回滚
+  async runInTransaction(actions: Array<(db: Database) => Promise<unknown>>): Promise<void> {
+    const db = await this.getDB()
+    await db.execute('BEGIN TRANSACTION')
+    try {
+      for (const action of actions) {
+        await action(db)
+      }
+      await db.execute('COMMIT')
+    } catch (err) {
+      try {
+        await db.execute('ROLLBACK')
+      } catch (rollbackErr) {
+        console.error('[runInTransaction] 回滚失败:', rollbackErr)
+      }
+      throw err
+    }
   }
 }

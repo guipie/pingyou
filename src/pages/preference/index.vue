@@ -12,13 +12,12 @@ import { useGeneralStore } from '@/stores/general'
 import { useModelStore } from '@/stores/model'
 import { useRouteSettingStore } from '@/stores/route-setting'
 import { isMac } from '@/utils/platform'
-import { openNewWindow } from '@/utils/win-manager.ts'
 
 import About from './components/about/index.vue'
 import Cat from './components/cat/index.vue'
 import Chat from './components/chat/index.vue'
 import General from './components/general/index.vue'
-import Model from './components/model/index.vue'
+import Pingyou from './components/pingyou/index.vue'
 import Provider from './components/provider/index.vue'
 import Shortcut from './components/shortcut/index.vue'
 
@@ -37,39 +36,44 @@ watch(() => generalStore.appearance.language, () => {
 
 const menus = computed(() => [
   {
+    index: 0,
     key: 'model',
     label: appStore.name,
     icon: 'i-solar:magic-stick-3-bold',
-    component: Model,
+    component: Pingyou,
   },
   {
+    index: 1,
     key: 'chat',
     label: t('pages.preference.chat.title'),
     icon: 'i-solar:chat-round-dots-linear',
     component: Chat,
   },
   {
+    index: 2,
     key: 'provider',
     label: t('pages.preference.provider.title'),
     icon: 'i-arcticons:openai-chatgpt',
     component: Provider,
   },
   {
+    index: 3,
     key: 'cat',
     label: t('pages.preference.cat.title'),
     icon: 'i-solar:settings-broken',
     component: Cat,
   },
   {
+    index: 4,
     key: 'shortcut',
     label: t('pages.preference.shortcut.title'),
     name: RoutersName.Shortcut,
     icon: 'i-solar:keyboard-bold',
     component: Shortcut,
+    type: 'append',
   },
-])
-const moreMenus = computed(() => [
   {
+    index: 5,
     key: 'general',
     name: RoutersName.General,
     label: t('pages.preference.general.title'),
@@ -78,6 +82,7 @@ const moreMenus = computed(() => [
     type: 'append',
   },
   {
+    index: 6,
     key: 'about',
     label: t('pages.preference.about.title'),
     name: RoutersName.About,
@@ -86,7 +91,6 @@ const moreMenus = computed(() => [
     type: 'append',
   },
 ])
-
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {
     document.documentElement.classList.add('dark')
@@ -124,13 +128,13 @@ watch(() => generalStore.appearance.isDark, (value) => {
 
       <div class="flex flex-col gap-2">
         <div
-          v-for="(item, index) in menus"
+          v-for="item in menus.filter(item => item.type !== 'append')"
           :key="item.key"
         >
           <div
             class="size-20 flex flex-col cursor-pointer items-center justify-center gap-2 transition color-text-tertiary rounded-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
-            :class="{ 'bg-container! color-blue-5! dark:color-blue-7! font-bold dark:bg-[--ant-color-fill-quaternary]!': current === index }"
-            @click="routeSettingStore.backHome(index); "
+            :class="{ 'bg-container! color-blue-5! dark:color-blue-7! font-bold dark:bg-[--ant-color-fill-quaternary]!': current === item.index }"
+            @click="routeSettingStore.backHome(item.index); "
           >
             <div
               class="size-8"
@@ -155,10 +159,10 @@ watch(() => generalStore.appearance.isDark, (value) => {
           <template #title>
             <div class="flex flex-col gap-2 overflow-auto">
               <div
-                v-for="(item, index) in moreMenus"
-                :key="index"
+                v-for="item in menus.filter(item => item.type === 'append')"
+                :key="item.key"
                 class="flex cursor-pointer gap-2 transition color-text-tertiary rounded-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
-                @click="openNewWindow(item.name, { title: item.label, width: 600, minHeight: 500 })"
+                @click="routeSettingStore.backHome(item.index); "
               >
                 <div
                   class="size-6"

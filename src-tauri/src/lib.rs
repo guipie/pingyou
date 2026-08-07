@@ -20,9 +20,13 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle();
 
-            let main_window = app.get_webview_window(MAIN_WINDOW_LABEL).unwrap();
+            let main_window = app
+                .get_webview_window(MAIN_WINDOW_LABEL)
+                .ok_or_else(|| format!("主窗口 [{}] 未找到", MAIN_WINDOW_LABEL))?;
 
-            let preference_window = app.get_webview_window(PREFERENCE_WINDOW_LABEL).unwrap();
+            let preference_window = app
+                .get_webview_window(PREFERENCE_WINDOW_LABEL)
+                .ok_or_else(|| format!("设置窗口 [{}] 未找到", PREFERENCE_WINDOW_LABEL))?;
 
             setup::default(&app_handle, main_window.clone(), preference_window.clone());
 
@@ -37,9 +41,14 @@ pub fn run() {
             utils::sys_info::check_hardware,
             ollama::ollama_manager::start_ollama_engine,
             ollama::ollama_manager::download_model,
+            ollama::ollama_manager::cancel_download,
+            ollama::ollama_manager::is_downloading,
             ollama::ollama_manager::stop_ollama_engine,
             ollama::ollama_manager::cleanup_local_models,
             ollama::ollama_manager::list_local_models,
+            // apiKey 加密/解密
+            utils::crypto::encrypt_string,
+            utils::crypto::decrypt_string,
         ])
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件
         .plugin(tauri_plugin_http::init()) // 注册插件
@@ -89,7 +98,7 @@ pub fn run() {
             _ => {}
         })
         .build(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("构建 Tauri 应用失败，请检查配置与依赖");
 
     app.run(|app_handle, event| match event {
         #[cfg(target_os = "macos")]

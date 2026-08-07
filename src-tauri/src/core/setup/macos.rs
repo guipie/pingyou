@@ -34,7 +34,13 @@ pub fn platform(
 
     let _ = app_handle.set_dock_visibility(false);
 
-    let panel = main_window.to_panel::<NsPanel>().unwrap();
+    let panel = match main_window.to_panel::<NsPanel>() {
+        Ok(p) => p,
+        Err(e) => {
+            log::error!("[macOS] 主窗口转换为 NsPanel 失败: {}", e);
+            return;
+        }
+    };
 
     panel.set_level(PanelLevel::Dock.value());
 

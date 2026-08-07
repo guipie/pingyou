@@ -140,7 +140,7 @@ function createSpeechRecognition() {
 </script>
 
 <template>
-  <div class="dark:border-ant-border-secondary">
+  <div>
     <input
       ref="imageInputRef"
       accept="image/*"
@@ -148,8 +148,7 @@ function createSpeechRecognition() {
       type="file"
       @change="handleImageChange"
     >
-
-    <div class="h-10 flex items-center justify-end px-1 color-text-secondary">
+    <div class="h-10 flex items-center justify-end px-1">
       <div
         v-show="false"
       >
@@ -198,10 +197,9 @@ function createSpeechRecognition() {
         :value="curConversation?.provider?.defaultModel"
       />
     </div>
-
     <div
       v-if="selectedImage"
-      class="mx-5 mb-1 max-w-[calc(100%-2.5rem)] inline-flex items-center gap-2 rounded-md bg-[--ant-color-fill-tertiary] px-2.5 py-1.5 text-3"
+      class="mx-5 mb-1 max-w-[calc(100%-2.5rem)] inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-3"
     >
       <i class="i-lucide:image shrink-0" />
       <span class="truncate">{{ selectedImage.name }}</span>
@@ -214,7 +212,7 @@ function createSpeechRecognition() {
     <TextArea
       v-model:value="input"
       :auto-size="false"
-      class="wechat-input dark:border-ant-base"
+      class="wechat-input"
       :disabled="chatLoading"
       @press-enter="sendMessage"
     />
@@ -255,7 +253,6 @@ function createSpeechRecognition() {
   height: 28px;
   padding: 0;
   color: var(--ant-color-text-secondary);
-  background: transparent;
   border: 0;
   border-radius: 4px;
 }
@@ -263,11 +260,12 @@ function createSpeechRecognition() {
 .wechat-toolbar-button:hover,
 .wechat-toolbar-button.is-active {
   color: var(--ant-color-text);
-  background: var(--ant-color-fill-tertiary);
 }
 
 .wechat-input {
   height: 180px;
+  border: 0;
+  box-shadow: none;
 }
 
 .wechat-input :deep(textarea) {
@@ -275,7 +273,6 @@ function createSpeechRecognition() {
   font-size: 14px;
   line-height: 22px;
   resize: none;
-  background: transparent;
   border: 0;
   box-shadow: none;
   scrollbar-width: none;
@@ -287,6 +284,8 @@ function createSpeechRecognition() {
 
 .wechat-input :deep(textarea:focus) {
   border: 0;
+  outline: 0;
+  border-color: var(--ant-color-border-primary);
   box-shadow: none;
 }
 </style>

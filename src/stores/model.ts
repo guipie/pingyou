@@ -65,7 +65,9 @@ export const useModelStore = defineStore('model', () => {
     }
     const matched = find(nextModels, { id: currentModel.value?.id })
     currentModel.value = matched ?? nextModels[0]
-    console.warn('所有模型：', models.value)
+    if (import.meta.env.DEV) {
+      console.warn('[model] 模型列表已加载，数量:', nextModels.length)
+    }
 
     models.value = nextModels
   }

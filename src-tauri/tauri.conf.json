@@ -15,7 +15,7 @@
       {
         "label": "main",
         "title": "屏友",
-        "url": "/#/",
+        "url": "index.html",
         "shadow": false,
         "alwaysOnTop": true,
         "transparent": true,
@@ -31,6 +31,7 @@
         "url": "/#/preference",
         "visible": false,
         "titleBarStyle": "Overlay",
+        "skipTaskbar": false,
         "hiddenTitle": true,
         "minWidth": 800,
         "minHeight": 680
@@ -65,7 +66,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; media-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost http: https: ws: wss:",
+      "csp": "default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; media-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost https://asset.localhost http://127.0.0.1:11435",
       "assetProtocol": {
         "enable": true,
         "scope": {
@@ -110,10 +111,9 @@
       ]
     },
     "updater": {
-      "dangerousInsecureTransportProtocol": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVBRjJFMzE3MjEwMUZEMTAKUldRUS9RRWhGK1B5NmdkemhKcUFrVjZBQXlzdExpakdWVEJDeU9XckVsbzV2cFIycVJOempWa2UK",
       "endpoints": [
-        "http://api.upgrade.toolsetlink.com/v1/tauri/upgrade?tauriKey=KtGlsZUVXmWfjkRKCuqpfw&versionName={{current_version}}&target={{target}}&arch={{arch}}&appointVersionName=&devModelKey=&devKey=",
+        "https://api.upgrade.toolsetlink.com/v1/tauri/upgrade?versionName={{current_version}}&target={{target}}&arch={{arch}}",
         "https://gh-proxy.com/github.com/guipie/pingyou/releases/latest/download/latest.json"
       ]
     },

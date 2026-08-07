@@ -19,3 +19,11 @@ html {
     outline: none !important;
   }
 }
+
+/* main 窗口全局重置（从 main/index.vue 迁移至此，避免干扰 UnoCSS class 提取） */
+html,
+body #app {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}

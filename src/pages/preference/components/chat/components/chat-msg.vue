@@ -75,12 +75,11 @@ defineExpose({
   <div
     ref="chatContainerRef"
     class="chat-container mx-auto h-full max-w-260 flex flex-col gap-5 overflow-y-auto"
-
     @scroll="handleScroll"
   >
     <div
       v-for="(item, index) in curConversation?.messages"
-      :key="item.timestampAnswer"
+      :key="item.id"
       class="flex flex-col gap-2"
     >
       <div

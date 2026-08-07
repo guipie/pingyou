@@ -30,9 +30,8 @@ export function useTauriAIChatCommand() {
       onClick: () => {
         ask('确定要删除吗？', 'warning').then(async (res) => {
           if (res)
-            chatStore.delConversation(conversationId)
+            await chatStore.delConversation(conversationId)
         })
-        console.warn('删除：', conversationId)
       },
     },
   ]

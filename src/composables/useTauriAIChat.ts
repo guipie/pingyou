@@ -117,21 +117,25 @@ function parseSSELine(line: string, isAnthropic: boolean): string {
     return parsed.choices?.[0]?.delta?.content ?? ''
   } catch (e) {
     // 忽略解析失败的断行（半包/心跳等），不污染回答内容
-    console.error('[SSE parse]', e, jsonStr)
+    if (import.meta.env.DEV) {
+      console.error('[SSE parse]', e, jsonStr)
+    }
     return ''
   }
 }
 
 async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
   let response: Response | null = null
-  const isAnthropic = getProviderFamily(ctx.provider!) === 'anthropic'
+  const provider = ctx.provider
+  if (!provider) throw new Error('Provider 未配置')
+  const isAnthropic = getProviderFamily(provider) === 'anthropic'
   if (isAnthropic) {
-    response = await tauriFetch(resolveEndpoint(ctx.provider!, '/v1/messages'), {
+    response = await tauriFetch(resolveEndpoint(provider, '/v1/messages'), {
       method: 'POST',
       headers: {
         ...buildCommonHeaders(ctx),
         'anthropic-version': '2023-06-01',
-        'x-api-key': ctx.provider!.apiKey!,
+        'x-api-key': provider.apiKey ?? '',
       },
       body: JSON.stringify({
         model: ctx.model,
@@ -142,7 +146,6 @@ async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
         stream: true,
       }),
       signal: ctx.signal,
-    // proxy: provider.isNeedProxy ? "http://127.0.0.1:7890" : undefined // 如果需要手动强制代理可以在此配置，通常标准Tauri会自动走系统代理
     })
   } else {
     const reqBody = JSON.stringify({
@@ -152,16 +155,18 @@ async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
       max_tokens: ctx.maxTokens,
       stream: true,
     })
-    response = await tauriFetch(resolveEndpoint(ctx.provider!), {
+    response = await tauriFetch(resolveEndpoint(provider), {
       method: 'POST',
       headers: {
         ...buildCommonHeaders(ctx),
-        Authorization: `Bearer ${ctx.provider!.apiKey}`,
+        Authorization: `Bearer ${provider.apiKey ?? ''}`,
       },
       body: reqBody,
       signal: ctx.signal,
     })
-    console.warn('会话请求参数配置：', reqBody)
+    if (import.meta.env.DEV) {
+      console.warn('[chat] 请求已发送')
+    }
   }
 
   if (!response.ok) {
@@ -304,7 +309,7 @@ export function useTauriAIChat() {
         model: resolvedModel.value,
         contents: content,
         messages: hisMessages.value,
-        baseUrl: provider.value.baseUrl!,
+        baseUrl: provider.value.baseUrl ?? '',
         signal: abortController.signal,
         systemPrompt: chatStore.currentConversation.config?.systemPrompt ?? defaultSystemPrompt,
         temperature: chatStore.currentConversation.config?.temperature,
@@ -312,26 +317,28 @@ export function useTauriAIChat() {
         onChunk(text: string): void {
           userMessage.answer = (userMessage.answer ?? '') + text
           userMessage.timestampAnswer = Date.now()
-          // 流式过程中只更新内存（保证 UI 响应），不逐 chunk 写库
-          chatStore.addChatMsg(chatStore.currentConversation!.id, userMessage, false)
+          const convId = chatStore.currentConversation?.id
+          if (convId) chatStore.addChatMsg(convId, userMessage, false)
           options.onChunk?.call(this, userMessage.answer)
         },
         onDone(): void {
-          // 流结束后一次性持久化最终回答
-          chatStore.addChatMsg(chatStore.currentConversation!.id, userMessage, true)
+          const convId = chatStore.currentConversation?.id
+          if (convId) chatStore.addChatMsg(convId, userMessage, true)
           options.onDone?.call(this)
         },
       }
-      assertProviderReady(chatRequestOptions.provider!, chatRequestOptions.model)
+      assertProviderReady(chatRequestOptions.provider ?? {} as AIProvider, chatRequestOptions.model)
       await tauriFetchChat(content, chatRequestOptions)
     } catch (caught) {
       error.value = caught instanceof Error ? caught : new Error(String(caught))
+      // 会话可能在异步过程中被删除，使用可选链安全获取 id
+      const convId = chatStore.currentConversation?.id
       // 中断属于用户主动行为，保留已生成的内容，不当作错误招出
       if (error.value.name === 'AbortError') {
-        chatStore.addChatMsg(chatStore.currentConversation.id, userMessage, true)
+        if (convId) chatStore.addChatMsg(convId, userMessage, true)
       } else {
         userMessage.error = error.value.message
-        chatStore.addChatMsg(chatStore.currentConversation.id, userMessage, true)
+        if (convId) chatStore.addChatMsg(convId, userMessage, true)
         throw error.value
       }
     } finally {

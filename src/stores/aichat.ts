@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import { ChatMsgRepo } from '@/database/chat-msg-repository'
 import { ConversationRepo } from '@/database/conversation-repository'
+import { DbTables } from '@/database/dbtables'
 
 import type { TauriAIChatMessage, TauriAIConversation } from './shard/chat-shard'
 import type { AIProvider } from './shard/provider-shard'
@@ -12,19 +13,24 @@ import { addConversationDb, initConversations } from './shard/chat-shard'
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<TauriAIConversation[]>([])
   const currentConversation = ref<TauriAIConversation | null>(null)
+  // 防止 initStore 被并发调用导致数据重复/丢失
+  let initPromise: Promise<void> | null = null
 
   const initStore = async () => {
+    if (initPromise) return initPromise
+    initPromise = (async () => {
+      try {
+        const data = await initConversations()
+        conversations.value = data.sort((a, b) => b.timestamp - a.timestamp)
+      } catch (error) {
+        console.error('Failed to initialize conversations:', error)
+        conversations.value = []
+      }
+    })()
     try {
-      // const providerStore = useProviderStore()
-      const data = await initConversations()
-      conversations.value = []
-      conversations.value.push(...data)
-    } catch (error) {
-      console.error('Failed to initialize conversations:', error)
-      conversations.value = []
+      await initPromise
     } finally {
-      // 按时间倒序排列（最新在前）
-      conversations.value = conversations.value.sort((a, b) => b.timestamp - a.timestamp)
+      initPromise = null
     }
   }
 
@@ -47,16 +53,23 @@ export const useChatStore = defineStore('chat', () => {
     conversations.value.push(con)
     return con
   }
-  const delConversation = (id: string) => {
-    ConversationRepo.deleteById(id).then((res) => {
-      if (res) {
-        // 同时删除该会话下的所有消息，避免产生孤儿记录
-        ChatMsgRepo.deleteMessage(id)
-        conversations.value = conversations.value.filter(conver => conver.id !== id)
-        if (currentConversation.value?.id === id)
-          currentConversation.value = null
-      }
-    })
+  const delConversation = async (id: string) => {
+    // 使用事务保证会话与消息删除的原子性，避免产生孤儿记录
+    try {
+      await ConversationRepo.runInTransaction([
+        async (db) => {
+          await db.execute(`DELETE FROM ${DbTables.ai_chat_conversation} WHERE id = $1`, [id])
+        },
+        async (db) => {
+          await db.execute(`DELETE FROM ${DbTables.ai_chat_message} WHERE conversation_id = $1`, [id])
+        },
+      ])
+      conversations.value = conversations.value.filter(conver => conver.id !== id)
+      if (currentConversation.value?.id === id)
+        currentConversation.value = null
+    } catch (err) {
+      console.error('删除会话失败:', err)
+    }
   }
   // 设置当前会话
   const setCurrentConversation = (conversation: string | TauriAIConversation) => {

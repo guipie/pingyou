@@ -120,7 +120,7 @@ function handleRemoveProvider(provider: AIProvider) {
       <div class="flex justify-between">
         <!-- 本地模型搭建卡片 -->
         <div
-          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
+          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
         >
           <Ollama />
         </div>

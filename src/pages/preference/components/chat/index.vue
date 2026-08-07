@@ -35,9 +35,9 @@ const curConversation = computed(() => chatStore.currentConversation)
 </script>
 
 <template>
-  <div class="h-full min-h-0 overflow-hidden bg-[--ant-color-bg-container] dark:bg-[--ant-color-bg-container-disabled]">
+  <div class="h-full min-h-0 overflow-hidden">
     <div class="h-full min-h-0 flex overflow-hidden">
-      <aside class="h-full w-62 shrink-0 b-0 b-r-1 b-solid bg-[--ant-color-fill-secondary] b-border-sec dark:bg-warmGray-9">
+      <aside class="h-full w-62 shrink-0 b-0 b-r-1 b-solid bg-gradient-from-blue-1 bg-gradient-to-black/2 bg-gradient-linear b-border-sec dark:bg-warmGray-9">
         <div class="flex items-center gap-2 px-2 pt-4">
           <div class="relative flex-1">
             <i class="i-lucide:search pointer-events-none absolute left-2 top-1/2 text-3.5 color-text-tertiary -translate-y-1/2" />
@@ -74,8 +74,8 @@ const curConversation = computed(() => chatStore.currentConversation)
             :trigger="['contextmenu']"
           >
             <button
-              class="wechat-friend-item w-full flex items-center gap-2 rounded dark:bg-warmGray-9"
-              :class="{ 'is-active': chatStore.currentConversation?.id === item.id }"
+              class="wechat-friend-item w-full flex items-center gap-2 bg-transparent rounded"
+              :class="{ 'is-pinned': item.options?.isPinned ?? false, 'is-active': chatStore.currentConversation?.id === item.id } "
               @click="chatStore.setCurrentConversation(item)"
             >
               <PyAvatar
@@ -103,7 +103,7 @@ const curConversation = computed(() => chatStore.currentConversation)
 
       <section
         v-if="conversations.length > 0 && curConversation?.id"
-        class="min-w-0 flex flex-1 flex-col overflow-hidden dark:bg-container"
+        class="min-w-0 flex flex-1 flex-col overflow-hidden"
       >
         <header class="h-13 flex shrink-0 items-center b-0 b-b-1 b-solid px-5 b-border-sec">
           <div class="text-4 font-medium color-text">
@@ -136,7 +136,7 @@ const curConversation = computed(() => chatStore.currentConversation)
         <main class="wechat-message-panel min-h-0 flex-1 overflow-y-auto px-8 py-6">
           <ChatMsg />
         </main>
-        <footer class="relative h-56 shrink-0 b-0 b-t-1 b-solid bg-container b-border-sec">
+        <footer class="relative h-56 shrink-0 b-0 b-t-1 b-solid b-border-sec">
           <ChatArea />
         </footer>
       </section>
@@ -196,11 +196,12 @@ const curConversation = computed(() => chatStore.currentConversation)
 .wechat-friend-item:hover {
   background: var(--ant-color-fill-tertiary);
 }
-
+.wechat-friend-item.is-pinned {
+  background: var(--ant-color-fill-tertiary);
+}
 .wechat-friend-item.is-active {
   background: #1aad70;
 }
-
 .wechat-friend-item.is-active * {
   color: #fff;
 }

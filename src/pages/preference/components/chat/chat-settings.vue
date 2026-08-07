@@ -21,7 +21,7 @@ type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
 const pvStore = useProviderStore()
 const chatStore = useChatStore()
 const routeStore = useRouteSettingStore()
-const curConversation = ref(JSON.parse(JSON.stringify(chatStore.currentConversation)))
+const curConversation = ref<TauriAIConversation | null>(JSON.parse(JSON.stringify(chatStore.currentConversation ?? 'null')))
 const curSelectedProviderVal = ref<string | null>(curConversation.value?.provider.value ?? null)
 const curSeletedProvider = computed(() => pvStore.stateProviders.find((item: AIProvider) => item.value === curSelectedProviderVal.value))
 const curSeletedModel = ref(curSeletedProvider.value?.defaultModel)
@@ -32,25 +32,28 @@ const { t } = useI18n()
 const cloneConversation = ref<TauriAIConversation | null>(null)
 const customModel = ref('')
 onMounted(() => {
-  if (!curConversation.value)
+  if (!curConversation.value) {
     routeStore.backHome()
+    return
+  }
   cloneConversation.value = JSON.parse(JSON.stringify(curConversation.value))
 })
 function handleRecovery() {
-  if (cloneConversation.value) {
+  if (cloneConversation.value && curConversation.value) {
     curConversation.value = cloneConversation.value
-    // chatStore.updateConversation(curConversation.value!)
   }
 }
 
 const avatarChange: UploadEmits['change'] = async (info) => {
+  if (!curConversation.value) return
   if (info.file) {
-    curConversation.value!.avatar = await getImgBase64(info.file as FileType)
+    curConversation.value.avatar = await getImgBase64(info.file as FileType)
   } else {
     message.warning('上传失败')
   }
 }
 function saveConversation() {
+  if (!curConversation.value) return
   if (!curSeletedProvider.value || !curSeletedProvider.value.apiKey) {
     return message.warning('请配置模型供应商')
   }
@@ -58,9 +61,9 @@ function saveConversation() {
     return message.warning('请选择模型')
   if (!curConversation.value.title.trim())
     return message.warning('请填写会话名称')
-  curConversation.value!.provider = curSeletedProvider.value
-  curConversation.value!.provider.defaultModel = curSeletedModel.value
-  chatStore.updateConversation(curConversation.value!)
+  curConversation.value.provider = curSeletedProvider.value
+  curConversation.value.provider.defaultModel = curSeletedModel.value
+  chatStore.updateConversation(curConversation.value)
   message.success('保存成功')
 }
 </script>
@@ -101,7 +104,10 @@ function saveConversation() {
       </div>
     </div>
 
-    <ProList title="">
+    <ProList
+      v-if="curConversation"
+      title=""
+    >
       <ProListItem
         description="启用后，可以和桌宠聊天。API Key 会保存在本机配置中。"
         title="启用聊天"

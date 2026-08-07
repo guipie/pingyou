@@ -26,8 +26,9 @@ const curType = ref<ModelEngine | 'all'>('all')
 // const model3dModels = computed(() => modelStore.models.filter(item => item.engine === '3d'))
 
 function getMasonryItems(models: Model[]) {
-  // 随机排序
-  return models.sort((a, b) => a.id.localeCompare(b.id)).map(item => ({
+  // 按模型 id 字典序排序（注释修正：原注释"随机排序"有误）
+  // 创建副本再排序，避免原地修改 store 中的 models 数组导致数据污染
+  return [...models].sort((a, b) => a.id.localeCompare(b.id)).map(item => ({
     key: item.id,
     data: item,
   }))
@@ -51,6 +52,7 @@ async function handleDelete(item: Model) {
   } finally {
     modelStore.models = modelStore.models.filter(item => item.id !== id)
 
+    // 删除后若当前模型被清空，回退到列表首项；列表为空时置为 undefined，避免访问 undefined 的属性
     if (id === modelStore.currentModel?.id) {
       modelStore.currentModel = modelStore.models[0]
     }

@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 
-import { DataProviders } from '@/assets/data/provider'
+import { DefaultProviders } from '@/constants/provider'
 import { ConversationRepo } from '@/database/conversation-repository'
 
 import type { AIProvider } from './provider-shard'
@@ -70,7 +70,7 @@ export interface TauriAIConversationConfig {
   maxTokens?: number
 }
 export const defaultSystemPrompt = '你是我的电脑桌面上一个随时陪伴我的桌面好友。温暖、简短且俏皮地回复.'
-export const defaultProvider = computed(() => useProviderStore().stateProviders.find((m: AIProvider) => !!m.apiKey) ?? DataProviders[0])
+export const defaultProvider = computed(() => useProviderStore().stateProviders.find((m: AIProvider) => !!m.apiKey) ?? useProviderStore().stateProviders[0] ?? DefaultProviders[0])
 // 初始化会话列表
 export function initConversations(): Promise<TauriAIConversation[]> {
   return ConversationRepo.getConversations().then(async (conversations) => {

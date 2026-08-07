@@ -21,6 +21,10 @@ const open = ref(false)
 function handleOk() {
   if (!model.name || !model.modelId)
     return message.warning('请填写完整')
+  // 校验 modelId 在当前供应商下唯一，避免 v-for key 冲突与 Select 值冲突
+  const exists = props.provider.models?.some(m => m.modelId === model.modelId)
+  if (exists)
+    return message.warning('该模型ID已存在，请更换')
   providerStore.updateProviderModels(props.provider.provider, JSON.parse(JSON.stringify(model)))
   open.value = false
   emits('modelSaved', JSON.parse(JSON.stringify(model)))

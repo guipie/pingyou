@@ -146,7 +146,6 @@ useTauriListen<number>(LISTEN_KEY.SET_EXPRESSION, ({ payload }) => {
   live2d.setExpression(payload)
 })
 useTauriListen<string>(LISTEN_KEY.WIN_MESSAGE, ({ payload }) => {
-  // console.warn('消息来了', payload)
   openAdjacentWindow(WINDOW_LABEL.WINMSG, { msg: payload })
 })
 function handleMouseDown() {
@@ -190,12 +189,10 @@ function handleMouseMove(event: MouseEvent) {
   catStore.window.scale = round(nextScale)
 }
 const isMouseOver = ref(false)
-// ✅ 新增：鼠标进入事件
 function handleMouseEnter() {
   isMouseOver.value = true
 }
 
-// ✅ 新增：鼠标离开事件
 function handleMouseLeave() {
   // appWindow.setShadow(false)
   isMouseOver.value = false
@@ -252,12 +249,3 @@ function handleMouseLeave() {
     </div>
   </div>
 </template>
-
-<style>
-html,
-body #app {
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-</style>

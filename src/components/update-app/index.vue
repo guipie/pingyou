@@ -12,7 +12,8 @@ import { useI18n } from 'vue-i18n'
 import VueMarkdown from 'vue-markdown-render'
 
 import { useTauriListen } from '@/composables/useTauriListen'
-import { GITHUB_LINK, LISTEN_KEY, UPGRADE_LINK_ACCESS_KEY } from '@/constants'
+import { UPDATER_ACCESS_KEY } from '@/config'
+import { GITHUB_LINK, LISTEN_KEY } from '@/constants'
 import { showWindow } from '@/plugins/window'
 import { useGeneralStore } from '@/stores/general'
 
@@ -71,9 +72,9 @@ async function checkUpdate(visibleMessage = false) {
   try {
     const update = await check({
       timeout: 5000,
-      headers: {
-        'X-AccessKey': UPGRADE_LINK_ACCESS_KEY,
-      },
+      headers: UPDATER_ACCESS_KEY
+        ? { 'X-AccessKey': UPDATER_ACCESS_KEY }
+        : undefined,
     })
 
     if (update) {
@@ -103,11 +104,15 @@ async function checkUpdate(visibleMessage = false) {
 }
 
 function replaceBody(body: string) {
-  return body
+  // 更新日志来自远程服务器，先做文本清洗
+  const cleaned = body
     .replace(/&nbsp;/g, '')
     .split('\n')
     .map(line => line.replace(/\s*-\s+by\s+@.*/, ''))
     .join('\n')
+  // 剥离所有原始 HTML 标签（含 script/img onerror 等），仅保留纯文本/markdown 语法
+  // vue-markdown-render 会将合法 markdown 转为安全的 DOM
+  return cleaned.replace(/<[^>]+>/g, '')
 }
 
 async function handleOk() {
