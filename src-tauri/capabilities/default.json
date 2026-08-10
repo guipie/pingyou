@@ -1,12 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the app windows (main/preference/winchat/winmsg)",
+  "description": "Capability for the app windows (main/preference/winchat/winmsg/provider-add)",
   "windows": [
     "main",
     "preference",
     "winchat",
-    "winmsg"
+    "winmsg",
+    "provider-add"
   ],
   "permissions": [
     "core:default",
@@ -14,17 +15,39 @@
     {
       "identifier": "http:allow-fetch",
       "allow": [
-        { "url": "https://api.deepseek.com" },
-        { "url": "https://ark.cn-beijing.volces.com" },
-        { "url": "https://dashscope.aliyuncs.com" },
-        { "url": "https://generativelanguage.googleapis.com" },
-        { "url": "https://api.openai.com" },
-        { "url": "https://api.anthropic.com" },
-        { "url": "https://open.bigmodel.cn" },
-        { "url": "https://api.moonshot.cn" },
-        { "url": "https://api.minimax.chat" },
-        { "url": "https://gh-proxy.com" },
-        { "url": "http://127.0.0.1:11435/*" }
+        {
+          "url": "https://api.deepseek.com"
+        },
+        {
+          "url": "https://ark.cn-beijing.volces.com"
+        },
+        {
+          "url": "https://dashscope.aliyuncs.com"
+        },
+        {
+          "url": "https://generativelanguage.googleapis.com"
+        },
+        {
+          "url": "https://api.openai.com"
+        },
+        {
+          "url": "https://api.anthropic.com"
+        },
+        {
+          "url": "https://open.bigmodel.cn"
+        },
+        {
+          "url": "https://api.moonshot.cn"
+        },
+        {
+          "url": "https://api.minimax.chat"
+        },
+        {
+          "url": "https://gh-proxy.com"
+        },
+        {
+          "url": "http://127.0.0.1:11435/*"
+        }
       ]
     },
     "core:window:allow-set-shadow",
@@ -42,6 +65,9 @@
     "core:webview:allow-webview-close",
     "core:window:allow-close",
     "core:window:allow-hide",
+    "core:window:allow-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-destroy",
     "admin-status:default",
     "custom-window:default",
     "os:default",
@@ -50,9 +76,15 @@
     {
       "identifier": "opener:allow-open-path",
       "allow": [
-        { "path": "$APPDATA/**" },
-        { "path": "$RESOURCE/**" },
-        { "path": "$HOME/**" }
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$RESOURCE/**"
+        },
+        {
+          "path": "$HOME/**"
+        }
       ]
     },
     "pinia:default",

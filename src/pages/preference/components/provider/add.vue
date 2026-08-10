@@ -55,6 +55,7 @@ onMounted(async () => {
   // ── 解析 URL query 参数，预填表单 ──
   const hash = window.location.hash // e.g. "#/provider-add?baseUrl=xxx&modelId=yyy"
   const queryStr = hash.includes('?') ? hash.split('?')[1] : ''
+
   if (queryStr) {
     const params = new URLSearchParams(queryStr)
     const baseUrl = params.get('baseUrl')

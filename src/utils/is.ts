@@ -7,3 +7,9 @@ export function isImage(value: string) {
 export function inBetween(value: number, minimum: number, maximum: number) {
   return value >= minimum && value <= maximum
 }
+
+// 是否是布尔值
+export function isBoolean(value: any) {
+  if (!value) return false
+  return value === true || value.toLowerCase() === 'true' || value === 1 || value === '1'
+}

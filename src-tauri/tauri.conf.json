@@ -70,7 +70,7 @@
         "url": "/#/provider-add",
         "visible": false,
         "shadow": false,
-        "decorations": false,
+        "height": 840,
         "resizable": true
       }
     ],

@@ -9,15 +9,20 @@ import type { RoutersName } from '@/router/roters'
 import { LISTEN_KEY } from '@/constants'
 
 // tauri的路由封装 统一管理
-export async function openNewWindow(routerName: RoutersName, options?: { title?: string, width?: number, height?: number, minHeight?: number, query?: string }) {
+export async function openNewWindow(routerName: RoutersName, options?: { isForeCreate?: boolean, title?: string, width?: number, height?: number, minHeight?: number, query?: string }) {
   // 检查窗口是否已经存在，避免重复打开
   const existingWindow = await WebviewWindow.getByLabel(routerName)
 
   if (existingWindow) {
+    if (!options?.isForeCreate) {
     // 如果已存在，则显示并聚焦
-    await existingWindow.show()
-    await existingWindow.setFocus()
-    return
+      await existingWindow.show()
+      await existingWindow.setFocus()
+      return
+    } else {
+      // 如果强制创建，则销毁旧窗口
+      await existingWindow.destroy()
+    }
   }
 
   // 创建新窗口

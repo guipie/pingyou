@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RedoOutlined, SettingOutlined } from '@antdv-next/icons'
+import { CheckCircleOutlined, ExclamationCircleOutlined, RedoOutlined, SettingOutlined } from '@antdv-next/icons'
 import { Button, message, Popconfirm, Tag } from 'antdv-next'
 import { computed, onUnmounted, ref } from 'vue'
 
@@ -10,6 +10,7 @@ import PyAvatar from '@/components/py-avatar.vue'
 import { LISTEN_KEY } from '@/constants'
 import { RoutersName } from '@/router/roters'
 import { useProviderStore } from '@/stores/aiprovider'
+import { isBoolean } from '@/utils/is.ts'
 import { openNewWindow } from '@/utils/win-manager'
 
 import Setting from './components/setting.vue'
@@ -46,8 +47,6 @@ function openSetting(provider: AIProvider) {
 function handleOpenAddModal() {
   openNewWindow(RoutersName.ProviderAdd, {
     title: '添加自定义模型',
-    width: 520,
-    height: 640,
   })
 }
 
@@ -55,9 +54,8 @@ function handleOpenAddModal() {
 function handleUseLocalModel(payload: { baseUrl: string, modelName: string, modelId: string, provider: string }) {
   const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}`
   openNewWindow(RoutersName.ProviderAdd, {
+    isForeCreate: true,
     title: '添加本地大模型',
-    width: 520,
-    height: 700,
     query,
   })
 }
@@ -121,10 +119,31 @@ function handleRemoveProvider(provider: AIProvider) {
               <div class="flex items-center gap-2">
                 <span class="text-4 font-semibold">{{ provider.provider }}</span>
                 <Tag
-                  v-if="provider.apiKey"
+                  v-if="isBoolean(provider.isCustom) "
                   color="success"
+                  variant="solid"
                 >
-                  已配置
+                  <template #icon>
+                    <CheckCircleOutlined />
+                  </template>自定义
+                </Tag>
+                <Tag
+                  v-else-if="provider.apiKey"
+                  color="success"
+                  variant="filled"
+                >
+                  <template #icon>
+                    <CheckCircleOutlined />
+                  </template>已配置
+                </Tag>
+                <Tag
+                  v-else
+                  color="warning"
+                >
+                  <template #icon>
+                    <ExclamationCircleOutlined />
+                  </template>
+                  未配置Key
                 </Tag>
               </div>
             </div>
