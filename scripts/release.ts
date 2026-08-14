@@ -622,7 +622,7 @@ Git Tag
   )
 
   run(
-    `git commit -m "release: ${tag}"`,
+    `git commit -m "chore(release): ${tag}"`,
   )
 
   /*
