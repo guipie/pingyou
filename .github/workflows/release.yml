@@ -17,9 +17,9 @@ jobs:
 
       matrix:
         include:
-          # =========================
+          # ========================================
           # macOS
-          # =========================
+          # ========================================
 
           - name: macOS ARM64
             platform: macos-latest
@@ -29,9 +29,9 @@ jobs:
             platform: macos-latest
             target: x86_64-apple-darwin
 
-          # =========================
+          # ========================================
           # Windows
-          # =========================
+          # ========================================
 
           - name: Windows x64
             platform: windows-latest
@@ -45,9 +45,9 @@ jobs:
             platform: windows-latest
             target: aarch64-pc-windows-msvc
 
-          # =========================
+          # ========================================
           # Linux
-          # =========================
+          # ========================================
 
           - name: Linux x64
             platform: ubuntu-22.04
@@ -60,16 +60,30 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      # =========================
-      # Checkout
-      # =========================
+
+      # ========================================
+      # 1. Checkout
+      # ========================================
 
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # =========================
-      # Node.js
-      # =========================
+      # ========================================
+      # 2. Setup pnpm
+      #
+      # 必须在 setup-node 之前
+      # 因为 setup-node 的 cache: pnpm
+      # 需要先找到 pnpm 可执行文件
+      # ========================================
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      # ========================================
+      # 3. Setup Node.js
+      # ========================================
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -77,27 +91,18 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      # =========================
-      # pnpm
-      # =========================
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
-      # =========================
-      # Rust
-      # =========================
+      # ========================================
+      # 4. Setup Rust
+      # ========================================
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      # =========================
-      # Linux dependencies
-      # =========================
+      # ========================================
+      # 5. Linux dependencies
+      # ========================================
 
       - name: Install Linux dependencies
         if: startsWith(matrix.platform, 'ubuntu')
@@ -112,9 +117,9 @@ jobs:
             patchelf \
             xdg-utils
 
-      # =========================
-      # Linux ARM64 cross compiler
-      # =========================
+      # ========================================
+      # 6. Linux ARM64 cross compiler
+      # ========================================
 
       - name: Install ARM64 cross compiler
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -125,9 +130,9 @@ jobs:
             gcc-aarch64-linux-gnu \
             g++-aarch64-linux-gnu
 
-      # =========================
-      # Rust cache
-      # =========================
+      # ========================================
+      # 7. Rust cache
+      # ========================================
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -135,33 +140,42 @@ jobs:
           workspaces: |
             target
 
-      # =========================
-      # Frontend dependencies
-      # =========================
+      # ========================================
+      # 8. Install frontend dependencies
+      # ========================================
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # =========================
-      # Build + Sign + Release
-      # =========================
+      # ========================================
+      # 9. Build + Sign + GitHub Release
+      # ========================================
 
       - name: Build and publish Tauri application
         uses: tauri-apps/tauri-action@v0.6.2
 
         env:
-          # GitHub Release
+          # ====================================
+          # GitHub Release Token
+          # ====================================
+
           GITHUB_TOKEN: ${{ github.token }}
 
-          # Tauri updater signing
+          # ====================================
+          # Tauri Updater Signer
+          # ====================================
+
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
         with:
-          # 当前 tag，例如 v1.1.2
+          # ====================================
+          # Release
+          # ====================================
+
           tagName: ${{ github.ref_name }}
 
-          # Release 名称
           releaseName: Pingyou ${{ github.ref_name }}
 
           releaseBody: |
@@ -169,11 +183,11 @@ jobs:
 
             See the assets below to download the installer.
 
-          # 多个平台并行构建时先创建 Draft Release
+          # 多平台构建期间保持 Draft
           releaseDraft: true
 
-          # 正式 Release
+          # 正式 Release，而不是 prerelease
           prerelease: false
 
-          # 当前平台 target
+          # 当前平台对应的 Rust target
           args: --target ${{ matrix.target }}
