@@ -18,8 +18,8 @@ jobs:
           fetch-depth: 0
       - name: Set output
         id: vars
-        # 兼容手动触发：如果是 tag 触发取 tag 名，否则取当前分支名
         run: |
+          # 提取当前 Tag 或分支名
           CLEAN_TAG=${GITHUB_REF#refs/tags/}
           if [ "$CLEAN_TAG" = "$GITHUB_REF" ]; then
             CLEAN_TAG=${GITHUB_REF#refs/heads/}
@@ -29,13 +29,34 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Generate changelog
-        id: create_release
-        run: npx changelogithub --draft --name ${{ steps.vars.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      # 替代 changelogithub：使用更加健壮的 GitHub 官方 Release 动作
+      # 如果是手动触发且没有 Tag，它会创建一个以分支名为名字的 Draft
+      - name: Create Draft Release
+        id: create_draft
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.RELEASE_TOKEN }}
+          script: |
+            try {
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: "${{ steps.vars.outputs.tag }}",
+                name: "Pingyou ${{ steps.vars.outputs.tag }}",
+                body: "Automated release via GitHub Actions.",
+                draft: true,
+                prerelease: false
+              });
+            } catch (error) {
+              // 如果 Release 已经存在，防止任务报错中断
+              if (error.status === 422) {
+                core.info("Release already exists, moving on.");
+              } else {
+                throw error;
+              }
+            }
 
   build-app:
     needs: create-release
