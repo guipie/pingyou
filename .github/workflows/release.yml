@@ -5,8 +5,6 @@ on:
     tags:
       - 'v*'
 
-# GitHub Actions 自带的 GITHUB_TOKEN
-# 允许 tauri-action 创建 Release、上传 Release Assets
 permissions:
   contents: write
 
@@ -19,51 +17,37 @@ jobs:
 
       matrix:
         include:
-          # =========================
           # macOS Apple Silicon
-          # =========================
           - name: macOS ARM64
             platform: macos-latest
             target: aarch64-apple-darwin
 
-          # =========================
           # macOS Intel
-          # =========================
           - name: macOS x64
             platform: macos-latest
             target: x86_64-apple-darwin
 
-          # =========================
           # Windows x64
-          # =========================
           - name: Windows x64
             platform: windows-latest
             target: x86_64-pc-windows-msvc
 
-          # =========================
           # Windows x86
-          # =========================
           - name: Windows x86
             platform: windows-latest
             target: i686-pc-windows-msvc
 
-          # =========================
           # Windows ARM64
-          # =========================
           - name: Windows ARM64
             platform: windows-latest
             target: aarch64-pc-windows-msvc
 
-          # =========================
           # Linux x64
-          # =========================
           - name: Linux x64
             platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
 
-          # =========================
           # Linux ARM64
-          # =========================
           - name: Linux ARM64
             platform: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
@@ -71,39 +55,39 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      # ==========================================
+      # -----------------------------
       # Checkout
-      # ==========================================
+      # -----------------------------
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # ==========================================
+      # -----------------------------
       # Node.js
-      # ==========================================
+      # -----------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
 
-      # ==========================================
+      # -----------------------------
       # pnpm
-      # ==========================================
+      # -----------------------------
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
 
-      # ==========================================
+      # -----------------------------
       # Rust
-      # ==========================================
-      - name: Install Rust stable
+      # -----------------------------
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      # ==========================================
+      # -----------------------------
       # Linux dependencies
-      # ==========================================
+      # -----------------------------
       - name: Install Linux dependencies
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
@@ -117,9 +101,9 @@ jobs:
             patchelf \
             xdg-utils
 
-      # ==========================================
+      # -----------------------------
       # Linux ARM64 cross compiler
-      # ==========================================
+      # -----------------------------
       - name: Install ARM64 cross compiler
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -129,57 +113,52 @@ jobs:
             gcc-aarch64-linux-gnu \
             g++-aarch64-linux-gnu
 
-      # ==========================================
+      # -----------------------------
       # Rust cache
-      # ==========================================
+      # -----------------------------
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: |
             target
 
-      # ==========================================
-      # Install frontend dependencies
-      # ==========================================
+      # -----------------------------
+      # Install dependencies
+      # -----------------------------
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # ==========================================
-      # Build and publish Tauri application
-      # ==========================================
+      # -----------------------------
+      # Build + Sign + Release
+      # -----------------------------
       - name: Build and publish Tauri application
         uses: tauri-apps/tauri-action@v0.6.2
 
         env:
-          # GitHub 自动提供，不需要 RELEASE_TOKEN
+          # GitHub Actions built-in token
           GITHUB_TOKEN: ${{ github.token }}
 
-          # Tauri updater 签名
+          # Tauri updater signing
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-          # CI 环境
-          CI: true
-
         with:
-          # 当前 Git tag，例如：
-          # v1.0.0
+          # 当前 tag，例如 v1.1.1
           tagName: ${{ github.ref_name }}
 
           # GitHub Release 名称
           releaseName: Pingyou ${{ github.ref_name }}
 
-          # Release 描述
           releaseBody: |
             ## Pingyou ${{ github.ref_name }}
 
-            See the assets below to download the installer for your platform.
+            See the assets below to download the installer.
 
-          # 先创建 Draft Release
+          # 创建 Draft Release
           releaseDraft: true
 
-          # 正式 Release，而不是 Pre-release
+          # 正式 Release，不是 prerelease
           prerelease: false
 
-          # 当前平台对应的 Rust target
+          # 当前平台 target
           args: --target ${{ matrix.target }}
