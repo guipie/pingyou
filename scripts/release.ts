@@ -31,9 +31,9 @@ const cargoPath = resolve(
   'Cargo.toml',
 )
 
+// 你的 Cargo.lock 在项目根目录
 const cargoLockPath = resolve(
   rootDir,
-  'src-tauri',
   'Cargo.lock',
 )
 
@@ -47,6 +47,9 @@ interface PackageJson {
   [key: string]: unknown
 }
 
+/**
+ * 执行命令
+ */
 function run(command: string): void {
   console.log(`\n$ ${command}`)
 
@@ -56,6 +59,9 @@ function run(command: string): void {
   })
 }
 
+/**
+ * 获取命令输出
+ */
 function outputOf(command: string): string {
   return execSync(command, {
     cwd: rootDir,
@@ -63,12 +69,18 @@ function outputOf(command: string): string {
   }).trim()
 }
 
+/**
+ * 读取 package.json
+ */
 function readPackageJson(): PackageJson {
   return JSON.parse(
     readFileSync(packagePath, 'utf8'),
   ) as PackageJson
 }
 
+/**
+ * 获取当前版本
+ */
 function getCurrentVersion(): string {
   const pkg = readPackageJson()
 
@@ -81,26 +93,59 @@ function getCurrentVersion(): string {
   return pkg.version
 }
 
+/**
+ * 修改 package.json 版本
+ *
+ * 保留原来的文件格式，并且：
+ * - 不改变其他字段
+ * - 保留文件原来的换行风格
+ */
 function setPackageVersion(
   version: string,
 ): void {
-  const pkg = readPackageJson()
+  const original = readFileSync(
+    packagePath,
+    'utf8',
+  )
+
+  const pkg = JSON.parse(
+    original,
+  ) as PackageJson
 
   pkg.version = version
 
+  const formatted
+    = JSON.stringify(pkg, null, 2)
+
+  /*
+   * 保持 package.json 原来的
+   * 是否有末尾换行。
+   */
+  const hasTrailingNewline
+    = original.endsWith('\n')
+
+  const finalContent
+    = hasTrailingNewline
+      ? `${formatted}\n`
+      : formatted
+
   writeFileSync(
     packagePath,
-    `${JSON.stringify(pkg, null, 2)}\n`,
+    finalContent,
   )
 }
 
+/**
+ * 计算新版本
+ */
 function bumpVersion(
   version: string,
   type: BumpType,
 ): string {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(
-    version,
-  )
+  const match
+    = /^(\d+)\.(\d+)\.(\d+)$/.exec(
+      version,
+    )
 
   if (!match) {
     throw new Error(
@@ -133,10 +178,9 @@ function bumpVersion(
 }
 
 /**
- * 只修改 Cargo.toml 的 [package] 区块中的 version。
+ * 同步 src-tauri/Cargo.toml
  *
- * 不使用跨行的 [\s\S]*? 正则，
- * 避免 ESLint 的 regexp 规则报错。
+ * 只修改 [package] 区块里的 version。
  */
 function syncCargoToml(
   version: string,
@@ -152,13 +196,14 @@ function syncCargoToml(
     'utf8',
   )
 
-  const lines = content.split(/\r?\n/)
+  const lines
+    = content.split(/\r?\n/)
 
   let insidePackageSection = false
   let versionUpdated = false
 
-  const updatedLines = lines.map(
-    (line) => {
+  const updatedLines
+    = lines.map((line) => {
       const sectionMatch
         = /^\s*\[([^\]]+)\]\s*$/.exec(
           line,
@@ -178,14 +223,13 @@ function syncCargoToml(
         versionUpdated = true
 
         const indentation
-          = line.match(/^\s*/)?.[0] ?? ''
+          = /^\s*/.exec(line)?.[0] ?? ''
 
         return `${indentation}version = "${version}"`
       }
 
       return line
-    },
-  )
+    })
 
   if (!versionUpdated) {
     throw new Error(
@@ -200,17 +244,12 @@ function syncCargoToml(
 }
 
 /**
- * 让 Cargo 自己更新 Cargo.lock。
- *
- * 注意：
- * Cargo.lock 通常位于项目根目录，
- * 如果你的项目实际位于 src-tauri/Cargo.lock，
- * 请根据实际目录调整 cargoLockPath。
+ * 使用 Cargo 自动更新根目录 Cargo.lock
  */
 function updateCargoLock(): void {
   if (!existsSync(cargoLockPath)) {
     console.log(
-      '\n⚠️ 没有找到 Cargo.lock，Cargo 会在需要时生成它。',
+      '\n⚠️ 当前没有找到根目录 Cargo.lock。',
     )
   }
 
@@ -223,32 +262,46 @@ function updateCargoLock(): void {
   )
 }
 
+/**
+ * 检查 Git 工作区
+ */
 function checkGitClean(): void {
-  const status = outputOf(
-    'git status --porcelain',
-  )
+  const status
+    = outputOf(
+      'git status --porcelain',
+    )
 
   if (status.length > 0) {
     console.error(
-      '\n❌ Git 工作区不是干净的：',
+      '\n❌ Git 工作区不是干净的：\n',
     )
 
     console.error(status)
 
-    console.error(
-      '\n请先提交、stash 或丢弃当前修改。',
-    )
+    console.error(`
+请先处理当前修改：
+
+  git status
+
+然后再执行：
+
+  pnpm release
+`)
 
     exit(1)
   }
 }
 
+/**
+ * 检查当前分支
+ */
 function checkBranch(
   force: boolean,
 ): void {
-  const branch = outputOf(
-    'git branch --show-current',
-  )
+  const branch
+    = outputOf(
+      'git branch --show-current',
+    )
 
   if (branch === 'main') {
     return
@@ -263,6 +316,7 @@ function checkBranch(
 发布操作默认要求在 main 分支执行。
 
 如果确认要继续：
+
   pnpm release -- --force
 `)
 
@@ -270,6 +324,9 @@ function checkBranch(
   }
 }
 
+/**
+ * 检查 origin
+ */
 function checkRemote(): void {
   try {
     outputOf(
@@ -284,6 +341,9 @@ function checkRemote(): void {
   }
 }
 
+/**
+ * 检查 Tag 是否已经存在
+ */
 function checkTagNotExists(
   tag: string,
 ): void {
@@ -302,10 +362,13 @@ function checkTagNotExists(
 
     exit(1)
   } catch {
-    // Tag 不存在，继续发布。
+    // Tag 不存在，继续。
   }
 }
 
+/**
+ * 用户确认
+ */
 async function confirm(
   message: string,
 ): Promise<boolean> {
@@ -327,6 +390,9 @@ async function confirm(
   )
 }
 
+/**
+ * 恢复版本文件
+ */
 function restoreFiles(): void {
   console.log(
     '\n正在恢复版本文件...',
@@ -334,7 +400,7 @@ function restoreFiles(): void {
 
   try {
     run(
-      'git checkout -- package.json src-tauri/Cargo.toml src-tauri/Cargo.lock',
+      'git checkout -- package.json src-tauri/Cargo.toml Cargo.lock',
     )
   } catch {
     console.error(
@@ -343,6 +409,9 @@ function restoreFiles(): void {
   }
 }
 
+/**
+ * 获取发布类型
+ */
 function getBumpType(
   args: string[],
 ): BumpType {
@@ -357,9 +426,14 @@ function getBumpType(
   return 'patch'
 }
 
+/**
+ * 主流程
+ */
 async function main(): Promise<void> {
-  // 不再使用 process.argv
-  const args = argv.slice(2)
+  // 使用 node:process 导入的 argv，
+  // 不直接使用全局 process
+  const args
+    = argv.slice(2)
 
   const bumpType
     = getBumpType(args)
@@ -452,7 +526,7 @@ Git Tag  : ${tag}
 
   /*
    * ========================================
-   * 6. Cargo 更新 Cargo.lock
+   * 6. 更新 Cargo.lock
    * ========================================
    */
 
@@ -490,6 +564,9 @@ package.json
 src-tauri/Cargo.toml
   ${newVersion}
 
+Cargo.lock
+  根目录 Cargo.lock
+
 Git Tag
   ${tag}
 ══════════════════════════════════════════
@@ -499,8 +576,12 @@ Git Tag
     '\n版本文件修改：',
   )
 
+  /*
+   * 关键：
+   * --no-pager 防止 Windows 下进入 less
+   */
   run(
-    'git diff -- package.json src-tauri/Cargo.toml src-tauri/Cargo.lock',
+    'git --no-pager diff -- package.json src-tauri/Cargo.toml Cargo.lock',
   )
 
   /*
@@ -537,7 +618,7 @@ Git Tag
   )
 
   run(
-    'git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock',
+    'git add package.json src-tauri/Cargo.toml Cargo.lock',
   )
 
   run(
@@ -593,17 +674,9 @@ Git Tag
 Tag：
   ${tag}
 
-GitHub Actions 将自动开始构建：
+GitHub Actions 已经开始构建。
 
-  ✓ macOS ARM64
-  ✓ macOS x64
-  ✓ Windows x64
-  ✓ Windows x86
-  ✓ Windows ARM64
-  ✓ Linux x64
-  ✓ Linux ARM64
-
-GitHub Actions：
+Actions：
 https://github.com/guipie/pingyou/actions
 `)
 }
