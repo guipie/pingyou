@@ -7,9 +7,17 @@
   // Auto fix
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
-    "source.organizeImports": "never"
+    "source.organizeImports": "never", 
+    "source.fixAll.markdownlint": "explicit"
   },
-
+  "[markdown]": {
+      "editor.formatOnSave": true,
+      "editor.formatOnPaste": true
+  },
+  "markdownlint.config": {
+    "default": true,
+    "MD033": false
+  },
   // Silent the stylistic rules in you IDE, but still auto fix them
   "eslint.rules.customizations": [
     { "rule": "style/*", "severity": "off", "fixable": true },

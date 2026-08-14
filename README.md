@@ -1,16 +1,18 @@
+# pingyou
+
 ![pingyou](https://socialify.git.ci/guipie/pingyou/image?custom_language=Rust&description=1&forks=1&issues=1&language=1&logo=https%3A%2F%2Fgithub.com%2Fguipie%2Fpingyou%2Fblob%2Fmain%2Fpublic%2Faipingyou-dark.png%3Fraw%3Dtrue&name=1&owner=1&pulls=1&stargazers=1&theme=Dark)
 
 <div align="center">
   <div>
-    <a href="https://github.com/guipie/pingyou/releases"><img alt="Windows" src="https://img.shields.io/badge/-Windows-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB0PSIxNzI2MzA1OTcxMDA2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE1NDgiIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4Ij48cGF0aCBkPSJNNTI3LjI3NTU1MTYxIDk2Ljk3MTAzMDEzdjM3My45OTIxMDY2N2g0OTQuNTEzNjE5NzVWMTUuMDI2NzU3NTN6TTUyNy4yNzU1NTE2MSA5MjguMzIzNTA4MTVsNDk0LjUxMzYxOTc1IDgwLjUyMDI4MDQ5di00NTUuNjc3NDcxNjFoLTQ5NC41MTM2MTk3NXpNNC42NzA0NTEzNiA0NzAuODMzNjgyOTdINDIyLjY3Njg1OTI1VjExMC41NjM2ODE5N2wtNDE4LjAwNjQwNzg5IDY5LjI1Nzc5NzUzek00LjY3MDQ1MTM2IDg0Ni43Njc1OTcwM0w0MjIuNjc2ODU5MjUgOTE0Ljg2MDMxMDEzVjU1My4xNjYzMTcwM0g0LjY3MDQ1MTM2eiIgcC1pZD0iMTU0OSIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg==" /></a>
-    <a href="https://github.com/guipie/pingyou/releases"><img alt="MacOS" src="https://img.shields.io/badge/-MacOS-black?style=flat-square&logo=apple&logoColor=white" /></a>
-    <a href="https://github.com/guipie/pingyou/releases"><img alt="Linux" src="https://img.shields.io/badge/-Linux-yellow?style=flat-square&logo=linux&logoColor=white" /></a>
+    <a href="https://github.com/guipie/pingyou/releases"><img alt="Windows" src="https://img.shields.io/badge/-Windows-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB0PSIxNzI2MzA1OTcxMDA2IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE1NDgiIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4Ij48cGF0aCBkPSJNNTI3LjI3NTU1MTYxIDk2Ljk3MTAzMDEzdjM3My45OTIxMDY2N2g0OTQuNTEzNjE5NzVWMTUuMDI2NzU3NTN6TTUyNy4yNzU1NTE2MSA5MjguMzIzNTA4MTVsNDk0LjUxMzYxOTc1IDgwLjUyMDI4MDQ5di00NTUuNjc3NDcxNjFoLTQ5NC41MTM2MTk3NXpNNC42NzA0NTEzNiA0NzAuODMzNjgyOTdINDIyLjY3Njg1OTI1VjExMC41NjM2ODE5N2wtNDE4LjAwNjQwNzg5IDY5LjI1Nzc5NzUzek00LjY3MDQ1MTM2IDg0Ni43Njc1OTcwM0w0MjIuNjc2ODU5MjUgOTE0Ljg2MDMxMDEzVjU1My4xNjYzMTcwM0g0LjY3MDQ1MTM2eiIgcC1pZD0iMTU0OSIgZmlsbD0iI2ZmZmZmZiI+PC9wYXRoPjwvc3ZnPg=="></img></a>
+    <a href="https://github.com/guipie/pingyou/releases"><img alt="MacOS" src="https://img.shields.io/badge/-MacOS-black?style=flat-square&logo=apple&logoColor=white"></img></a>
+    <a href="https://github.com/guipie/pingyou/releases"><img alt="Linux" src="https://img.shields.io/badge/-Linux-yellow?style=flat-square&logo=linux&logoColor=white"></img></a>
   </div>
 
   <p>
-    <a href="./LICENSE"><img src="https://img.shields.io/github/license/ayangweb/BongoCat?style=flat-square" /></a>
-    <a href="https://github.com/guipie/pingyou/releases/latest"><img src="https://img.shields.io/github/package-json/v/ayangweb/BongoCat?style=flat-square"/></a>
-    <a href="https://github.com/guipie/pingyou/releases"><img src="https://img.shields.io/github/downloads/ayangweb/BongoCat/total?style=flat-square"/></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/github/license/guipie/pingyou?style=flat-square" alt="License"></img></a>
+    <a href="https://github.com/guipie/pingyou/releases/latest"><img src="https://img.shields.io/github/package-json/v/guipie/pingyou?style=flat-square" alt="Version"></img></a>
+    <a href="https://github.com/guipie/pingyou/releases"><img src="https://img.shields.io/github/downloads/guipie/pingyou/total?style=flat-square" alt="Downloads"></img></a>
   </p>
 
   <!-- <p>
@@ -26,13 +28,29 @@
   </p> -->
 </div>
 
-| live2D                                                                                 | 3D                                                                                         | 屏友广场                                                                                          |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| ![live2D](https://github.com/guipie/pingyou/blob/main/public/demo/live2d.png?raw=true) | ![3D](https://github.com/guipie/pingyou/blob/main/public/demo/3dchat.png?raw=true)         | ![屏友广场](https://github.com/guipie/pingyou/blob/main/public/demo/pingyou.png?raw=true)         |
-|                                                                                        |
-| ![chat](https://github.com/guipie/pingyou/blob/main/public/demo/chat.png?raw=true)     | ![provider](https://github.com/guipie/pingyou/blob/main/public/demo/provider.png?raw=true) | ![本地模型](https://github.com/guipie/pingyou/blob/main/public/demo/ollama-download.png?raw=true) |
+<!-- markdownlint-disable MD033 -->
+<table style="width:100%;">
+  <tr>
+    <th>live2D</th>
+    <th>3D</th>
+    <th>屏友广场</th>
+  </tr>
+  <tr>
+    <td style="height:260px;padding:0;"><img alt="live2D演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/live2d.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="3D演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/3dchat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="屏友广场演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/pingyou.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+  </tr>
+  <tr>
+    <td style="height:260px;padding:0;"><img alt="聊天演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/chat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="供应商演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/provider.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="Ollama下载演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/ollama-download.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+  </tr>
+</table>
+<!-- markdownlint-enable MD033 -->
 
-#### 项目初衷来源于老婆想把闺女的3D模型放桌面，所以fork了 [ayangweb](https://github.com/ayangweb) 大佬开发的 [BongoCat](https://github.com/ayangweb/BongoCat)，但是它以猫咪互动功能且仅支持Live2D模型，不支持3D模型，同时没有接入大模型，所以我决定开发一个版本
+## 项目初衷
+
+项目初衷来源于老婆想把闺女的3D模型放桌面，所以fork了 [ayangweb](https://github.com/ayangweb) 大佬开发的 [BongoCat](https://github.com/ayangweb/BongoCat)，但是它以猫咪互动功能且仅支持Live2D模型，不支持3D模型，同时没有接入大模型，所以我决定开发一个版本
 
 ## 下载
 
@@ -61,6 +79,7 @@
 
 ## 社区交流，[点击](https://qm.qq.com/q/xWjcsbsDq8)
 
+<!-- markdownlint-disable MD033 -->
 <table>
   <thead>
     <tr>
@@ -83,3 +102,4 @@
     </tr>
   </tbody>
 </table>
+<!-- markdownlint-enable MD033 -->

@@ -10,12 +10,12 @@
 
 ### 手动下载
 
-- Apple Silicon：下载 `BongoCat_aarch64.dmg`
-- Intel Chip：下载 `BongoCat_x64.dmg`
+- Apple Silicon：下载 `pingyou_aarch64.dmg`
+- Intel Chip：下载 `pingyou_x64.dmg`
 
 ### Homebrew 下载
 
-1. 添加 BongoCat 的 tap 源：
+1. 添加 pingyou 的 tap 源：
 
 ```bash
 brew tap guipie/pingyou
@@ -43,22 +43,22 @@ brew untap guipie/pingyou
 
 ## Windows
 
-- 64 位系统：下载 `BongoCat_x64.exe`
-- 32 位系统：下载 `BongoCat_x86.exe`
-- ARM64 架构：下载 `BongoCat_arm64.exe`
+- 64 位系统：下载 `pingyou_x64.exe`
+- 32 位系统：下载 `pingyou_x86.exe`
+- ARM64 架构：下载 `pingyou_arm64.exe`
 
 ## Linux(X11)
 
 ### 手动下载
 
 - 64 位系统：
-  - Debian / Ubuntu：下载 `BongoCat_amd64.deb`
-  - Fedora / RHEL：下载 `BongoCat_x86_64.rpm`
-  - 通用版本：下载 `BongoCat_amd64.AppImage`
+  - Debian / Ubuntu：下载 `pingyou_amd64.deb`
+  - Fedora / RHEL：下载 `pingyou_x86_64.rpm`
+  - 通用版本：下载 `pingyou_amd64.AppImage`
 - ARM64 架构：
-  - Debian / Ubuntu：下载 `BongoCat_arm64.deb`
-  - Fedora / RHEL：下载 `BongoCat_aarch64.rpm`
-  - 通用版本：下载 `BongoCat_aarch64.AppImage`
+  - Debian / Ubuntu：下载 `pingyou_arm64.deb`
+  - Fedora / RHEL：下载 `pingyou_aarch64.rpm`
+  - 通用版本：下载 `pingyou_aarch64.AppImage`
 
 ### AUR 下载
 
