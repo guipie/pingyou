@@ -26,13 +26,13 @@
   </p> -->
 </div>
 
-| live2D                                                                                        | 3D                                                                                        | 屏友广场                                                                                        |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| ![live2D](https://i0.hdslb.com/bfs/openplatform/dff276b96d49c5d6c431b74b531aab72191b3d87.png) | ![3D](https://i0.hdslb.com/bfs/openplatform/a4149b753856ee7f401989da902cf3b5ad35b39e.png) | ![屏友广场](https://i0.hdslb.com/bfs/openplatform/3b49f961819d3ff63b2b80251c1cc13c27e986b0.png) |
+| live2D                                                                                 | 3D                                                                                         | 屏友广场                                                                                          |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| ![live2D](https://github.com/guipie/pingyou/blob/main/public/demo/live2d.png?raw=true) | ![3D](https://github.com/guipie/pingyou/blob/main/public/demo/3dchat.png?raw=true)         | ![屏友广场](https://github.com/guipie/pingyou/blob/main/public/demo/pingyou.png?raw=true)         |
+|                                                                                        |
+| ![chat](https://github.com/guipie/pingyou/blob/main/public/demo/chat.png?raw=true)     | ![provider](https://github.com/guipie/pingyou/blob/main/public/demo/provider.png?raw=true) | ![本地模型](https://github.com/guipie/pingyou/blob/main/public/demo/ollama-download.png?raw=true) |
 
-<!-- 换行 -->| 本项目的灵感来源于 [MMmmmoko](https://github.com/MMmmmoko) 大佬开发的 [Bongo-Cat-Mver](https://github.com/MMmmmoko/Bongo-Cat-Mver)。它以独特的猫咪互动功能深受用户喜爱，但仅支持 Windows 平台。作为一名深度 macOS 用户，我特别希望在自己的设备上也能使用这款可爱的猫咪，于是我决定开发一个适配 macOS 的版本。 |
-
-同时，得益于 [Tauri](https://github.com/tauri-apps/tauri) 强大的跨平台能力，本项目不仅支持 macOS，还兼容 Windows 和 Linux(x11)，让更多的用户都能与这只可爱的猫咪互动！
+#### 项目初衷来源于老婆想把闺女的3D模型放桌面，所以fork了 [ayangweb](https://github.com/ayangweb) 大佬开发的 [BongoCat](https://github.com/ayangweb/BongoCat)，但是它以猫咪互动功能且仅支持Live2D模型，不支持3D模型，同时没有接入大模型，所以我决定开发一个版本
 
 ## 下载
 
@@ -46,8 +46,8 @@
 - 适配 macOS、Windows 和 Linux(x11)。
 - 根据键盘、鼠标或手柄的操作，同步对应的动作。
 - 支持导入自定义模型，自由打造专属屏友形象。
-- 支持live2D,3D模型(glb,fbx),随意切换。
-- 支持OpenAI 接口接入适配，支持各大供应商平台、讯飞星火大模型、腾讯混、Deep-Seek、Deep-Seek，等兼容OpenAI接口，配置超级简单，一键配置，开箱即用.
+- 支持live2D，3D模型(glb,fbx),随意切换。
+- 支持OpenAI 接口接入适配，支持各大供应商平台、讯飞星火大模型、腾讯混、Deep-Seek、Deep-Seek，等兼容OpenAI，Ollama，Anthropic等接口，配置超级简单，一键配置，开箱即用.
 - 支持电脑检测自动下载安装ollama本地模型加载，无需联网。
 - 支持屏友广场，与屏友互动。
 - 完全开源，代码公开透明，绝不收集任何用户数据。
@@ -59,7 +59,7 @@
 
 📦 [Awesome-BongoCat](https://github.com/ayangweb/Awesome-BongoCat)
 
-## 社区交流，[点击](https://qm.qq.com/q/QLoUZCyESs)
+## 社区交流，[点击](https://qm.qq.com/q/xWjcsbsDq8)
 
 <table>
   <thead>
@@ -72,17 +72,9 @@
       <td>
         <a href="https://qm.qq.com/q/AS3gNv2Vzy">
           <picture>
-            <source
-              media="(prefers-color-scheme: dark)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/8ecdc4982ab01b59d7731fcca3ec26631a274560.png"
-            />
-            <source
-              media="(prefers-color-scheme: light)"
-              srcset="https://i0.hdslb.com/bfs/openplatform/09f56580397063e1819c4c2ed63d07dee12720e1.png"
-            />
             <img
-              alt="QQ Group 1"
-              src="https://i0.hdslb.com/bfs/openplatform/09f56580397063e1819c4c2ed63d07dee12720e1.png"
+              alt="QQ群"
+              src="https://github.com/guipie/pingyou/blob/main/public/demo/qq_group.png?raw=true"
               height="250"
             />
           </picture>
@@ -91,32 +83,3 @@
     </tr>
   </tbody>
 </table>
-
-## 赞赏
-
-每一份认可都值得被珍视！赞赏随缘，心意无价，谢谢你的支持 ❤️
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://i0.hdslb.com/bfs/openplatform/e7438bff14cdfb6bfd0feacbb482f99ea4093294.png" />
-  <source media="(prefers-color-scheme: light)" srcset="https://i0.hdslb.com/bfs/openplatform/da55cc3ec1556580c91e59f589792866c998c7c6.png" />
-  <img alt="微信赞赏码" src="https://i0.hdslb.com/bfs/openplatform/da55cc3ec1556580c91e59f589792866c998c7c6.png" height="250" />
-</picture>
-
-## 贡献指南
-
-感谢大家为 BongoCat 做出的宝贵贡献！如果你也希望为 BongoCat 做出贡献，请查阅[贡献指南](.github/CONTRIBUTING.md)。
-
-<a href="https://openomy.com/ayangweb/BongoCat" target="_blank" style="display: block; width: 100%;" align="center">
-  <img src="https://openomy.com/svg?repo=ayangweb/BongoCat&chart=bubble" alt="Contribution Leaderboard" style="display: block; width: 100%;" />
-</a>
-
-## 历史星标
-
-<a href="https://www.star-history.com/#ayangweb/BongoCat&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ayangweb/BongoCat&type=Date" />
- </picture>
-</a>
-

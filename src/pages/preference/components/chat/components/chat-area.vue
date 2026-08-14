@@ -2,11 +2,13 @@
 import { PauseOutlined } from '@antdv-next/icons'
 import { Button, message, Select, TextArea } from 'antdv-next'
 import { computed, ref, useTemplateRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useTauriAIChat } from '@/composables/useTauriAIChat'
 import { useChatStore } from '@/stores/aichat'
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 const selectedImage = ref<any>()
 const imageInputRef = useTemplateRef<HTMLInputElement>('imageInputRef')
 const chatLoading = computed(() => useTauriAIChat().loading.value)
@@ -46,7 +48,7 @@ function handleImageChange(event: Event) {
   if (!file) return
 
   if (!file.type.startsWith('image/')) {
-    message.warning('请选择图片文件。')
+    message.warning(t('pages.preference.chat.messages.selectImage'))
 
     return
   }
@@ -91,7 +93,7 @@ function toggleListening() {
   recognition.value ??= createSpeechRecognition()
 
   if (!recognition.value) {
-    message.warning('当前 WebView 不支持语音识别。')
+    message.warning(t('pages.preference.chat.messages.webviewNotSupportVoice'))
 
     return
   }
@@ -129,7 +131,7 @@ function createSpeechRecognition() {
       input.value = input.value ? `${input.value} ${transcript}` : transcript
   }
   nextRecognition.onerror = (event) => {
-    message.error(event.error ?? '语音识别失败。')
+    message.error(event.error ?? t('pages.preference.chat.messages.voiceRecognitionFailed'))
   }
   nextRecognition.onend = () => {
     listening.value = false
@@ -154,20 +156,20 @@ function createSpeechRecognition() {
       >
         <button
           class="wechat-toolbar-button"
-          title="表情"
+          :title="t('pages.preference.chat.labels.emoji')"
         >
           <i class="i-lucide:smile" />
         </button>
         <button
           class="wechat-toolbar-button"
-          title="图片"
+          :title="t('pages.preference.chat.labels.image')"
           @click="handleSelectImage"
         >
           <i class="i-lucide:image" />
         </button>
         <button
           class="wechat-toolbar-button"
-          title="文件"
+          :title="t('pages.preference.chat.labels.file')"
           @click="handleSelectImage"
         >
           <i class="i-lucide:folder" />
@@ -175,7 +177,7 @@ function createSpeechRecognition() {
         <button
           class="wechat-toolbar-button"
           :class="{ 'is-active': voiceMode }"
-          title="语音"
+          :title="t('pages.preference.chat.labels.voice')"
           @click="voiceMode = !voiceMode"
         >
           <i class="i-lucide:mic" />
@@ -184,7 +186,7 @@ function createSpeechRecognition() {
           v-if="voiceMode"
           class="wechat-toolbar-button"
           :class="{ 'is-active': listening }"
-          title="开始识别"
+          :title="t('pages.preference.chat.labels.startRecognition')"
           @click="toggleListening"
         >
           <i :class="listening ? 'i-lucide:mic-off' : 'i-lucide:audio-lines'" />
@@ -192,7 +194,7 @@ function createSpeechRecognition() {
       </div>
       <Select
         :options="curConversation?.provider.models?.map(m => ({ label: m.modelId, value: m.modelId }))"
-        placeholder="模型"
+        :placeholder="t('pages.preference.chat.placeholders.model')"
         size="small"
         :value="curConversation?.provider?.defaultModel"
       />
@@ -221,10 +223,10 @@ function createSpeechRecognition() {
         v-if="!curConversation"
         class="mr-auto text-3 color-text-tertiary"
       >
-        请先启用聊天，并在供应商设置中填写 API Key、Base URL 和模型。
+        {{ t('pages.preference.chat.hints.enableChatFirst') }}
       </span>
       <Button v-if="chatLoading">
-        思考中
+        {{ t('pages.preference.chat.labels.thinking') }}
         <template #icon>
           <PauseOutlined />
         </template>
@@ -237,7 +239,7 @@ function createSpeechRecognition() {
         type="primary"
         @click="sendMessage"
       >
-        发送
+        {{ t('pages.preference.chat.labels.send') }}
       </Button>
     </div>
   </div>

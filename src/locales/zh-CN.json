@@ -6,13 +6,226 @@
         "switching": "切换中..."
       }
     },
+    "winchat": {
+      "hints": {
+        "sendFailed": "发送失败，{error}",
+        "sendFailedTitle": "消息发送提示",
+        "dragWindow": "拖动窗口"
+      },
+      "placeholders": {
+        "input": "按Enter发送给屏友，按Esc关闭窗口，拖动图标可移动窗口"
+      },
+      "status": {
+        "thinking": "屏友思考中..."
+      }
+    },
     "preference": {
       "title": "偏好设置",
       "chat": {
-        "title": "聊天"
+        "title": "聊天",
+        "labels": {
+          "newChat": "新建聊天",
+          "conversationConfig": "会话配置",
+          "enableChat": "启用聊天",
+          "avatarUpload": "头像上传",
+          "petName": "屏友名称",
+          "provider": "模型供应商",
+          "modelName": "模型名称",
+          "customModelTitle": "自定义模型-(可以在官方供应商模型列表中查找)",
+          "custom": "自定义",
+          "persona": "屏友人格",
+          "emoji": "表情",
+          "image": "图片",
+          "file": "文件",
+          "voice": "语音",
+          "startRecognition": "开始识别",
+          "thinking": "思考中",
+          "send": "发送"
+        },
+        "hints": {
+          "enableChatDesc": "启用后，可以和桌宠聊天。API Key 会保存在本机配置中。",
+          "openAiCompatibleDesc": "大多数供应商使用 OpenAI-compatible 接口，Anthropic 会自动走 Claude Messages 接口。",
+          "baseUrlDesc": "如果使用代理、兼容网关或私有部署，可以修改这里。",
+          "modelNameDesc": "优先使用这里的模型；留空时会使用供应商默认模型。",
+          "enableChatFirst": "请先启用聊天，并在供应商设置中填写 API Key、Base URL 和模型。",
+          "chooseProviderModel": "请选择配置供应商和模型。"
+        },
+        "placeholders": {
+          "search": "搜索",
+          "petName": "屏友名称",
+          "selectProvider": "请选择模型供应商",
+          "model": "模型",
+          "persona": "告诉模型应该如何扮演你的屏友"
+        },
+        "status": {
+          "noTitle": "无标题",
+          "emptyChat": "选择左侧屏友开始聊天",
+          "configured": "已配置",
+          "unconfigured": "未配置"
+        },
+        "messages": {
+          "uploadFailed": "上传失败",
+          "configureProvider": "请配置模型供应商",
+          "selectModel": "请选择模型",
+          "fillName": "请填写会话名称",
+          "saveSuccess": "保存成功",
+          "selectImage": "请选择图片文件。",
+          "webviewNotSupportVoice": "当前 WebView 不支持语音识别。",
+          "voiceRecognitionFailed": "语音识别失败。"
+        },
+        "buttons": {
+          "save": "保存"
+        }
       },
       "provider": {
-        "title": "模型源"
+        "title": "模型源",
+        "labels": {
+          "source": "模型源",
+          "addCustomModel": "添加自定义模型",
+          "addLocalModel": "添加本地大模型",
+          "custom": "自定义",
+          "configured": "已配置",
+          "unconfiguredKey": "未配置Key",
+          "settings": "设置",
+          "removeProvider": "移除供应商",
+          "avatar": "头像",
+          "providerName": "供应商名称",
+          "providerValue": "供应商标识",
+          "modelConfig": "大模型配置",
+          "modelName": "模型名称",
+          "modelId": "模型ID",
+          "apiKeyOptional": "API Key（可选）",
+          "needProxy": "需要代理",
+          "providerDesc": "描述（可选）",
+          "addProvider": "添加供应商",
+          "apiKey": "API Key",
+          "baseUrl": "Base URL",
+          "defaultModel": "默认模型",
+          "running": "本地大模型服务运行中",
+          "loadedModels": "已加载的本地模型",
+          "usableForChat": "可直接用于对话",
+          "ollamaBaseUrl": "Ollama API 基础地址 (Base URL):",
+          "copy": "复制",
+          "oneClickClean": "一键彻底清除",
+          "stopRunning": "停止运行",
+          "useLocalModel": "使用本地大模型",
+          "oneClickAI": "一键开启 AI 体验",
+          "paused": "已暂停",
+          "modelDownloading": "模型下载中",
+          "engineDownloading": "引擎下载中",
+          "initializingEngine": "正在初始化本地引擎",
+          "downloadPaused": "下载已暂停"
+        },
+        "hints": {
+          "openAiCompatible": "接入任意 OpenAI 兼容接口",
+          "proxyDesc": "若接口需要科学上网访问，请开启",
+          "apiKeyLocalOnly": "密钥仅保存在本地，不会上传到任何服务器",
+          "optimizingEnv": "正在优化您的 AI 本地运行环境...",
+          "configUnsupported": "电脑配置暂不支持",
+          "memoryLow": "检测到您的电脑内存仅为 {gb}GB。运行本地 AI 至少需要 4GB 内存。",
+          "environmentReady": "环境准备就绪",
+          "systemMemory": "检测到系统内存为",
+          "recommendModel": "我们将为您一键安装最适合您电脑的极速轻量模型：",
+          "pausedResumeHint": "下载已暂停，点击\"继续下载\"恢复"
+        },
+        "messages": {
+          "copied": "服务地址已成功复制到剪贴板！",
+          "copyFailed": "复制失败，请手动复制",
+          "hardwareCheckFailed": "硬件环境检测失败，请重启软件",
+          "deploySuccess": "AI 引擎与模型部署成功！",
+          "modelLoadError": "模型加载异常，未检测到有效模型，请尝试重新初始化",
+          "downloadCancelled": "下载已取消，临时文件已清理",
+          "initFailed": "初始化失败: {err}",
+          "downloadPaused": "下载已暂停",
+          "resuming": "继续下载中...",
+          "cleanupFailed": "深度清理失败: {err}",
+          "stopFailed": "服务停止失败: {err}",
+          "removedProvider": "已移除供应商：{provider}",
+          "addedCustomProvider": "已添加自定义供应商：{provider}",
+          "defaultCustomDesc": "自定义供应商"
+        },
+        "dialogs": {
+          "removeConfirm": "确定要移除该供应商吗？",
+          "providerConfigTitle": "供应商配置",
+          "cancelDownloadTitle": "确定要取消下载吗？",
+          "cancelDownloadContent": "取消后将删除所有已下载的临时文件，恢复至初始状态。",
+          "confirmCancel": "确认取消",
+          "continueDownload": "继续下载",
+          "cleanupTitle": "确定要彻底清除本地 AI 模型吗？",
+          "cleanupContent": "此操作将物理删除本地下载的全部大模型数据并深度释放硬盘空间。",
+          "confirmCleanup": "确认清理",
+          "thinkAgain": "我再想想",
+          "stopTitle": "确定要停止本地 AI 模型服务吗？",
+          "stopContent": "此操作将停止本地 AI 模型服务，服务不可用了,但不会删除任何数据。",
+          "confirmStop": "确认停止",
+          "cleanupSuccessTitle": "空间深度清理成功",
+          "cleanupSuccessContent": "所有本地大模型缓存文件已被安全、干净地物理移除。",
+          "stopSuccessTitle": "服务停止成功",
+          "stopSuccessContent": "所有本地大模型服务已被停止。"
+        },
+        "errors": {
+          "noProvider": "未获取到供应商",
+          "fillComplete": "请填写完整",
+          "modelIdExists": "该模型ID已存在，请更换",
+          "providerNameRequired": "请输入供应商名称",
+          "providerValueRequired": "请输入供应商标识",
+          "baseUrlRequired": "请输入 Base URL",
+          "providerValueExists": "该供应商标识已存在，请更换"
+        },
+        "placeholders": {
+          "providerName": "如：DeepSeek、硅基流动",
+          "providerValue": "唯一英文标识，如：deepseek",
+          "baseUrl": "如：https://api.deepseek.com/v1/chat/completions",
+          "modelName": "展示用名称，如：Qwen 2.5",
+          "modelId": "API 调用用，如：qwen2.5:0.5b",
+          "apiKey": "也可在添加后通过设置按钮填写",
+          "providerDesc": "简短描述该供应商",
+          "apiKeyInput": "请输入 API Key，如 sk-xxxx",
+          "baseUrlInput": "请输入接口地址",
+          "defaultModel": "请选择默认模型"
+        },
+        "buttons": {
+          "resume": "继续下载",
+          "pause": "暂停下载",
+          "cancelDownload": "取消下载",
+          "saveConfig": "保存配置"
+        },
+        "modelDialog": {
+          "labels": {
+            "modelName": "模型名称",
+            "modelId": "模型ID",
+            "description": "描述"
+          },
+          "placeholders": {
+            "modelName": "输入模型显示名称",
+            "modelId": "输入模型ID,用于调用模型"
+          },
+          "hints": {
+            "addModel": "在供应商官网查询发布的模型"
+          },
+          "buttons": {
+            "add": "添加",
+            "confirmAdd": "确定添加",
+            "cancel": "取消"
+          }
+        },
+        "status": {
+          "preparingDownload": "正在准备下载通道...",
+          "preparingCleanup": "正在准备清理环境...",
+          "preparingInit": "正在准备初始化通道...",
+          "pullingEngine": "正在拉起内核引擎...",
+          "verifyingModel": "正在校验本地模型完整性...",
+          "requestingConfig": "正在安全请求云端环境配置...",
+          "downloadingCore": "正在高速下载AI核心组件: {progress}%",
+          "extractingEnv": "正在解压并深度优化本地 AI 显卡加速环境...",
+          "activatingChannel": "内核环境就绪，正在激活大模型通道...",
+          "downloadingModel": "正在高速下载AI大模型: {progress}%",
+          "modelReady": "模型初始化成功！",
+          "stoppingEngine": "正在安全关闭本地 AI 引擎...",
+          "uninstallingModel": "正在从本地仓库卸载模型: {name}...",
+          "shreddingData": "正在全量物理粉碎 AI 内核、显卡驱动及模型数据...",
+          "cleanupComplete": "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！"
+        }
       },
       "cat": {
         "title": "设置",
@@ -126,14 +339,16 @@
           "togglePreferences": "打开偏好设置",
           "mirrorMode": "镜像模式",
           "passThrough": "窗口穿透",
-          "alwaysOnTop": "窗口置顶"
+          "alwaysOnTop": "窗口置顶",
+          "openMessageBox": "打开消息输入框"
         },
         "hints": {
           "toggleCat": "切换屏友窗口的显示与隐藏。",
           "togglePreferences": "切换偏好设置窗口的显示与隐藏。",
           "mirrorMode": "切换屏友的镜像模式。",
           "passThrough": "切换屏友窗口是否可穿透。",
-          "alwaysOnTop": "切换屏友窗口是否置顶。"
+          "alwaysOnTop": "切换屏友窗口是否置顶。",
+          "openMessageBox": "按下快捷键后打开消息输入框"
         }
       },
       "about": {
@@ -195,6 +410,29 @@
         "quitApp": "退出应用"
       }
     },
+    "useTauriAIChat": {
+      "errors": {
+        "providerNotConfigured": "Provider 未配置",
+        "createStreamReaderFailed": "无法创建数据流读取器",
+        "selectPetFirst": "请先选择您的屏友",
+        "inputMessageRequired": "请输入发送消息",
+        "createConversationFailed": "创建会话失败",
+        "configureModelFirst": "请先配置好模型",
+        "selectConversation": "请选择一个会话"
+      }
+    },
+    "useTauriAiChatCommand": {
+      "labels": {
+        "pin": "置顶",
+        "delete": "删除"
+      },
+      "errors": {
+        "selectConversation": "请选择一个会话"
+      },
+      "hints": {
+        "deleteConfirm": "确定要删除吗？"
+      }
+    },
     "useTray": {
       "checkUpdate": "检查更新",
       "openSource": "开源地址"
@@ -205,6 +443,37 @@
       "hints": {
         "notFound": "未找到模型主配置文件，请确认模型文件是否完整。"
       }
+    }
+  },
+  "stores": {
+    "chat": {
+      "defaultConversationTitle": "默认会话",
+      "defaultSystemPrompt": "你是我的电脑桌面上一个随时陪伴我的桌面好友。温暖、简短且俏皮地回复。"
+    }
+  },
+  "providers": {
+    "names": {
+      "深度求索": "深度求索",
+      "字节跳动": "字节跳动",
+      "阿里巴巴": "阿里巴巴",
+      "google": "Google",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "智谱ai": "智谱AI",
+      "月之暗面": "月之暗面",
+      "Minimax": "MiniMax",
+      "本地大模型": "本地大模型"
+    },
+    "descs": {
+      "深度求索": "深度求索（DeepSeek）开放平台，提供高性能大模型 API。",
+      "字节跳动": "字节跳动旗下豆包大模型，提供对话、图像等多模态能力。",
+      "阿里巴巴": "阿里巴巴通义千问大模型开放平台。",
+      "google": "Google Gemini 大模型开放平台。",
+      "openai": "OpenAI 大模型开放平台。",
+      "anthropic": "Anthropic Claude 大模型开放平台。",
+      "智谱ai": "智谱 AI 开放平台，提供 GLM 系列大模型。",
+      "月之暗面": "月之暗面 Kimi 大模型开放平台。",
+      "Minimax": "MiniMax 开放平台，提供多模态大模型。"
     }
   },
   "common": {
@@ -218,6 +487,10 @@
       "settingNow": "前往设置",
       "resetToDefault": "恢复默认",
       "back": "返回"
+    },
+    "tips": {
+      "clear": "确定要清空吗？",
+      "delete": "确定要删除吗？"
     }
   }
 }

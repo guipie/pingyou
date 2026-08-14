@@ -2,6 +2,7 @@
 import { CheckCircleOutlined, ExclamationCircleOutlined, RedoOutlined, SettingOutlined } from '@antdv-next/icons'
 import { Button, message, Popconfirm, Tag } from 'antdv-next'
 import { computed, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { AIProvider } from '@/stores/shard/provider-shard'
 
@@ -17,6 +18,17 @@ import Setting from './components/setting.vue'
 import Ollama from './ollama.vue'
 
 const providerStore = useProviderStore()
+const { t } = useI18n()
+
+/** 供应商显示名称：优先使用 i18n 映射，找不到则回退数据库中的名称 */
+function providerDisplayName(provider: AIProvider) {
+  return t(`providers.names.${provider.provider}`, {}, provider.provider)
+}
+
+/** 供应商描述：优先使用 i18n 映射，找不到则回退数据库中的描述 */
+function providerDisplayDesc(provider: AIProvider) {
+  return t(`providers.descs.${provider.provider}`, {}, provider.desc || '')
+}
 
 // 设置弹框状态
 const settingOpen = ref(false)
@@ -46,7 +58,7 @@ function openSetting(provider: AIProvider) {
 /** 在新窗口中打开"添加自定义模型"表单，方便用户自由切换窗口复制地址/密钥 */
 function handleOpenAddModal() {
   openNewWindow(RoutersName.ProviderAdd, {
-    title: '添加自定义模型',
+    title: t('pages.preference.provider.labels.addCustomModel'),
   })
 }
 
@@ -55,21 +67,21 @@ function handleUseLocalModel(payload: { baseUrl: string, modelName: string, mode
   const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}`
   openNewWindow(RoutersName.ProviderAdd, {
     isForeCreate: true,
-    title: '添加本地大模型',
+    title: t('pages.preference.provider.labels.addLocalModel'),
     query,
   })
 }
 
 function handleRemoveProvider(provider: AIProvider) {
   providerStore.removeProvider(provider.provider)
-  message.success(`已移除供应商：${provider.provider}`)
+  message.success(t('pages.preference.provider.messages.removedProvider', { provider: providerDisplayName(provider) }))
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
     <!-- 供应商列表 -->
-    <ProList title="模型源">
+    <ProList :title="t('pages.preference.provider.labels.source')">
       <template #right>
         <!-- //刷新 -->
         <Button
@@ -97,8 +109,8 @@ function handleRemoveProvider(provider: AIProvider) {
           <div class="bg-blue-50 dark:bg-blue-900/30 size-12 flex items-center justify-center rounded-full text-7 text-blue-5">
             <i class="i-lucide:plus" />
           </div>
-          <span class="text-4.5 font-medium color-text-secondary">添加自定义模型</span>
-          <span class="text-3 color-text-quaternary">接入任意 OpenAI 兼容接口</span>
+          <span class="text-4.5 font-medium color-text-secondary">{{ t('pages.preference.provider.labels.addCustomModel') }}</span>
+          <span class="text-3 color-text-quaternary">{{ t('pages.preference.provider.hints.openAiCompatible') }}</span>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
@@ -117,7 +129,7 @@ function handleRemoveProvider(provider: AIProvider) {
             />
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <span class="text-4 font-semibold">{{ provider.provider }}</span>
+                <span class="text-4 font-semibold">{{ providerDisplayName(provider) }}</span>
                 <Tag
                   v-if="isBoolean(provider.isCustom) "
                   color="success"
@@ -125,7 +137,7 @@ function handleRemoveProvider(provider: AIProvider) {
                 >
                   <template #icon>
                     <CheckCircleOutlined />
-                  </template>自定义
+                  </template>{{ t('pages.preference.provider.labels.custom') }}
                 </Tag>
                 <Tag
                   v-else-if="provider.apiKey"
@@ -134,7 +146,7 @@ function handleRemoveProvider(provider: AIProvider) {
                 >
                   <template #icon>
                     <CheckCircleOutlined />
-                  </template>已配置
+                  </template>{{ t('pages.preference.provider.labels.configured') }}
                 </Tag>
                 <Tag
                   v-else
@@ -143,7 +155,7 @@ function handleRemoveProvider(provider: AIProvider) {
                   <template #icon>
                     <ExclamationCircleOutlined />
                   </template>
-                  未配置Key
+                  {{ t('pages.preference.provider.labels.unconfiguredKey') }}
                 </Tag>
               </div>
             </div>
@@ -151,7 +163,7 @@ function handleRemoveProvider(provider: AIProvider) {
 
           <!-- 描述 -->
           <div class="line-clamp-2 min-h-10 text-3 leading-relaxed color-text-tertiary">
-            {{ provider.desc }}
+            {{ providerDisplayDesc(provider) }}
           </div>
 
           <!-- 模型标签 -->
@@ -185,14 +197,14 @@ function handleRemoveProvider(provider: AIProvider) {
               <template #icon>
                 <SettingOutlined />
               </template>
-              设置
+              {{ t('pages.preference.provider.labels.settings') }}
             </Button>
 
             <Popconfirm
               v-if="provider.isCustom"
-              description="确定要移除该供应商吗？"
+              :description="t('pages.preference.provider.dialogs.removeConfirm')"
               placement="topRight"
-              title="移除供应商"
+              :title="t('pages.preference.provider.labels.removeProvider')"
               @confirm="handleRemoveProvider(provider)"
             >
               <Button

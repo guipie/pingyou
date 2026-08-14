@@ -7,9 +7,12 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { Button } from 'antdv-next'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
-import { LISTEN_KEY } from '@/constants'
+import { LISTEN_KEY, WIN_MESSAGE_STATUS } from '@/constants'
 import { useChatStore } from '@/stores/aichat'
+
+const { t } = useI18n()
 // 默认在右边（尖角在左）
 const side = ref<'left' | 'right'>('right')
 let posListen: UnlistenFn | undefined
@@ -101,10 +104,10 @@ onUnmounted(() => {
     >
       <!-- //思考中  -->
       <p
-        v-if="msg === '屏友思考中'"
+        v-if="msg === WIN_MESSAGE_STATUS.THINKING"
       >
         <Button type="text">
-          {{ msg }}...
+          {{ t('pages.winchat.status.thinking') }}
           <template #icon>
             <LoadingOutlined />
           </template>

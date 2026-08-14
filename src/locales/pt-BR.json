@@ -6,8 +6,227 @@
         "switching": "Alternando..."
       }
     },
+    "winchat": {
+      "hints": {
+        "sendFailed": "Falha ao enviar, {error}",
+        "sendFailedTitle": "Aviso de envio de mensagem",
+        "dragWindow": "Arrastar Janela"
+      },
+      "placeholders": {
+        "input": "Pressione Enter para enviar ao pet, Esc para fechar a janela, arraste o ícone para mover a janela"
+      },
+      "status": {
+        "thinking": "Seu pet está pensando..."
+      }
+    },
     "preference": {
       "title": "Preferências",
+      "chat": {
+        "title": "Bate-papo",
+        "labels": {
+          "newChat": "Nova Conversa",
+          "conversationConfig": "Configurações da Conversa",
+          "enableChat": "Ativar Bate-papo",
+          "avatarUpload": "Enviar Avatar",
+          "petName": "Nome do Pet",
+          "provider": "Provedor de Modelo",
+          "modelName": "Nome do Modelo",
+          "customModelTitle": "Modelo Personalizado (encontre na lista oficial de modelos do provedor)",
+          "custom": "Personalizado",
+          "persona": "Personalidade do Pet",
+          "emoji": "Emoji",
+          "image": "Imagem",
+          "file": "Arquivo",
+          "voice": "Voz",
+          "startRecognition": "Iniciar Reconhecimento",
+          "thinking": "Pensando",
+          "send": "Enviar"
+        },
+        "hints": {
+          "enableChatDesc": "Quando ativado, você pode conversar com o pet de mesa. A API Key é armazenada localmente.",
+          "openAiCompatibleDesc": "A maioria dos provedores usa APIs compatíveis com OpenAI; a Anthropic usa automaticamente a API Claude Messages.",
+          "baseUrlDesc": "Você pode modificar aqui se usar proxy, gateway compatível ou implantação privada.",
+          "modelNameDesc": "O modelo definido aqui é preferido; se vazio, o modelo padrão do provedor é usado.",
+          "enableChatFirst": "Ative o bate-papo e preencha a API Key, o Base URL e o modelo nas configurações do provedor.",
+          "chooseProviderModel": "Configure um provedor e um modelo."
+        },
+        "placeholders": {
+          "search": "Pesquisar",
+          "petName": "Nome do Pet",
+          "selectProvider": "Selecione um provedor de modelo",
+          "model": "Modelo",
+          "persona": "Diga ao modelo como ele deve atuar como seu pet"
+        },
+        "status": {
+          "noTitle": "Sem título",
+          "emptyChat": "Selecione um pet à esquerda para começar a conversar",
+          "configured": "Configurado",
+          "unconfigured": "Não configurado"
+        },
+        "messages": {
+          "uploadFailed": "Falha no envio",
+          "configureProvider": "Configure um provedor de modelo",
+          "selectModel": "Selecione um modelo",
+          "fillName": "Digite um nome de conversa",
+          "saveSuccess": "Salvo com sucesso",
+          "selectImage": "Selecione um arquivo de imagem.",
+          "webviewNotSupportVoice": "O WebView atual não suporta reconhecimento de voz.",
+          "voiceRecognitionFailed": "Falha no reconhecimento de voz."
+        },
+        "buttons": {
+          "save": "Salvar"
+        }
+      },
+      "provider": {
+        "title": "Fontes de Modelo",
+        "labels": {
+          "source": "Fontes de Modelo",
+          "addCustomModel": "Adicionar Modelo Personalizado",
+          "addLocalModel": "Adicionar Modelo Local",
+          "custom": "Personalizado",
+          "configured": "Configurado",
+          "unconfiguredKey": "Sem Key",
+          "settings": "Configurações",
+          "removeProvider": "Remover Provedor",
+          "avatar": "Avatar",
+          "providerName": "Nome do Provedor",
+          "providerValue": "Identificador do Provedor",
+          "modelConfig": "Configuração do Modelo",
+          "modelName": "Nome do Modelo",
+          "modelId": "ID do Modelo",
+          "apiKeyOptional": "API Key (Opcional)",
+          "needProxy": "Requer Proxy",
+          "providerDesc": "Descrição (Opcional)",
+          "addProvider": "Adicionar Provedor",
+          "apiKey": "API Key",
+          "baseUrl": "Base URL",
+          "defaultModel": "Modelo Padrão",
+          "running": "Serviço de Modelo Local em Execução",
+          "loadedModels": "Modelos Locais Carregados",
+          "usableForChat": "Pronto para conversar",
+          "ollamaBaseUrl": "URL Base da API Ollama (Base URL):",
+          "copy": "Copiar",
+          "oneClickClean": "Limpeza Profunda",
+          "stopRunning": "Parar Execução",
+          "useLocalModel": "Usar Modelo Local",
+          "oneClickAI": "Ativar Experiência de IA",
+          "paused": "Pausado",
+          "modelDownloading": "Baixando Modelo",
+          "engineDownloading": "Baixando Motor",
+          "initializingEngine": "Inicializando Motor Local",
+          "downloadPaused": "Download Pausado"
+        },
+        "hints": {
+          "openAiCompatible": "Conecte qualquer API compatível com OpenAI",
+          "proxyDesc": "Ative se a API exigir proxy para acesso",
+          "apiKeyLocalOnly": "A chave é armazenada localmente e nunca é enviada a nenhum servidor",
+          "optimizingEnv": "Otimizando seu ambiente de execução de IA local...",
+          "configUnsupported": "Seu Computador Não é Suportado",
+          "memoryLow": "Seu computador tem apenas {gb}GB de memória. Executar IA local requer pelo menos 4GB.",
+          "environmentReady": "Ambiente Pronto",
+          "systemMemory": "Memória do sistema detectada",
+          "recommendModel": "Instalaremos o melhor modelo leve para o seu computador com um clique:",
+          "pausedResumeHint": "Download pausado. Clique em \"Retomar Download\" para continuar."
+        },
+        "messages": {
+          "copied": "Endereço do serviço copiado para a área de transferência!",
+          "copyFailed": "Falha ao copiar, copie manualmente",
+          "hardwareCheckFailed": "Falha na verificação do ambiente de hardware. Reinicie o aplicativo",
+          "deploySuccess": "Motor de IA e modelo implantados com sucesso!",
+          "modelLoadError": "Erro ao carregar o modelo: nenhum modelo válido encontrado. Tente reinicializar.",
+          "downloadCancelled": "Download cancelado, arquivos temporários removidos",
+          "initFailed": "Falha na inicialização: {err}",
+          "downloadPaused": "Download pausado",
+          "resuming": "Retomando download...",
+          "cleanupFailed": "Falha na limpeza profunda: {err}",
+          "stopFailed": "Falha ao parar o serviço: {err}",
+          "removedProvider": "Provedor removido: {provider}",
+          "addedCustomProvider": "Provedor personalizado adicionado: {provider}",
+          "defaultCustomDesc": "Provedor Personalizado"
+        },
+        "dialogs": {
+          "removeConfirm": "Tem certeza de que deseja remover este provedor?",
+          "providerConfigTitle": "Configurações do Provedor",
+          "cancelDownloadTitle": "Cancelar o download?",
+          "cancelDownloadContent": "Todos os arquivos temporários baixados serão excluídos e o estado será restaurado.",
+          "confirmCancel": "Cancelar",
+          "continueDownload": "Retomar Download",
+          "cleanupTitle": "Remover completamente os modelos de IA locais?",
+          "cleanupContent": "Isso excluirá fisicamente todos os dados de modelos locais baixados e liberará profundamente espaço no disco.",
+          "confirmCleanup": "Limpar",
+          "thinkAgain": "Deixe-me Pensar",
+          "stopTitle": "Parar o serviço de modelo de IA local?",
+          "stopContent": "Isso interromperá o serviço de modelo de IA local. O serviço ficará indisponível, mas nenhum dado será excluído.",
+          "confirmStop": "Parar",
+          "cleanupSuccessTitle": "Limpeza Profunda Bem-sucedida",
+          "cleanupSuccessContent": "Todos os arquivos de cache de modelos locais foram removidos com segurança e totalmente.",
+          "stopSuccessTitle": "Serviço Parado",
+          "stopSuccessContent": "Todos os serviços de modelo local foram interrompidos."
+        },
+        "errors": {
+          "noProvider": "Provedor não encontrado",
+          "fillComplete": "Preencha todos os campos obrigatórios",
+          "modelIdExists": "Este ID de modelo já existe, use outro",
+          "providerNameRequired": "Digite o nome do provedor",
+          "providerValueRequired": "Digite o identificador do provedor",
+          "baseUrlRequired": "Digite o Base URL",
+          "providerValueExists": "Este identificador de provedor já existe, use outro"
+        },
+        "placeholders": {
+          "providerName": "ex.: DeepSeek, SiliconFlow",
+          "providerValue": "Identificador único em inglês, ex.: deepseek",
+          "baseUrl": "ex.: https://api.deepseek.com/v1/chat/completions",
+          "modelName": "Nome de exibição, ex.: Qwen 2.5",
+          "modelId": "Usado para chamadas de API, ex.: qwen2.5:0.5b",
+          "apiKey": "Você também pode preencher depois pelo botão Configurações",
+          "providerDesc": "Descreva brevemente este provedor",
+          "apiKeyInput": "Digite a API Key, ex.: sk-xxxx",
+          "baseUrlInput": "Digite o endereço da API",
+          "defaultModel": "Selecione o modelo padrão"
+        },
+        "buttons": {
+          "resume": "Retomar Download",
+          "pause": "Pausar Download",
+          "cancelDownload": "Cancelar Download",
+          "saveConfig": "Salvar Configurações"
+        },
+        "modelDialog": {
+          "labels": {
+            "modelName": "Nome do Modelo",
+            "modelId": "ID do Modelo",
+            "description": "Descrição"
+          },
+          "placeholders": {
+            "modelName": "Digite o nome de exibição do modelo",
+            "modelId": "Digite o ID do modelo usado para chamadas de API"
+          },
+          "hints": {
+            "addModel": "Encontre modelos publicados no site oficial do provedor"
+          },
+          "buttons": {
+            "add": "Adicionar",
+            "confirmAdd": "Adicionar",
+            "cancel": "Cancelar"
+          }
+        },
+        "status": {
+          "preparingDownload": "Preparando canal de download...",
+          "preparingCleanup": "Preparando ambiente de limpeza...",
+          "preparingInit": "Preparando canal de inicialização...",
+          "pullingEngine": "Iniciando o motor do kernel...",
+          "verifyingModel": "Verificando integridade do modelo local...",
+          "requestingConfig": "Solicitando com segurança a configuração do ambiente na nuvem...",
+          "downloadingCore": "Baixando em alta velocidade os componentes principais de IA: {progress}%",
+          "extractingEnv": "Extraindo e otimizando profundamente o ambiente de aceleração GPU de IA local...",
+          "activatingChannel": "Ambiente do kernel pronto, ativando o canal de modelo...",
+          "downloadingModel": "Baixando em alta velocidade o modelo de IA: {progress}%",
+          "modelReady": "Modelo inicializado com sucesso!",
+          "stoppingEngine": "Desligando com segurança o motor de IA local...",
+          "uninstallingModel": "Desinstalando modelo do repositório local: {name}...",
+          "shreddingData": "Destruindo fisicamente o kernel de IA, driver GPU e dados do modelo...",
+          "cleanupComplete": "1.8GB de componentes de IA e modelos locais foram totalmente removidos. Espaço totalmente liberado!"
+        }
+      },
       "cat": {
         "title": "Gato",
         "labels": {
@@ -88,7 +307,8 @@
       "model": {
         "title": "Modelo",
         "labels": {
-          "deleteModel": "Excluir modelo"
+          "deleteModel": "Excluir modelo",
+          "tips": "Escolha um companheiro para alternar."
         },
         "hints": {
           "deleteSuccess": "Excluído com sucesso",
@@ -119,14 +339,16 @@
           "togglePreferences": "Abrir Preferências",
           "mirrorMode": "Modo Espelho",
           "passThrough": "Janela Transparente",
-          "alwaysOnTop": "Sempre no Topo"
+          "alwaysOnTop": "Sempre no Topo",
+          "openMessageBox": "Abrir Caixa de Mensagem"
         },
         "hints": {
           "toggleCat": "Alternar a visibilidade da janela do gato.",
           "togglePreferences": "Alternar a visibilidade da janela de preferências.",
           "mirrorMode": "Alternar o modo espelho do gato.",
           "passThrough": "Alternar se a janela do gato é clicável.",
-          "alwaysOnTop": "Alternar se a janela do gato permanece no topo."
+          "alwaysOnTop": "Alternar se a janela do gato permanece no topo.",
+          "openMessageBox": "Abrir a caixa de entrada de mensagem ao pressionar o atalho"
         }
       },
       "about": {
@@ -177,6 +399,7 @@
   "composables": {
     "useAppMenu": {
       "labels": {
+        "chat": "Bate-papo...",
         "preference": "Preferências...",
         "hideCat": "Ocultar Gato",
         "showCat": "Mostrar Gato",
@@ -185,6 +408,29 @@
         "opacity": "Opacidade",
         "restartApp": "Reiniciar",
         "quitApp": "Sair"
+      }
+    },
+    "useTauriAIChat": {
+      "errors": {
+        "providerNotConfigured": "O provedor não está configurado",
+        "createStreamReaderFailed": "Falha ao criar o leitor de fluxo",
+        "selectPetFirst": "Selecione seu pet primeiro",
+        "inputMessageRequired": "Digite uma mensagem para enviar",
+        "createConversationFailed": "Falha ao criar a conversa",
+        "configureModelFirst": "Configure um modelo primeiro",
+        "selectConversation": "Selecione uma conversa"
+      }
+    },
+    "useTauriAiChatCommand": {
+      "labels": {
+        "pin": "Fixar",
+        "delete": "Excluir"
+      },
+      "errors": {
+        "selectConversation": "Selecione uma conversa"
+      },
+      "hints": {
+        "deleteConfirm": "Tem certeza de que deseja excluir?"
       }
     },
     "useTray": {
@@ -197,6 +443,50 @@
       "hints": {
         "notFound": "Arquivo de configuração principal do modelo não encontrado. Verifique se os arquivos do modelo estão completos."
       }
+    }
+  },
+  "stores": {
+    "chat": {
+      "defaultConversationTitle": "Conversa Padrão",
+      "defaultSystemPrompt": "Você é um companheiro de mesa que está sempre ao meu lado na área de trabalho do meu computador. Responda de forma calorosa, breve e divertida."
+    }
+  },
+  "providers": {
+    "names": {
+      "深度求索": "DeepSeek",
+      "字节跳动": "ByteDance",
+      "阿里巴巴": "Alibaba",
+      "google": "Google",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "智谱ai": "Zhipu AI",
+      "月之暗面": "Moonshot AI",
+      "Minimax": "MiniMax",
+      "本地大模型": "Modelo Local"
+    },
+    "descs": {
+      "深度求索": "Plataforma aberta da DeepSeek que oferece APIs de modelos de alto desempenho.",
+      "字节跳动": "Plataforma de modelos Doubao da ByteDance, com capacidades multimodais de conversa e imagem.",
+      "阿里巴巴": "Plataforma aberta de modelos Tongyi Qianwen da Alibaba.",
+      "google": "Plataforma aberta de modelos Google Gemini.",
+      "openai": "Plataforma aberta de modelos da OpenAI.",
+      "anthropic": "Plataforma aberta de modelos Anthropic Claude.",
+      "智谱ai": "Plataforma aberta Zhipu AI que oferece a série GLM de modelos.",
+      "月之暗面": "Plataforma aberta de modelos Kimi da Moonshot AI.",
+      "Minimax": "Plataforma aberta MiniMax que oferece modelos multimodais."
+    }
+  },
+  "common": {
+    "buttons": {
+      "confirm": "OK",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "reset": "Redefinir",
+      "save": "Salvar",
+      "apply": "Aplicar",
+      "settingNow": "Ir para Configurações",
+      "resetToDefault": "Restaurar Padrões",
+      "back": "Voltar"
     }
   }
 }

@@ -6,8 +6,227 @@
         "switching": "Đang chuyển đổi..."
       }
     },
+    "winchat": {
+      "hints": {
+        "sendFailed": "Gửi thất bại, {error}",
+        "sendFailedTitle": "Thông báo gửi tin nhắn",
+        "dragWindow": "Kéo cửa sổ"
+      },
+      "placeholders": {
+        "input": "Nhấn Enter để gửi cho thú cưng, nhấn Esc để đóng cửa sổ, kéo biểu tượng để di chuyển cửa sổ"
+      },
+      "status": {
+        "thinking": "Thú cưng đang suy nghĩ..."
+      }
+    },
     "preference": {
       "title": "Tùy chỉnh",
+      "chat": {
+        "title": "Trò chuyện",
+        "labels": {
+          "newChat": "Cuộc trò chuyện mới",
+          "conversationConfig": "Cài đặt hội thoại",
+          "enableChat": "Bật trò chuyện",
+          "avatarUpload": "Tải lên ảnh đại diện",
+          "petName": "Tên thú cưng",
+          "provider": "Nhà cung cấp mô hình",
+          "modelName": "Tên mô hình",
+          "customModelTitle": "Mô hình tùy chỉnh (tìm trong danh sách mô hình chính thức của nhà cung cấp)",
+          "custom": "Tùy chỉnh",
+          "persona": "Tính cách thú cưng",
+          "emoji": "Biểu cảm",
+          "image": "Ảnh",
+          "file": "Tệp",
+          "voice": "Giọng nói",
+          "startRecognition": "Bắt đầu nhận dạng",
+          "thinking": "Đang suy nghĩ",
+          "send": "Gửi"
+        },
+        "hints": {
+          "enableChatDesc": "Khi bật, bạn có thể trò chuyện với thú cưng trên màn hình. API Key được lưu cục bộ.",
+          "openAiCompatibleDesc": "Hầu hết nhà cung cấp dùng API tương thích OpenAI; Anthropic tự động dùng API Claude Messages.",
+          "baseUrlDesc": "Bạn có thể sửa ở đây nếu dùng proxy, cổng tương thích hoặc triển khai riêng.",
+          "modelNameDesc": "Ưu tiên dùng mô hình đặt ở đây; nếu để trống sẽ dùng mô hình mặc định của nhà cung cấp.",
+          "enableChatFirst": "Hãy bật trò chuyện và điền API Key, Base URL cùng mô hình trong cài đặt nhà cung cấp.",
+          "chooseProviderModel": "Vui lòng chọn nhà cung cấp và mô hình."
+        },
+        "placeholders": {
+          "search": "Tìm kiếm",
+          "petName": "Tên thú cưng",
+          "selectProvider": "Chọn nhà cung cấp mô hình",
+          "model": "Mô hình",
+          "persona": "Mô tả cho mô hình biết cách đóng vai thú cưng của bạn"
+        },
+        "status": {
+          "noTitle": "Không có tiêu đề",
+          "emptyChat": "Chọn thú cưng bên trái để bắt đầu trò chuyện",
+          "configured": "Đã cấu hình",
+          "unconfigured": "Chưa cấu hình"
+        },
+        "messages": {
+          "uploadFailed": "Tải lên thất bại",
+          "configureProvider": "Vui lòng cấu hình nhà cung cấp mô hình",
+          "selectModel": "Vui lòng chọn mô hình",
+          "fillName": "Vui lòng nhập tên hội thoại",
+          "saveSuccess": "Đã lưu thành công",
+          "selectImage": "Vui lòng chọn tệp hình ảnh.",
+          "webviewNotSupportVoice": "WebView hiện tại không hỗ trợ nhận dạng giọng nói.",
+          "voiceRecognitionFailed": "Nhận dạng giọng nói thất bại."
+        },
+        "buttons": {
+          "save": "Lưu"
+        }
+      },
+      "provider": {
+        "title": "Nguồn mô hình",
+        "labels": {
+          "source": "Nguồn mô hình",
+          "addCustomModel": "Thêm mô hình tùy chỉnh",
+          "addLocalModel": "Thêm mô hình cục bộ",
+          "custom": "Tùy chỉnh",
+          "configured": "Đã cấu hình",
+          "unconfiguredKey": "Chưa đặt Key",
+          "settings": "Cài đặt",
+          "removeProvider": "Xóa nhà cung cấp",
+          "avatar": "Ảnh đại diện",
+          "providerName": "Tên nhà cung cấp",
+          "providerValue": "Mã nhà cung cấp",
+          "modelConfig": "Cấu hình mô hình",
+          "modelName": "Tên mô hình",
+          "modelId": "Mã mô hình",
+          "apiKeyOptional": "API Key (Tùy chọn)",
+          "needProxy": "Cần proxy",
+          "providerDesc": "Mô tả (Tùy chọn)",
+          "addProvider": "Thêm nhà cung cấp",
+          "apiKey": "API Key",
+          "baseUrl": "Base URL",
+          "defaultModel": "Mô hình mặc định",
+          "running": "Dịch vụ mô hình cục bộ đang chạy",
+          "loadedModels": "Mô hình cục bộ đã tải",
+          "usableForChat": "Sẵn sàng để trò chuyện",
+          "ollamaBaseUrl": "Địa chỉ cơ sở API Ollama (Base URL):",
+          "copy": "Sao chép",
+          "oneClickClean": "Dọn sạch hoàn toàn",
+          "stopRunning": "Dừng chạy",
+          "useLocalModel": "Dùng mô hình cục bộ",
+          "oneClickAI": "Kích hoạt trải nghiệm AI",
+          "paused": "Đã tạm dừng",
+          "modelDownloading": "Đang tải mô hình",
+          "engineDownloading": "Đang tải engine",
+          "initializingEngine": "Đang khởi tạo engine cục bộ",
+          "downloadPaused": "Đã tạm dừng tải"
+        },
+        "hints": {
+          "openAiCompatible": "Kết nối mọi API tương thích OpenAI",
+          "proxyDesc": "Bật nếu API yêu cầu proxy để truy cập",
+          "apiKeyLocalOnly": "Khóa chỉ được lưu cục bộ, không bao giờ tải lên máy chủ nào",
+          "optimizingEnv": "Đang tối ưu môi trường chạy AI cục bộ của bạn...",
+          "configUnsupported": "Máy tính của bạn chưa được hỗ trợ",
+          "memoryLow": "Máy tính của bạn chỉ có {gb}GB bộ nhớ. Chạy AI cục bộ cần ít nhất 4GB.",
+          "environmentReady": "Môi trường đã sẵn sàng",
+          "systemMemory": "Phát hiện bộ nhớ hệ thống",
+          "recommendModel": "Chúng tôi sẽ cài mô hình nhẹ nhanh phù hợp nhất cho máy của bạn chỉ với một cú nhấp chuột:",
+          "pausedResumeHint": "Đã tạm dừng tải. Nhấp \"Tiếp tục tải\" để tiếp tục."
+        },
+        "messages": {
+          "copied": "Đã sao chép địa chỉ dịch vụ vào clipboard!",
+          "copyFailed": "Sao chép thất bại, vui lòng sao chép thủ công",
+          "hardwareCheckFailed": "Kiểm tra môi trường phần cứng thất bại, vui lòng khởi động lại ứng dụng",
+          "deploySuccess": "Engine AI và mô hình đã triển khai thành công!",
+          "modelLoadError": "Lỗi tải mô hình: không tìm thấy mô hình hợp lệ. Vui lòng thử khởi tạo lại.",
+          "downloadCancelled": "Đã hủy tải, tệp tạm đã được dọn",
+          "initFailed": "Khởi tạo thất bại: {err}",
+          "downloadPaused": "Đã tạm dừng tải",
+          "resuming": "Đang tiếp tục tải...",
+          "cleanupFailed": "Dọn sạch thất bại: {err}",
+          "stopFailed": "Dừng dịch vụ thất bại: {err}",
+          "removedProvider": "Đã xóa nhà cung cấp: {provider}",
+          "addedCustomProvider": "Đã thêm nhà cung cấp tùy chỉnh: {provider}",
+          "defaultCustomDesc": "Nhà cung cấp tùy chỉnh"
+        },
+        "dialogs": {
+          "removeConfirm": "Bạn chắc chắn muốn xóa nhà cung cấp này?",
+          "providerConfigTitle": "Cài đặt nhà cung cấp",
+          "cancelDownloadTitle": "Hủy tải xuống?",
+          "cancelDownloadContent": "Tất cả tệp tạm đã tải sẽ bị xóa và trạng thái được khôi phục.",
+          "confirmCancel": "Hủy",
+          "continueDownload": "Tiếp tục tải",
+          "cleanupTitle": "Xóa hoàn toàn mô hình AI cục bộ?",
+          "cleanupContent": "Thao tác này sẽ xóa vật lý toàn bộ dữ liệu mô hình cục bộ đã tải và giải phóng sâu dung lượng ổ cứng.",
+          "confirmCleanup": "Dọn sạch",
+          "thinkAgain": "Để tôi suy nghĩ",
+          "stopTitle": "Dừng dịch vụ mô hình AI cục bộ?",
+          "stopContent": "Thao tác này sẽ dừng dịch vụ mô hình AI cục bộ. Dịch vụ sẽ không khả dụng, nhưng không dữ liệu nào bị xóa.",
+          "confirmStop": "Dừng",
+          "cleanupSuccessTitle": "Dọn sạch thành công",
+          "cleanupSuccessContent": "Tất cả tệp bộ nhớ đệm mô hình cục bộ đã được xóa vật lý an toàn và sạch sẽ.",
+          "stopSuccessTitle": "Đã dừng dịch vụ",
+          "stopSuccessContent": "Tất cả dịch vụ mô hình cục bộ đã được dừng."
+        },
+        "errors": {
+          "noProvider": "Không tìm thấy nhà cung cấp",
+          "fillComplete": "Vui lòng điền đầy đủ thông tin",
+          "modelIdExists": "Mã mô hình này đã tồn tại, vui lòng dùng mã khác",
+          "providerNameRequired": "Vui lòng nhập tên nhà cung cấp",
+          "providerValueRequired": "Vui lòng nhập mã nhà cung cấp",
+          "baseUrlRequired": "Vui lòng nhập Base URL",
+          "providerValueExists": "Mã nhà cung cấp này đã tồn tại, vui lòng dùng mã khác"
+        },
+        "placeholders": {
+          "providerName": "VD: DeepSeek, SiliconFlow",
+          "providerValue": "Mã định danh tiếng Anh duy nhất, VD: deepseek",
+          "baseUrl": "VD: https://api.deepseek.com/v1/chat/completions",
+          "modelName": "Tên hiển thị, VD: Qwen 2.5",
+          "modelId": "Dùng cho lời gọi API, VD: qwen2.5:0.5b",
+          "apiKey": "Bạn cũng có thể điền sau qua nút Cài đặt",
+          "providerDesc": "Mô tả ngắn về nhà cung cấp này",
+          "apiKeyInput": "Nhập API Key, VD: sk-xxxx",
+          "baseUrlInput": "Nhập địa chỉ API",
+          "defaultModel": "Chọn mô hình mặc định"
+        },
+        "buttons": {
+          "resume": "Tiếp tục tải",
+          "pause": "Tạm dừng tải",
+          "cancelDownload": "Hủy tải",
+          "saveConfig": "Lưu cài đặt"
+        },
+        "modelDialog": {
+          "labels": {
+            "modelName": "Tên mô hình",
+            "modelId": "Mã mô hình",
+            "description": "Mô tả"
+          },
+          "placeholders": {
+            "modelName": "Nhập tên hiển thị của mô hình",
+            "modelId": "Nhập mã mô hình dùng để gọi API"
+          },
+          "hints": {
+            "addModel": "Tìm mô hình đã phát hành trên trang web chính thức của nhà cung cấp"
+          },
+          "buttons": {
+            "add": "Thêm",
+            "confirmAdd": "Thêm",
+            "cancel": "Hủy"
+          }
+        },
+        "status": {
+          "preparingDownload": "Đang chuẩn bị kênh tải...",
+          "preparingCleanup": "Đang chuẩn bị môi trường dọn dẹp...",
+          "preparingInit": "Đang chuẩn bị kênh khởi tạo...",
+          "pullingEngine": "Đang khởi động engine lõi...",
+          "verifyingModel": "Đang xác minh tính toàn vẹn của mô hình cục bộ...",
+          "requestingConfig": "Đang an toàn yêu cầu cấu hình môi trường đám mây...",
+          "downloadingCore": "Đang tải tốc độ cao các thành phần lõi AI: {progress}%",
+          "extractingEnv": "Đang giải nén và tối ưu sâu môi trường tăng tốc GPU AI cục bộ...",
+          "activatingChannel": "Môi trường lõi đã sẵn sàng, đang kích hoạt kênh mô hình...",
+          "downloadingModel": "Đang tải tốc độ cao mô hình AI: {progress}%",
+          "modelReady": "Khởi tạo mô hình thành công!",
+          "stoppingEngine": "Đang đóng an toàn engine AI cục bộ...",
+          "uninstallingModel": "Đang gỡ mô hình khỏi kho cục bộ: {name}...",
+          "shreddingData": "Đang xóa vật lý toàn bộ lõi AI, driver GPU và dữ liệu mô hình...",
+          "cleanupComplete": "Đã xóa hoàn toàn 1.8GB thành phần AI và mô hình cục bộ. Dung lượng đã được giải phóng hoàn toàn!"
+        }
+      },
       "cat": {
         "title": "Mèo",
         "labels": {
@@ -88,7 +307,8 @@
       "model": {
         "title": "Mô hình",
         "labels": {
-          "deleteModel": "Xóa mô hình"
+          "deleteModel": "Xóa mô hình",
+          "tips": "Chọn một người bạn đồng hành để chuyển đổi nhé."
         },
         "hints": {
           "deleteSuccess": "Xóa thành công",
@@ -119,14 +339,16 @@
           "togglePreferences": "Mở Tùy chỉnh",
           "mirrorMode": "Chế độ gương",
           "passThrough": "Click xuyên",
-          "alwaysOnTop": "Luôn trên cùng"
+          "alwaysOnTop": "Luôn trên cùng",
+          "openMessageBox": "Mở hộp nhập tin nhắn"
         },
         "hints": {
           "toggleCat": "Bật/Tắt cửa sổ mèo.",
           "togglePreferences": "Bật/Tắt cửa sổ tùy chỉnh.",
           "mirrorMode": "Bật/Tắt chế độ gương.",
           "passThrough": "Bật/Tắt cho phép click xuyên cửa sổ mèo.",
-          "alwaysOnTop": "Bật/Tắt luôn giữ cửa sổ mèo trên cùng."
+          "alwaysOnTop": "Bật/Tắt luôn giữ cửa sổ mèo trên cùng.",
+          "openMessageBox": "Mở hộp nhập tin nhắn sau khi nhấn phím tắt"
         }
       },
       "about": {
@@ -177,6 +399,7 @@
   "composables": {
     "useAppMenu": {
       "labels": {
+        "chat": "Trò chuyện...",
         "preference": "Tùy chỉnh...",
         "hideCat": "Ẩn Mèo",
         "showCat": "Hiện Mèo",
@@ -185,6 +408,29 @@
         "opacity": "Độ mờ",
         "restartApp": "Khởi động lại",
         "quitApp": "Thoát"
+      }
+    },
+    "useTauriAIChat": {
+      "errors": {
+        "providerNotConfigured": "Nhà cung cấp chưa được cấu hình",
+        "createStreamReaderFailed": "Không thể tạo trình đọc luồng dữ liệu",
+        "selectPetFirst": "Vui lòng chọn thú cưng của bạn trước",
+        "inputMessageRequired": "Vui lòng nhập tin nhắn để gửi",
+        "createConversationFailed": "Tạo hội thoại thất bại",
+        "configureModelFirst": "Vui lòng cấu hình mô hình trước",
+        "selectConversation": "Vui lòng chọn một hội thoại"
+      }
+    },
+    "useTauriAiChatCommand": {
+      "labels": {
+        "pin": "Ghim",
+        "delete": "Xóa"
+      },
+      "errors": {
+        "selectConversation": "Vui lòng chọn một hội thoại"
+      },
+      "hints": {
+        "deleteConfirm": "Bạn chắc chắn muốn xóa?"
       }
     },
     "useTray": {
@@ -197,6 +443,50 @@
       "hints": {
         "notFound": "Không tìm thấy tệp cấu hình chính của mô hình, vui lòng xác nhận các tệp mô hình có đầy đủ không."
       }
+    }
+  },
+  "stores": {
+    "chat": {
+      "defaultConversationTitle": "Hội thoại mặc định",
+      "defaultSystemPrompt": "Bạn là người bạn đồng hành trên màn hình máy tính luôn ở bên tôi. Hãy trả lời ấm áp, ngắn gọn và tinh nghịch."
+    }
+  },
+  "providers": {
+    "names": {
+      "深度求索": "DeepSeek",
+      "字节跳动": "ByteDance",
+      "阿里巴巴": "Alibaba",
+      "google": "Google",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "智谱ai": "Zhipu AI",
+      "月之暗面": "Moonshot AI",
+      "Minimax": "MiniMax",
+      "本地大模型": "Mô hình cục bộ"
+    },
+    "descs": {
+      "深度求索": "Nền tảng mở DeepSeek cung cấp API mô hình lớn hiệu suất cao.",
+      "字节跳动": "Nền tảng mô hình Doubao của ByteDance, cung cấp khả năng đa phương thức trò chuyện, hình ảnh...",
+      "阿里巴巴": "Nền tảng mở mô hình lớn Tongyi Qianwen của Alibaba.",
+      "google": "Nền tảng mở mô hình lớn Google Gemini.",
+      "openai": "Nền tảng mở mô hình lớn OpenAI.",
+      "anthropic": "Nền tảng mở mô hình lớn Anthropic Claude.",
+      "智谱ai": "Nền tảng mở Zhipu AI cung cấp dòng mô hình lớn GLM.",
+      "月之暗面": "Nền tảng mở mô hình lớn Kimi của Moonshot AI.",
+      "Minimax": "Nền tảng mở MiniMax cung cấp mô hình lớn đa phương thức."
+    }
+  },
+  "common": {
+    "buttons": {
+      "confirm": "OK",
+      "cancel": "Hủy",
+      "close": "Đóng",
+      "reset": "Đặt lại",
+      "save": "Lưu",
+      "apply": "Áp dụng",
+      "settingNow": "Đi đến cài đặt",
+      "resetToDefault": "Khôi phục mặc định",
+      "back": "Quay lại"
     }
   }
 }

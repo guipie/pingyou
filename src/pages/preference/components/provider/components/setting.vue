@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button, Input, message, Modal, Select } from 'antdv-next'
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { AIProvider, AiProviderModels } from '@/stores/shard/provider-shard'
 
@@ -15,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'saved'): void
 }>()
+const { t } = useI18n()
 const open = defineModel<boolean>('open', { default: false })
 const providerStore = useProviderStore()
 const chatStore = useChatStore()
@@ -24,6 +26,11 @@ const formData = ref({
   baseUrl: '',
   defaultModel: '',
 })
+
+/** 供应商显示名称：优先使用 i18n 映射，找不到则回退数据库中的名称 */
+function providerDisplayName(p: AIProvider) {
+  return t(`providers.names.${p.provider}`, {}, p.provider)
+}
 const modelsOptions = ref<AiProviderModels[]>([])
 watch(() => props.provider, (p) => {
   if (p) {
@@ -40,9 +47,9 @@ function handleModelsSave(model: AiProviderModels) {
   modelsOptions.value.push(JSON.parse(JSON.stringify(model)))
 }
 function handleSave() {
-  if (!props.provider) return message.warning('未获取到供应商')
+  if (!props.provider) return message.warning(t('pages.preference.provider.errors.noProvider'))
   if (!formData.value.apiKey || !formData.value.baseUrl || !formData.value.defaultModel)
-    return message.warning('请填写完整')
+    return message.warning(t('pages.preference.provider.errors.fillComplete'))
   const updated: AIProvider = {
     ...props.provider,
     apiKey: formData.value.apiKey,
@@ -62,7 +69,7 @@ function handleSave() {
     v-model:open="open"
     centered
     :footer="null"
-    title="供应商配置"
+    :title="t('pages.preference.provider.dialogs.providerConfigTitle')"
     :width="520"
   >
     <div
@@ -77,7 +84,7 @@ function handleSave() {
         />
         <div class="min-w-0 flex-1">
           <div class="text-4 font-medium">
-            {{ provider.provider }}
+            {{ providerDisplayName(provider) }}
           </div>
           <div class="mt-1 truncate text-3 color-text-tertiary">
             {{ provider.desc }}
@@ -87,20 +94,20 @@ function handleSave() {
 
       <!-- API Key -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-3.5 font-medium">API Key</label>
+        <label class="text-3.5 font-medium">{{ t('pages.preference.provider.labels.apiKey') }}</label>
         <Input.Password
           v-model:value="formData.apiKey"
-          placeholder="请输入 API Key，如 sk-xxxx"
+          :placeholder="t('pages.preference.provider.placeholders.apiKey')"
         />
-        <span class="text-2.5 color-text-quaternary">密钥仅保存在本地，不会上传到任何服务器</span>
+        <span class="text-2.5 color-text-quaternary">{{ t('pages.preference.provider.hints.apiKeyLocalOnly') }}</span>
       </div>
 
       <!-- Base URL -->
       <div class="flex flex-col gap-1.5">
-        <label class="text-3.5 font-medium">Base URL</label>
+        <label class="text-3.5 font-medium">{{ t('pages.preference.provider.labels.baseUrl') }}</label>
         <Input
           v-model:value="formData.baseUrl"
-          placeholder="请输入接口地址"
+          :placeholder="t('pages.preference.provider.placeholders.baseUrlInput')"
         />
       </div>
 
@@ -108,14 +115,14 @@ function handleSave() {
       <div
         class="flex flex-col gap-1.5"
       >
-        <label class="text-3.5 font-medium">默认模型</label>
+        <label class="text-3.5 font-medium">{{ t('pages.preference.provider.labels.defaultModel') }}</label>
         <div class="flex">
           <Select
             v-model:value="formData.defaultModel"
             class="w-full"
             :field-names="{ label: 'name', value: 'modelId' }"
             :options="modelsOptions"
-            placeholder="请选择默认模型"
+            :placeholder="t('pages.preference.provider.placeholders.defaultModel')"
           />
           <ProviderModelAdd
             :provider="provider"
@@ -130,7 +137,7 @@ function handleSave() {
         type="primary"
         @click="handleSave"
       >
-        保存配置
+        {{ t('pages.preference.provider.buttons.saveConfig') }}
       </Button>
     </div>
   </Modal>

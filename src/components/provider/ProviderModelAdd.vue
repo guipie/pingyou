@@ -2,6 +2,7 @@
 import { PlusCircleOutlined } from '@antdv-next/icons'
 import { Button, Form, FormItem, Input, message, Modal, TextArea } from 'antdv-next'
 import { reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { AIProvider } from '@/stores/shard/provider-shard'
 
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 const emits = defineEmits(['modelSaved'])
 const providerStore = useProviderStore()
+const { t } = useI18n()
 const model = reactive({
   name: '',
   modelId: '',
@@ -20,11 +22,11 @@ const model = reactive({
 const open = ref(false)
 function handleOk() {
   if (!model.name || !model.modelId)
-    return message.warning('请填写完整')
+    return message.warning(t('pages.preference.provider.errors.fillComplete'))
   // 校验 modelId 在当前供应商下唯一，避免 v-for key 冲突与 Select 值冲突
   const exists = props.provider.models?.some(m => m.modelId === model.modelId)
   if (exists)
-    return message.warning('该模型ID已存在，请更换')
+    return message.warning(t('pages.preference.provider.errors.modelIdExists'))
   providerStore.updateProviderModels(props.provider.provider, JSON.parse(JSON.stringify(model)))
   open.value = false
   emits('modelSaved', JSON.parse(JSON.stringify(model)))
@@ -37,7 +39,7 @@ function handleOk() {
       type="dashed"
       @click="open = true"
     >
-      添加
+      {{ t('pages.preference.provider.modelDialog.buttons.add') }}
       <template #icon>
         <PlusCircleOutlined />
       </template>
@@ -45,7 +47,7 @@ function handleOk() {
 
     <Modal
       v-model:open="open"
-      title="在供应商官网查询发布的模型"
+      :title="t('pages.preference.provider.modelDialog.hints.addModel')"
       @ok="handleOk"
     >
       <template #footer>
@@ -53,14 +55,14 @@ function handleOk() {
           key="back"
           @click="open = false"
         >
-          取消
+          {{ t('pages.preference.provider.modelDialog.buttons.cancel') }}
         </Button>
         <Button
           key="submit"
           type="primary"
           @click="handleOk"
         >
-          确定添加
+          {{ t('pages.preference.provider.modelDialog.buttons.confirmAdd') }}
         </Button>
       </template>
       <Form
@@ -71,16 +73,16 @@ function handleOk() {
         :wrapper-col="{ span: 16 }"
       >
         <FormItem
-          label="模型名称"
+          :label="t('pages.preference.provider.modelDialog.labels.modelName')"
           name="name"
-          :rules="[{ required: true, message: '输入模型显示名称' }]"
+          :rules="[{ required: true, message: t('pages.preference.provider.modelDialog.placeholders.modelName') }]"
         >
           <Input v-model:value="model.name" />
         </FormItem>
         <FormItem
-          label="模型ID"
+          :label="t('pages.preference.provider.modelDialog.labels.modelId')"
           name="modelId"
-          :rules="[{ required: true, message: '输入模型ID,用于调用模型' }]"
+          :rules="[{ required: true, message: t('pages.preference.provider.modelDialog.placeholders.modelId') }]"
         >
           <Input
             v-model:value="model.modelId"
@@ -88,7 +90,7 @@ function handleOk() {
           />
         </FormItem>
         <FormItem
-          label="描述"
+          :label="t('pages.preference.provider.modelDialog.labels.description')"
           name="desc"
         >
           <TextArea v-model:value="model.desc" />

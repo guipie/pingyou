@@ -27,6 +27,14 @@ export const INVOKE_KEY = {
   STOP_GAMEPAD_LISTING: 'stop_gamepad_listing',
 }
 
+/**
+ * 快捷聊天窗口之间的状态哨兵值（跨窗口事件传输）。
+ * 注意：该值仅用于事件消息判等，不要按语言本地化，展示时使用 i18n。
+ */
+export const WIN_MESSAGE_STATUS = {
+  THINKING: 'pingyou-thinking',
+} as const
+
 export const LANGUAGE = {
   ZH_CN: 'zh-CN',
   ZH_TW: 'zh-TW',

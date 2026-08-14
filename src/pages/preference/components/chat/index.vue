@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ClearOutlined, PlusOutlined } from '@antdv-next/icons'
-import { Button, Dropdown, Input } from 'antdv-next'
+import { Button, Dropdown, Input, Popconfirm } from 'antdv-next'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import PyAvatar from '@/components/py-avatar.vue'
 import { useTauriAIChatCommand } from '@/composables/useTauriAiChatCommand'
@@ -15,6 +16,7 @@ import ChatMsg from './components/chat-msg.vue'
 
 const routeSettingStore = useRouteSettingStore()
 const chatStore = useChatStore()
+const { t } = useI18n()
 // 按照置顶，时间倒序排列
 // 按照置顶优先，同状态下按时间倒序排列
 const conversations = computed(() => {
@@ -43,7 +45,7 @@ const curConversation = computed(() => chatStore.currentConversation)
             <i class="i-lucide:search pointer-events-none absolute left-2 top-1/2 text-3.5 color-text-tertiary -translate-y-1/2" />
             <Input
               class="wechat-search"
-              placeholder="搜索"
+              :placeholder="t('pages.preference.chat.placeholders.search')"
             />
           </div>
           <Button
@@ -65,7 +67,7 @@ const curConversation = computed(() => chatStore.currentConversation)
             <template #icon>
               <PlusOutlined />
             </template>
-            新建聊天
+            {{ t('pages.preference.chat.labels.newChat') }}
           </Button>
           <Dropdown
             v-for="item in conversations"
@@ -107,7 +109,7 @@ const curConversation = computed(() => chatStore.currentConversation)
       >
         <header class="h-13 flex shrink-0 items-center b-0 b-b-1 b-solid px-5 b-border-sec">
           <div class="text-4 font-medium color-text">
-            {{ curConversation?.title || '无标题' }}
+            {{ curConversation?.title || t('pages.preference.chat.status.noTitle') }}
           </div>
 
           <div class="flex-1" />
@@ -116,21 +118,25 @@ const curConversation = computed(() => chatStore.currentConversation)
             class="wechat-header-button"
             shape="circle"
             type="text"
+
             @click="routeSettingStore.goCurPage(ContainerRouters.chatModelSetting)"
           >
             <i class="i-lucide:settings" />
           </Button>
-
-          <Button
-            class="wechat-header-button"
-            shape="circle"
-            type="text"
-            @click="chatStore.clearChatMessages(curConversation?.id)"
+          <Popconfirm
+            :title="t('common.tips.clear')"
+            @confirm="chatStore.clearChatMessages(curConversation?.id)"
           >
-            <template #icon>
-              <ClearOutlined />
-            </template>
-          </Button>
+            <Button
+              class="wechat-header-button"
+              shape="circle"
+              type="text"
+            >
+              <template #icon>
+                <ClearOutlined />
+              </template>
+            </Button>
+          </Popconfirm>
         </header>
 
         <main class="wechat-message-panel min-h-0 flex-1 overflow-y-auto px-8 py-6">
@@ -155,10 +161,10 @@ const curConversation = computed(() => chatStore.currentConversation)
               <i class="i-solar:cat-bold text-9 color-[#07c160]" />
             </div>
             <div class="text-4 font-medium color-text-secondary">
-              选择左侧屏友开始聊天
+              {{ t('pages.preference.chat.status.emptyChat') }}
             </div>
             <div class="text-3.5">
-              请选择配置供应商和模型。
+              {{ t('pages.preference.chat.hints.chooseProviderModel') }}
             </div>
           </div>
         </main>

@@ -5,9 +5,11 @@ import { computed, ref } from 'vue'
 import type { TauriAIChatFileOptions, TauriAIChatMessage, TauriAIChatRequestOptions, TauriAIConversation } from '@/stores/shard/chat-shard'
 import type { AIProvider, AiProviderModels } from '@/stores/shard/provider-shard'
 
+import { i18n } from '@/locales'
 import { useChatStore } from '@/stores/aichat'
 import { useModelStore } from '@/stores/model'
-import { defaultProvider, defaultSystemPrompt } from '@/stores/shard/chat-shard'
+import { defaultProvider, getDefaultSystemPrompt } from '@/stores/shard/chat-shard'
+import { isBoolean } from '@/utils/is'
 
 type ProviderFamily = 'anthropic' | 'openai-compatible'
 
@@ -86,7 +88,7 @@ function buildOpenAIMessages(content: string, ctx: TauriAIChatRequestOptions, is
     return [
       {
         role: 'system',
-        content: ctx.systemPrompt || defaultSystemPrompt,
+        content: ctx.systemPrompt || getDefaultSystemPrompt(),
       },
       ...sendMessages,
     ]
@@ -127,7 +129,7 @@ function parseSSELine(line: string, isAnthropic: boolean): string {
 async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
   let response: Response | null = null
   const provider = ctx.provider
-  if (!provider) throw new Error('Provider 未配置')
+  if (!provider) throw new Error(i18n.global.t('composables.useTauriAIChat.errors.providerNotConfigured'))
   const isAnthropic = getProviderFamily(provider) === 'anthropic'
   if (isAnthropic) {
     response = await tauriFetch(resolveEndpoint(provider, '/v1/messages'), {
@@ -140,7 +142,7 @@ async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
       body: JSON.stringify({
         model: ctx.model,
         max_tokens: ctx.maxTokens ?? 4096,
-        system: ctx.systemPrompt || defaultSystemPrompt,
+        system: ctx.systemPrompt || getDefaultSystemPrompt(),
         messages: buildOpenAIMessages(content, ctx, false),
         temperature: ctx.temperature,
         stream: true,
@@ -188,7 +190,7 @@ async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
   const reader = response.body?.getReader()
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
-  if (!reader) throw new Error('无法创建数据流读取器')
+  if (!reader) throw new Error(i18n.global.t('composables.useTauriAIChat.errors.createStreamReaderFailed'))
 
   while (true) {
     const { done, value } = await reader.read()
@@ -211,7 +213,7 @@ async function tauriFetchChat(content: string, ctx: TauriAIChatRequestOptions) {
 }
 
 function assertProviderReady(provider: AIProvider, model?: string) {
-  if (!provider.apiKey?.trim())
+  if ((!(provider.apiKey?.trim() || isBoolean(provider.isCustom))))
     throw new Error('Provider API key is empty.')
 
   if (!provider.baseUrl?.trim() || !isAbsoluteUrl(provider.baseUrl))
@@ -233,7 +235,6 @@ export function useTauriAIChat() {
   const hisMessages = ref<TauriAIChatMessage[]>([])
   const loading = ref(false)
   const error = ref<Error>()
-  const model = ref('')
   // 当前请求的中断控制器
   let abortController: AbortController | null = null
 
@@ -243,16 +244,15 @@ export function useTauriAIChat() {
   // 实际生效的模型：用户选择 > 会话配置 > 供应商默认 > 模型列表首项
   const resolvedModel = computed(() => {
     return (
-      model.value?.trim()
-      || chatStore.currentConversation?.config?.model?.trim()
-      || provider.value.defaultModel?.trim()
+      provider.value.defaultModel?.trim()
       || provider.value.models?.[0]?.modelId
+      || chatStore.currentConversation?.config?.model?.trim()
       || ''
     )
   })
   const isReady = computed(() => {
     return Boolean(
-      provider.value.apiKey?.trim()
+      (provider.value.apiKey?.trim() || isBoolean(provider.value.isCustom))
       && provider.value.baseUrl?.trim()
       && resolvedModel.value,
     )
@@ -260,17 +260,17 @@ export function useTauriAIChat() {
   async function sendWinMessage(content: string, options: { onChunk?: (text: string) => void, onDone?: () => void }) {
     const modelStore = useModelStore()
     if (!modelStore.currentModel) {
-      return message('请先选择您的屏友')
+      return message(i18n.global.t('composables.useTauriAIChat.errors.selectPetFirst'))
     }
     if (!content.trim()) {
-      return message('请输入发送消息')
+      return message(i18n.global.t('composables.useTauriAIChat.errors.inputMessageRequired'))
     }
     let conversation = conversations.value.find((item: TauriAIConversation) => item.id === modelStore.currentModel?.id)
     if (!conversation) {
       conversation = await chatStore.addConversation(modelStore.currentModel?.id)
     }
     if (!conversation) {
-      return message('创建会话失败')
+      return message(i18n.global.t('composables.useTauriAIChat.errors.createConversationFailed'))
     }
     chatStore.currentConversation = conversation
     return sendMessage(content, options)
@@ -292,11 +292,11 @@ export function useTauriAIChat() {
     }
 
     if (!userMessage.question && !userMessage.file)
-      throw new Error('请输入发送消息')
+      throw new Error(i18n.global.t('composables.useTauriAIChat.errors.inputMessageRequired'))
     if (!isReady.value)
-      throw new Error('请先配置好模型')
+      throw new Error(i18n.global.t('composables.useTauriAIChat.errors.configureModelFirst'))
     if (!chatStore.currentConversation || !chatStore.currentConversation.id)
-      throw new Error('请选择一个会话')
+      throw new Error(i18n.global.t('composables.useTauriAIChat.errors.selectConversation'))
 
     hisMessages.value = chatStore.currentConversation?.messages || []
     loading.value = true
@@ -311,7 +311,7 @@ export function useTauriAIChat() {
         messages: hisMessages.value,
         baseUrl: provider.value.baseUrl ?? '',
         signal: abortController.signal,
-        systemPrompt: chatStore.currentConversation.config?.systemPrompt ?? defaultSystemPrompt,
+        systemPrompt: chatStore.currentConversation.config?.systemPrompt ?? getDefaultSystemPrompt(),
         temperature: chatStore.currentConversation.config?.temperature,
         maxTokens: chatStore.currentConversation.config?.maxTokens,
         onChunk(text: string): void {
@@ -347,13 +347,8 @@ export function useTauriAIChat() {
     }
   }
 
-  function setModel(nextModel: string) {
-    model.value = nextModel
-  }
-
   return {
     provider,
-    model,
     resolvedModel,
     modelOptions,
     loading,
@@ -361,7 +356,6 @@ export function useTauriAIChat() {
     isReady,
     sendMessage,
     sendWinMessage,
-    setModel,
     stop,
   }
 }

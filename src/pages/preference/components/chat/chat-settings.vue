@@ -15,6 +15,7 @@ import PyAvatar from '@/components/py-avatar.vue'
 import { useChatStore } from '@/stores/aichat'
 import { useProviderStore } from '@/stores/aiprovider'
 import { useRouteSettingStore } from '@/stores/route-setting'
+import { isBoolean } from '@/utils/is'
 import { getImgBase64 } from '@/utils/path'
 
 type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
@@ -49,22 +50,22 @@ const avatarChange: UploadEmits['change'] = async (info) => {
   if (info.file) {
     curConversation.value.avatar = await getImgBase64(info.file as FileType)
   } else {
-    message.warning('上传失败')
+    message.warning(t('pages.preference.chat.messages.uploadFailed'))
   }
 }
 function saveConversation() {
   if (!curConversation.value) return
-  if (!curSeletedProvider.value || !curSeletedProvider.value.apiKey) {
-    return message.warning('请配置模型供应商')
+  if (!curSeletedProvider.value || (!curSeletedProvider.value.apiKey && !isBoolean(curSeletedProvider.value.isCustom))) {
+    return message.warning(t('pages.preference.chat.messages.configureProvider'))
   }
   if (!curSeletedModel.value)
-    return message.warning('请选择模型')
+    return message.warning(t('pages.preference.chat.messages.selectModel'))
   if (!curConversation.value.title.trim())
-    return message.warning('请填写会话名称')
+    return message.warning(t('pages.preference.chat.messages.fillName'))
   curConversation.value.provider = curSeletedProvider.value
   curConversation.value.provider.defaultModel = curSeletedModel.value
   chatStore.updateConversation(curConversation.value)
-  message.success('保存成功')
+  message.success(t('pages.preference.chat.messages.saveSuccess'))
 }
 </script>
 
@@ -81,7 +82,7 @@ function saveConversation() {
           {{ t('common.buttons.back') }}
         </Button>
         <span class="text-5 font-medium">
-          会话配置
+          {{ t('pages.preference.chat.labels.conversationConfig') }}
         </span>
       </div>
       <div>
@@ -109,8 +110,8 @@ function saveConversation() {
       title=""
     >
       <ProListItem
-        description="启用后，可以和桌宠聊天。API Key 会保存在本机配置中。"
-        title="启用聊天"
+        :description="t('pages.preference.chat.hints.enableChatDesc')"
+        :title="t('pages.preference.chat.labels.enableChat')"
       >
         <Switch
           :checked="true"
@@ -141,31 +142,31 @@ function saveConversation() {
           >
             <PlusOutlined />
             <div style="margin-top: 8px">
-              头像上传
+              {{ t('pages.preference.chat.labels.avatarUpload') }}
             </div>
           </button>
         </Upload>
       </ProListItem>
       <ProListItem
-        title="屏友名称"
+        :title="t('pages.preference.chat.labels.petName')"
       >
         <Input
           v-model:value="curConversation!.title"
           class="w-80"
-          placeholder="屏友名称"
+          :placeholder="t('pages.preference.chat.placeholders.petName')"
         />
       </ProListItem>
       <ProListItem
-        description="大多数供应商使用 OpenAI-compatible 接口，Anthropic 会自动走 Claude Messages 接口。"
-        title="模型供应商"
+        :description="t('pages.preference.chat.hints.openAiCompatibleDesc')"
+        :title="t('pages.preference.chat.labels.provider')"
         vertical
       >
         <div class="flex flex-col gap-2">
           <div>
             <Select
               v-model:value="curSelectedProviderVal"
-              :options="pvStore.stateProviders.map((item:AIProvider) => ({ label: item.provider, value: item.value, provider: item }))"
-              placeholder="请选择模型供应商"
+              :options="pvStore.stateProviders.map((item:AIProvider) => ({ label: t(`providers.names.${item.provider}`, {}, item.provider), value: item.value, provider: item }))"
+              :placeholder="t('pages.preference.chat.placeholders.selectProvider')"
               style="width: 80%;"
             >
               <template #optionRender="{ option }">
@@ -185,7 +186,7 @@ function saveConversation() {
                   <Tag
                     size="small"
                   >
-                    {{ option.data.provider?.apiKey?.length > 0 ? '✅已配置' : '❌未配置' }}
+                    {{ (option.data.provider?.apiKey?.length > 0 || isBoolean(option.data.provider.isCustom)) ? `✅${t('pages.preference.chat.status.configured')}` : `❌${t('pages.preference.chat.status.unconfigured')}` }}
                   </Tag>
                 </Space>
               </template>
@@ -209,7 +210,7 @@ function saveConversation() {
             </ProListItem>
 
             <ProListItem
-              description="如果使用代理、兼容网关或私有部署，可以修改这里。"
+              :description="t('pages.preference.chat.hints.baseUrlDesc')"
               title="Base URL"
             >
               <Input
@@ -221,8 +222,8 @@ function saveConversation() {
             </ProListItem>
 
             <ProListItem
-              description="优先使用这里的模型；留空时会使用供应商默认模型。"
-              title="模型名称"
+              :description="t('pages.preference.chat.hints.modelNameDesc')"
+              :title="t('pages.preference.chat.labels.modelName')"
             >
               <div>
                 <Select
@@ -231,7 +232,7 @@ function saveConversation() {
                   :options="(curSeletedProvider?.models ?? []).map((item:AiProviderModels) => ({ label: `${item.modelId}`, value: item.modelId }))"
                 />
                 <Popover
-                  title="自定义模型-(可以在官方供应商模型列表中查找)"
+                  :title="t('pages.preference.chat.labels.customModelTitle')"
                   trigger="click"
                 >
                   <template #content>
@@ -245,12 +246,12 @@ function saveConversation() {
                         type="primary"
                         @click="curSeletedModel = customModel"
                       >
-                        保存
+                        {{ t('pages.preference.chat.buttons.save') }}
                       </Button>
                     </div>
                   </template>
                   <Button>
-                    自定义
+                    {{ t('pages.preference.chat.labels.custom') }}
                   </Button>
                 </Popover>
               </div>
@@ -260,13 +261,13 @@ function saveConversation() {
       </ProListItem>
 
       <ProListItem
-        title="屏友人格"
+        :title="t('pages.preference.chat.labels.persona')"
         vertical
       >
         <TextArea
           v-model:value="curConversation!.config.systemPrompt"
           :auto-size="{ minRows: 3, maxRows: 6 }"
-          placeholder="告诉模型应该如何扮演你的屏友"
+          :placeholder="t('pages.preference.chat.placeholders.persona')"
         />
       </ProListItem>
     </ProList>

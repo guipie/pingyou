@@ -2,6 +2,7 @@ import { computed } from 'vue'
 
 import { DefaultProviders } from '@/constants/provider'
 import { ConversationRepo } from '@/database/conversation-repository'
+import { i18n } from '@/locales'
 
 import type { AIProvider } from './provider-shard'
 
@@ -69,7 +70,10 @@ export interface TauriAIConversationConfig {
   temperature?: number
   maxTokens?: number
 }
-export const defaultSystemPrompt = '你是我的电脑桌面上一个随时陪伴我的桌面好友。温暖、简短且俏皮地回复.'
+/** 默认系统提示词：按当前界面语言获取，避免写入数据库的种子数据被语言写死 */
+export function getDefaultSystemPrompt(): string {
+  return i18n.global.t('stores.chat.defaultSystemPrompt')
+}
 export const defaultProvider = computed(() => useProviderStore().stateProviders.find((m: AIProvider) => !!m.apiKey) ?? useProviderStore().stateProviders[0] ?? DefaultProviders[0])
 // 初始化会话列表
 export function initConversations(): Promise<TauriAIConversation[]> {
@@ -89,14 +93,14 @@ export function initConversations(): Promise<TauriAIConversation[]> {
 export async function addConversationDb(proverder?: AIProvider, id?: string): Promise<TauriAIConversation> {
   const conversation: TauriAIConversation = {
     id: id || crypto.randomUUID(),
-    title: '默认会话',
+    title: i18n.global.t('stores.chat.defaultConversationTitle'),
     avatar: proverder?.avatar || defaultProvider.value.avatar,
     messages: [],
     timestamp: Date.now(),
     provider: proverder || defaultProvider.value,
     config: {
       enabled: true,
-      systemPrompt: defaultSystemPrompt,
+      systemPrompt: getDefaultSystemPrompt(),
       model: proverder?.defaultModel || defaultProvider.value.defaultModel || defaultProvider.value.models?.[0]?.modelId || '',
     },
   }

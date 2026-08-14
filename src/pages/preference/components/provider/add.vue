@@ -4,6 +4,7 @@ import type { UploadEmits, UploadProps } from 'antdv-next'
 import { PlusOutlined } from '@antdv-next/icons'
 import { Button, Input, message, Switch, TextArea, Upload } from 'antdv-next'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { AIProvider } from '@/stores/shard/provider-shard'
 
@@ -17,6 +18,7 @@ type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
 
 const generalStore = useGeneralStore()
 const providerStore = useProviderStore()
+const { t } = useI18n()
 
 const addForm = ref({
   provider: '',
@@ -88,15 +90,15 @@ async function handleSubmit() {
   const { provider, value, baseUrl } = addForm.value
 
   if (!provider.trim()) {
-    message.warning('请输入供应商名称')
+    message.warning(t('pages.preference.provider.errors.providerNameRequired'))
     return
   }
   if (!value.trim()) {
-    message.warning('请输入供应商标识')
+    message.warning(t('pages.preference.provider.errors.providerValueRequired'))
     return
   }
   if (!baseUrl.trim()) {
-    message.warning('请输入 Base URL')
+    message.warning(t('pages.preference.provider.errors.baseUrlRequired'))
     return
   }
 
@@ -104,7 +106,7 @@ async function handleSubmit() {
     (p: AIProvider) => p.value === value.trim(),
   )
   if (existProvider) {
-    message.warning('该供应商标识已存在，请更换')
+    message.warning(t('pages.preference.provider.errors.providerValueExists'))
     return
   }
 
@@ -124,7 +126,7 @@ async function handleSubmit() {
     provider: provider.trim(),
     value: value.trim(),
     avatar: addForm.value.avatar.trim() || provider.trim().charAt(0),
-    desc: addForm.value.desc.trim() || '自定义供应商',
+    desc: addForm.value.desc.trim() || t('pages.preference.provider.messages.defaultCustomDesc'),
     baseUrl: baseUrl.trim(),
     isCustom: true,
     apiKey: addForm.value.apiKey.trim(),
@@ -133,7 +135,7 @@ async function handleSubmit() {
     models,
   }
   providerStore.addProvider(newProvider)
-  message.success(`已添加自定义供应商：${newProvider.provider}`)
+  message.success(t('pages.preference.provider.messages.addedCustomProvider', { provider: newProvider.provider }))
 
   // 通知主窗口刷新供应商列表
   const [{ emit }, { getCurrentWebviewWindow }] = await Promise.all([
@@ -155,7 +157,7 @@ const avatarChange: UploadEmits['change'] = async (info) => {
   <div class="min-h-screen bg-[--ant-color-fill-secondary] p-6">
     <div class="mx-auto max-w-lg rounded-xl p-6 shadow-md bg-white dark:bg-warmGray-8">
       <h2 class="mb-6 text-slate-800 font-bold text-lg dark:text-white">
-        添加自定义模型
+        {{ t('pages.preference.provider.labels.addCustomModel') }}
       </h2>
 
       <div class="flex flex-col gap-4">
@@ -184,19 +186,19 @@ const avatarChange: UploadEmits['change'] = async (info) => {
             >
               <PlusOutlined />
               <div style="margin-top: 8px">
-                头像
+                {{ t('pages.preference.provider.labels.avatar') }}
               </div>
             </button>
           </Upload>
 
           <div class="flex flex-1 flex-col justify-evenly gap-1.5">
             <label class="text-3.5 font-medium">
-              供应商名称
+              {{ t('pages.preference.provider.labels.providerName') }}
               <span class="text-red-5">*</span>
             </label>
             <Input
               v-model:value="addForm.provider"
-              placeholder="如：DeepSeek、硅基流动"
+              :placeholder="t('pages.preference.provider.placeholders.providerName')"
             />
           </div>
         </div>
@@ -204,12 +206,12 @@ const avatarChange: UploadEmits['change'] = async (info) => {
         <!-- 供应商标识 -->
         <div class="flex flex-col gap-1.5">
           <label class="text-3.5 font-medium">
-            供应商标识
+            {{ t('pages.preference.provider.labels.providerValue') }}
             <span class="text-red-5">*</span>
           </label>
           <Input
             v-model:value="addForm.value"
-            placeholder="唯一英文标识，如：deepseek"
+            :placeholder="t('pages.preference.provider.placeholders.providerValue')"
           />
         </div>
 
@@ -221,28 +223,28 @@ const avatarChange: UploadEmits['change'] = async (info) => {
           </label>
           <Input
             v-model:value="addForm.baseUrl"
-            placeholder="如：https://api.deepseek.com/v1/chat/completions"
+            :placeholder="t('pages.preference.provider.placeholders.baseUrl')"
           />
         </div>
 
         <!-- 模型名称 + 模型标识 -->
         <div class="bg-blue-50/50 border border-slate-200 p-3 rounded-lg dark:border-warmGray-600 dark:bg-warmGray-700/50">
           <div class="mb-2 text-3 text-slate-600 font-medium dark:text-warmGray-300">
-            大模型配置
+            {{ t('pages.preference.provider.labels.modelConfig') }}
           </div>
           <div class="flex flex-col gap-3">
             <div class="flex flex-col gap-1.5">
-              <label class="text-3 font-medium">模型名称</label>
+              <label class="text-3 font-medium">{{ t('pages.preference.provider.labels.modelName') }}</label>
               <Input
                 v-model:value="addForm.modelName"
-                placeholder="展示用名称，如：Qwen 2.5"
+                :placeholder="t('pages.preference.provider.placeholders.modelName')"
               />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-3 font-medium">模型标识</label>
+              <label class="text-3 font-medium">{{ t('pages.preference.provider.labels.modelId') }}</label>
               <Input
                 v-model:value="addForm.modelId"
-                placeholder="API 调用用，如：qwen2.5:0.5b"
+                :placeholder="t('pages.preference.provider.placeholders.modelId')"
               />
             </div>
           </div>
@@ -250,10 +252,10 @@ const avatarChange: UploadEmits['change'] = async (info) => {
 
         <!-- API Key -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">API Key（可选）</label>
+          <label class="text-3.5 font-medium">{{ t('pages.preference.provider.labels.apiKeyOptional') }}</label>
           <Input.Password
             v-model:value="addForm.apiKey"
-            placeholder="也可在添加后通过设置按钮填写"
+            :placeholder="t('pages.preference.provider.placeholders.apiKey')"
           />
         </div>
 
@@ -263,10 +265,10 @@ const avatarChange: UploadEmits['change'] = async (info) => {
         >
           <div>
             <div class="text-3.5 font-medium">
-              需要代理
+              {{ t('pages.preference.provider.labels.needProxy') }}
             </div>
             <div class="mt-0.5 text-2.5 color-text-quaternary">
-              若接口需要科学上网访问，请开启
+              {{ t('pages.preference.provider.hints.proxyDesc') }}
             </div>
           </div>
           <Switch v-model:checked="addForm.isNeedProxy" />
@@ -274,10 +276,10 @@ const avatarChange: UploadEmits['change'] = async (info) => {
 
         <!-- 描述 -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-3.5 font-medium">描述（可选）</label>
+          <label class="text-3.5 font-medium">{{ t('pages.preference.provider.labels.providerDesc') }}</label>
           <TextArea
             v-model:value="addForm.desc"
-            placeholder="简短描述该供应商"
+            :placeholder="t('pages.preference.provider.placeholders.providerDesc')"
             :rows="4"
           />
         </div>
@@ -288,7 +290,7 @@ const avatarChange: UploadEmits['change'] = async (info) => {
           type="primary"
           @click="handleSubmit"
         >
-          添加供应商
+          {{ t('pages.preference.provider.labels.addProvider') }}
         </Button>
       </div>
     </div>

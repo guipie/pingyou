@@ -9,13 +9,22 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    # 【修正 1】必须在这里声明输出，后续任务才能通过 needs 拿到
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set output
         id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        # 兼容手动触发：如果是 tag 触发取 tag 名，否则取当前分支名
+        run: |
+          CLEAN_TAG=${GITHUB_REF#refs/tags/}
+          if [ "$CLEAN_TAG" = "$GITHUB_REF" ]; then
+            CLEAN_TAG=${GITHUB_REF#refs/heads/}
+          fi
+          echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
 
       - name: Setup node
         uses: actions/setup-node@v4
@@ -50,6 +59,7 @@ jobs:
 
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+          # 注意：GitHub 官方的 ubuntu-22.04-arm 可能需要特定的 Runner 权限，如果是标准免费账户请确保该环境可用
           - platform: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
 
@@ -57,25 +67,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - uses: pnpm/action-setup@v3
         with:
           version: latest
 
+      # 【修正 3】先安装并初始化 Rust 环境
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # 【修正 3】再添加对应的交叉编译 Target
       - name: Install rust target
         run: rustup target add ${{ matrix.target }}
+
+      # 【优化】如果是 Linux 且是编译 AArch64 (ARM64)，可能需要安装 gcc 交叉编译器
+      - name: Install cross-compiler for arm64 (ubuntu-arm only)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
       - name: Install dependencies (ubuntu only)
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libudev-dev patchelf xdg-utils
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -100,8 +121,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Pingyou ${{ needs.create-release.outputs.APP_VERSION }}
+          # 【修正 4】使用前面 create-release 任务统一计算好的准确 tag
+          tagName: ${{ needs.create-release.outputs.tag }}
+          # 【修正 1】改为使用 needs 传过来的正确 tag 变量
+          releaseName: Pingyou ${{ needs.create-release.outputs.tag }}
           releaseBody: ''
           releaseDraft: true
           prerelease: false

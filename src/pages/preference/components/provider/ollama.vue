@@ -7,12 +7,54 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { message } from '@tauri-apps/plugin-dialog'
 import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from 'antdv-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import type { DownloadPayload, HardwareReport, InitStep } from '@/stores/shard/app-shard'
 
 const emit = defineEmits<{
   (e: 'useLocalModel', payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
 }>()
+
+const { t } = useI18n()
+
+/** 本地大模型供应商标识（数据库主键，不可按语言翻译，展示时通过 i18n 映射） */
+const LOCAL_MODEL_PROVIDER = '本地大模型'
+
+/**
+ * 将 Rust 侧推送的中文状态文本翻译为当前语言。
+ * 未匹配到的状态（例如 Ollama 自身的英文状态消息）原样返回。
+ */
+function translateStatus(status: string): string {
+  if (!status) return ''
+  const trimmed = status.trim()
+
+  const engineDownload = /^正在高速下载AI核心组件:\s*([\d.]+)%$/.exec(trimmed)
+  if (engineDownload) {
+    return t('pages.preference.provider.status.downloadingCore', { progress: engineDownload[1] })
+  }
+  const modelDownload = /^正在高速下载AI大模型:\s*([\d.]+)%$/.exec(trimmed)
+  if (modelDownload) {
+    return t('pages.preference.provider.status.downloadingModel', { progress: modelDownload[1] })
+  }
+  const UNINSTALL_PREFIX = '正在从本地仓库卸载模型:'
+  if (trimmed.startsWith(UNINSTALL_PREFIX) && trimmed.endsWith('...')) {
+    return t('pages.preference.provider.status.uninstallingModel', {
+      name: trimmed.slice(UNINSTALL_PREFIX.length, -3).trim(),
+    })
+  }
+
+  const statusKeyMap: Record<string, string> = {
+    '正在安全请求云端环境配置...': 'requestingConfig',
+    '正在解压并深度优化本地 AI 显卡加速环境...': 'extractingEnv',
+    '内核环境就绪，正在激活大模型通道...': 'activatingChannel',
+    '模型初始化成功！': 'modelReady',
+    '正在安全关闭本地 AI 引擎...': 'stoppingEngine',
+    '正在全量物理粉碎 AI 内核、显卡驱动及模型数据...': 'shreddingData',
+    '1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！': 'cleanupComplete',
+  }
+  const key = statusKeyMap[trimmed]
+  return key ? t(`pages.preference.provider.status.${key}`) : status
+}
 
 interface CleanupPayload {
   success: boolean
@@ -46,14 +88,14 @@ const OLLAMA_HOST = 'http://127.0.0.1:11435/v1/chat/completions'
 
 const step = ref<InitStep | 'completed'>('checking')
 const downloadProgress = ref<number>(0)
-const downloadStatusText = ref<string>('正在准备下载通道...')
+const downloadStatusText = ref<string>(t('pages.preference.provider.status.preparingDownload'))
 /** 当前下载阶段: 空字符串表示未开始 */
 const downloadPhase = ref<string>('')
 /** 是否处于暂停状态 */
 const isPaused = ref<boolean>(false)
 
 const isCleaning = ref<boolean>(false)
-const cleanupStatusText = ref<string>('正在准备清理环境...')
+const cleanupStatusText = ref<string>(t('pages.preference.provider.status.preparingCleanup'))
 
 // 存储已安装的模型列表
 const localModels = ref<LocalModel[]>([])
@@ -126,9 +168,9 @@ function formatSize(bytes: number): string {
 async function copyHost() {
   try {
     await navigator.clipboard.writeText(OLLAMA_HOST)
-    messageApi.success('服务地址已成功复制到剪贴板！')
+    messageApi.success(t('pages.preference.provider.messages.copied'))
   } catch {
-    messageApi.error('复制失败，请手动复制')
+    messageApi.error(t('pages.preference.provider.messages.copyFailed'))
   }
 }
 
@@ -155,7 +197,7 @@ async function startProgressListener() {
   unlistenFn = await listen<DownloadPayload>('download-progress', (event) => {
     const payload = event.payload
     downloadProgress.value = payload.progress
-    downloadStatusText.value = payload.status
+    downloadStatusText.value = translateStatus(payload.status)
 
     // 首次收到事件时记录阶段（避免 phase 为空导致进度计算错误）
     if (payload.phase && payload.phase !== downloadPhase.value) {
@@ -233,7 +275,7 @@ onMounted(async () => {
       clearDownloadState()
     }
   } catch (err) {
-    message('硬件环境检测失败，请重启软件')
+    message(t('pages.preference.provider.messages.hardwareCheckFailed'))
     console.error(err)
   }
 })
@@ -252,7 +294,7 @@ async function handleInit(): Promise<void> {
   step.value = 'downloading'
   downloadProgress.value = 0
   downloadPhase.value = 'engine'
-  downloadStatusText.value = '正在准备初始化通道...'
+  downloadStatusText.value = t('pages.preference.provider.status.preparingInit')
   isPaused.value = false
   saveDownloadState()
 
@@ -260,33 +302,33 @@ async function handleInit(): Promise<void> {
     await startProgressListener()
 
     // 1. 拉起引擎
-    downloadStatusText.value = '正在拉起内核引擎...'
+    downloadStatusText.value = t('pages.preference.provider.status.pullingEngine')
     await invoke<void>('start_ollama_engine')
 
     // 2. 下载模型
     await invoke<void>('download_model', { model_name: hardwareInfo.value.recommend_model })
 
     // 3. 验证
-    downloadStatusText.value = '正在校验本地模型完整性...'
+    downloadStatusText.value = t('pages.preference.provider.status.verifyingModel')
     saveDownloadState()
 
     const hasModels = await fetchLocalModels()
 
     if (hasModels) {
-      messageApi.success('AI 引擎与模型部署成功！')
+      messageApi.success(t('pages.preference.provider.messages.deploySuccess'))
       step.value = 'completed'
       clearDownloadState()
     } else {
-      messageApi.error('模型加载异常，未检测到有效模型，请尝试重新初始化')
+      messageApi.error(t('pages.preference.provider.messages.modelLoadError'))
       step.value = 'ready'
       clearDownloadState()
     }
   } catch (err) {
     const errMsg = String(err)
     if (errMsg.includes('已被用户取消') || errMsg.includes('cancelled')) {
-      messageApi.info('下载已取消，临时文件已清理')
+      messageApi.info(t('pages.preference.provider.messages.downloadCancelled'))
     } else {
-      message(`初始化失败: ${err}`)
+      message(t('pages.preference.provider.messages.initFailed', { err }))
     }
     step.value = 'ready'
     isPaused.value = false
@@ -301,7 +343,7 @@ async function handlePause() {
   try {
     await invoke<void>('pause_download')
     isPaused.value = true
-    messageApi.info('下载已暂停')
+    messageApi.info(t('pages.preference.provider.messages.downloadPaused'))
     saveDownloadState()
   } catch (err) {
     console.error('暂停失败:', err)
@@ -313,7 +355,7 @@ async function handleResume() {
   try {
     await invoke<void>('resume_download')
     isPaused.value = false
-    messageApi.info('继续下载中...')
+    messageApi.info(t('pages.preference.provider.messages.resuming'))
     saveDownloadState()
   } catch (err) {
     console.error('继续下载失败:', err)
@@ -323,11 +365,11 @@ async function handleResume() {
 // ★ 取消下载（Rust 侧会清理临时文件）
 async function handleCancel() {
   Modal.confirm({
-    title: '确定要取消下载吗？',
-    content: '取消后将删除所有已下载的临时文件，恢复至初始状态。',
-    okText: '确认取消',
+    title: t('pages.preference.provider.dialogs.cancelDownloadTitle'),
+    content: t('pages.preference.provider.dialogs.cancelDownloadContent'),
+    okText: t('pages.preference.provider.dialogs.confirmCancel'),
     okType: 'danger',
-    cancelText: '继续下载',
+    cancelText: t('pages.preference.provider.dialogs.continueDownload'),
     onOk: async () => {
       try {
         // 如果暂停中，先恢复再取消（避免死锁）
@@ -335,7 +377,7 @@ async function handleCancel() {
           await invoke<void>('resume_download')
         }
         await invoke<void>('cancel_download')
-        messageApi.info('下载已取消，临时文件已清理')
+        messageApi.info(t('pages.preference.provider.messages.downloadCancelled'))
         step.value = 'ready'
         isPaused.value = false
         clearDownloadState()
@@ -363,7 +405,7 @@ function handleUseLocalModel() {
     baseUrl: OLLAMA_HOST,
     modelName,
     modelId: modelName,
-    provider: '本地大模型',
+    provider: LOCAL_MODEL_PROVIDER,
   })
 }
 
@@ -371,30 +413,30 @@ function handleUseLocalModel() {
 
 function cleanupModels() {
   Modal.confirm({
-    title: '确定要彻底清除本地 AI 模型吗？',
-    content: '此操作将物理删除本地下载的全部大模型数据并深度释放硬盘空间。',
-    okText: '确认清理',
+    title: t('pages.preference.provider.dialogs.cleanupTitle'),
+    content: t('pages.preference.provider.dialogs.cleanupContent'),
+    okText: t('pages.preference.provider.dialogs.confirmCleanup'),
     okType: 'danger',
-    cancelText: '我再想想',
+    cancelText: t('pages.preference.provider.dialogs.thinkAgain'),
     onOk: async () => {
       isCleaning.value = true
       try {
         cleanupUnlistenFn = await listen<CleanupPayload>('cleanup-status', (event) => {
-          cleanupStatusText.value = event.payload.status
+          cleanupStatusText.value = translateStatus(event.payload.status)
         })
 
         await invoke<void>('cleanup_local_models', { model_name: null })
 
         Modal.success({
-          title: '空间深度清理成功',
-          content: '所有本地大模型缓存文件已被安全、干净地物理移除。',
+          title: t('pages.preference.provider.dialogs.cleanupSuccessTitle'),
+          content: t('pages.preference.provider.dialogs.cleanupSuccessContent'),
         })
 
         localModels.value = []
         step.value = 'ready'
         clearDownloadState()
       } catch (err) {
-        message(`深度清理失败: ${err}`)
+        message(t('pages.preference.provider.messages.cleanupFailed', { err }))
         console.error(err)
       } finally {
         isCleaning.value = false
@@ -409,30 +451,30 @@ function cleanupModels() {
 
 async function stopModels(): Promise<void> {
   Modal.confirm({
-    title: '确定要停止本地 AI 模型服务吗？',
-    content: '此操作将停止本地 AI 模型服务，服务不可用了,但不会删除任何数据。',
-    okText: '确认停止',
+    title: t('pages.preference.provider.dialogs.stopTitle'),
+    content: t('pages.preference.provider.dialogs.stopContent'),
+    okText: t('pages.preference.provider.dialogs.confirmStop'),
     okType: 'danger',
-    cancelText: '我再想想',
+    cancelText: t('pages.preference.provider.dialogs.thinkAgain'),
     onOk: async () => {
       isCleaning.value = true
       try {
         cleanupUnlistenFn = await listen<CleanupPayload>('cleanup-status', (event) => {
-          cleanupStatusText.value = event.payload.status
+          cleanupStatusText.value = translateStatus(event.payload.status)
         })
 
         await invoke<void>('stop_ollama_engine')
 
         Modal.success({
-          title: '服务停止成功',
-          content: '所有本地大模型服务已被停止。',
+          title: t('pages.preference.provider.dialogs.stopSuccessTitle'),
+          content: t('pages.preference.provider.dialogs.stopSuccessContent'),
         })
 
         localModels.value = []
         step.value = 'ready'
         clearDownloadState()
       } catch (err) {
-        message(`深度清理失败: ${err}`)
+        message(t('pages.preference.provider.messages.stopFailed', { err }))
         console.error(err)
       } finally {
         isCleaning.value = false
@@ -458,7 +500,7 @@ async function stopModels(): Promise<void> {
         >
           <Spin size="large" />
           <p class="mt-4 text-14px text-slate-500 font-medium">
-            正在优化您的 AI 本地运行环境...
+            {{ t('pages.preference.provider.hints.optimizingEnv') }}
           </p>
         </div>
 
@@ -469,8 +511,8 @@ async function stopModels(): Promise<void> {
         >
           <Result
             status="error"
-            :sub-title="`检测到您的电脑内存仅为 ${hardwareInfo.total_memory_gb}GB。运行本地 AI 至少需要 4GB 内存。`"
-            title="电脑配置暂不支持"
+            :sub-title="t('pages.preference.provider.hints.memoryLow', { gb: hardwareInfo.total_memory_gb })"
+            :title="t('pages.preference.provider.hints.configUnsupported')"
           />
         </div>
 
@@ -483,11 +525,11 @@ async function stopModels(): Promise<void> {
             <div class="i-carbon-cpu text-32px" />
           </div>
           <h3 class="mb-2 text-18px text-slate-800 font-bold">
-            环境准备就绪
+            {{ t('pages.preference.provider.hints.environmentReady') }}
           </h3>
           <p class="mb-6 text-14px text-slate-500 leading-relaxed">
-            检测到系统内存为 <span class="text-blue-600 font-bold">{{ hardwareInfo.total_memory_gb }}GB</span>。<br>
-            我们将为您一键安装最适合您电脑的极速轻量模型：<br>
+            {{ t('pages.preference.provider.hints.systemMemory') }} <span class="text-blue-600 font-bold">{{ hardwareInfo.total_memory_gb }}GB</span>。<br>
+            {{ t('pages.preference.provider.hints.recommendModel') }}<br>
             <span class="mx-auto mt-2 block w-fit px-2 py-0.5 text-12px text-slate-700 font-mono rounded">
               {{ hardwareInfo.recommend_model }}
             </span>
@@ -498,7 +540,7 @@ async function stopModels(): Promise<void> {
             type="primary"
             @click="handleInit"
           >
-            一键开启 AI 体验
+            {{ t('pages.preference.provider.labels.oneClickAI') }}
           </Button>
         </div>
 
@@ -509,23 +551,23 @@ async function stopModels(): Promise<void> {
         >
           <div class="mb-1 flex items-center gap-2">
             <h4 class="text-16px text-slate-800 font-bold">
-              {{ isPaused ? '下载已暂停' : '正在初始化本地引擎' }}
+              {{ isPaused ? t('pages.preference.provider.labels.downloadPaused') : t('pages.preference.provider.labels.initializingEngine') }}
             </h4>
             <Tag
               v-if="isPaused"
               color="warning"
             >
-              已暂停
+              {{ t('pages.preference.provider.labels.paused') }}
             </Tag>
             <Tag
               v-else
               color="processing"
             >
-              {{ downloadPhase === 'model' ? '模型下载中' : '引擎下载中' }}
+              {{ downloadPhase === 'model' ? t('pages.preference.provider.labels.modelDownloading') : t('pages.preference.provider.labels.engineDownloading') }}
             </Tag>
           </div>
           <p class="mb-6 text-12px text-slate-400 font-mono">
-            {{ isPaused ? '下载已暂停，点击"继续下载"恢复' : downloadStatusText }}
+            {{ isPaused ? t('pages.preference.provider.hints.pausedResumeHint') : downloadStatusText }}
           </p>
 
           <Progress
@@ -543,7 +585,7 @@ async function stopModels(): Promise<void> {
               type="primary"
               @click="handleResume"
             >
-              继续下载
+              {{ t('pages.preference.provider.buttons.resume') }}
             </Button>
             <!-- 下载中状态：显示"暂停下载" -->
             <Button
@@ -551,7 +593,7 @@ async function stopModels(): Promise<void> {
               size="small"
               @click="handlePause"
             >
-              暂停下载
+              {{ t('pages.preference.provider.buttons.pause') }}
             </Button>
             <!-- 取消下载始终显示 -->
             <Button
@@ -560,7 +602,7 @@ async function stopModels(): Promise<void> {
               type="link"
               @click="handleCancel"
             >
-              取消下载
+              {{ t('pages.preference.provider.buttons.cancelDownload') }}
             </Button>
           </div>
         </div>
@@ -575,13 +617,13 @@ async function stopModels(): Promise<void> {
               class="px-2 py-1 text-12px"
               color="success"
             >
-              🟢 本地大模型服务运行中
+              🟢 {{ t('pages.preference.provider.labels.running') }}
             </Tag>
           </div>
 
           <div class="mb-6 border border-slate-200 p-4 rounded-lg">
             <div class="mb-1 text-12px text-slate-500 font-medium">
-              Ollama API 基础地址 (Base URL):
+              {{ t('pages.preference.provider.labels.ollamaBaseUrl') }}
             </div>
             <div class="flex items-center justify-between border px-3 py-2 text-13px text-slate-700 font-mono rounded">
               <span class="select-text">{{ OLLAMA_HOST }}</span>
@@ -590,15 +632,15 @@ async function stopModels(): Promise<void> {
                 type="link"
                 @click="copyHost"
               >
-                复制
+                {{ t('pages.preference.provider.labels.copy') }}
               </Button>
             </div>
           </div>
 
           <div>
             <div class="mb-3 flex items-center justify-between text-14px text-slate-800 font-bold">
-              <span>已加载的本地模型</span>
-              <span class="text-12px text-slate-400 font-normal">可直接用于对话</span>
+              <span>{{ t('pages.preference.provider.labels.loadedModels') }}</span>
+              <span class="text-12px text-slate-400 font-normal">{{ t('pages.preference.provider.labels.usableForChat') }}</span>
             </div>
 
             <div class="flex flex-col gap-2">
@@ -627,7 +669,7 @@ async function stopModels(): Promise<void> {
                   type="link"
                   @click="writeText(model.name)"
                 >
-                  复制
+                  {{ t('pages.preference.provider.labels.copy') }}
                 </Button>
               </div>
             </div>
@@ -644,7 +686,7 @@ async function stopModels(): Promise<void> {
             type="primary"
             @click="cleanupModels"
           >
-            一键彻底清除
+            {{ t('pages.preference.provider.labels.oneClickClean') }}
           </Button>
           <Button
             v-if="step === 'completed'"
@@ -653,7 +695,7 @@ async function stopModels(): Promise<void> {
             type="primary"
             @click="stopModels"
           >
-            停止运行
+            {{ t('pages.preference.provider.labels.stopRunning') }}
           </Button>
           <Button
             v-if="step === 'completed'"
@@ -661,7 +703,7 @@ async function stopModels(): Promise<void> {
             type="primary"
             @click="handleUseLocalModel"
           >
-            使用本地大模型
+            {{ t('pages.preference.provider.labels.useLocalModel') }}
           </Button>
         </div>
       </div>

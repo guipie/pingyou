@@ -13,7 +13,6 @@ import { useModelStore } from '@/stores/model'
 import { join } from '@/utils/path'
 
 import BehaviorModal from './components/behavior-modal/index.vue'
-import FloatMenu from './components/float-menu/index.vue'
 import Preview3d from './components/preview-3d/index.vue'
 // import Upload from './components/upload/index.vue'
 
@@ -94,7 +93,7 @@ async function handleOpenFolder(path: string) {
           <span>3D</span>
         </div>
         <div
-          class="flex cursor-pointer items-center text-blueGray hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
+          class="flex cursor-pointer items-center text-blueGray text-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
 
           @click="curType = 'all'"
         >
@@ -207,7 +206,7 @@ async function handleOpenFolder(path: string) {
     <!-- <Upload class="min-h-40" /> -->
   </div>
 
-  <FloatMenu />
+  <!-- <FloatMenu /> -->
 
   <BehaviorModal
     v-if="catStore.model.behavior"

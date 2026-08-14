@@ -6,8 +6,227 @@
         "switching": "Switching..."
       }
     },
+    "winchat": {
+      "hints": {
+        "sendFailed": "Failed to send, {error}",
+        "sendFailedTitle": "Message Send Notice",
+        "dragWindow": "Drag Window"
+      },
+      "placeholders": {
+        "input": "Press Enter to send to the pet, press Esc to close the window, drag the icon to move the window"
+      },
+      "status": {
+        "thinking": "Your pet is thinking..."
+      }
+    },
     "preference": {
       "title": "Preferences",
+      "chat": {
+        "title": "Chat",
+        "labels": {
+          "newChat": "New Chat",
+          "conversationConfig": "Conversation Settings",
+          "enableChat": "Enable Chat",
+          "avatarUpload": "Upload Avatar",
+          "petName": "Pet Name",
+          "provider": "Model Provider",
+          "modelName": "Model Name",
+          "customModelTitle": "Custom Model (find it in the official provider model list)",
+          "custom": "Custom",
+          "persona": "Pet Persona",
+          "emoji": "Emoji",
+          "image": "Image",
+          "file": "File",
+          "voice": "Voice",
+          "startRecognition": "Start Recognition",
+          "thinking": "Thinking",
+          "send": "Send"
+        },
+        "hints": {
+          "enableChatDesc": "When enabled, you can chat with the desktop pet. The API key is stored locally.",
+          "openAiCompatibleDesc": "Most providers use OpenAI-compatible APIs; Anthropic automatically uses the Claude Messages API.",
+          "baseUrlDesc": "You can modify this if you use a proxy, compatible gateway, or a private deployment.",
+          "modelNameDesc": "The model set here is preferred; if left empty, the provider default model is used.",
+          "enableChatFirst": "Enable chat first and fill in the API Key, Base URL, and model in the provider settings.",
+          "chooseProviderModel": "Please configure a provider and a model."
+        },
+        "placeholders": {
+          "search": "Search",
+          "petName": "Pet Name",
+          "selectProvider": "Select a model provider",
+          "model": "Model",
+          "persona": "Tell the model how it should act as your pet"
+        },
+        "status": {
+          "noTitle": "Untitled",
+          "emptyChat": "Select a pet on the left to start chatting",
+          "configured": "Configured",
+          "unconfigured": "Not Configured"
+        },
+        "messages": {
+          "uploadFailed": "Upload failed",
+          "configureProvider": "Please configure a model provider",
+          "selectModel": "Please select a model",
+          "fillName": "Please enter a conversation name",
+          "saveSuccess": "Saved successfully",
+          "selectImage": "Please select an image file.",
+          "webviewNotSupportVoice": "The current WebView does not support speech recognition.",
+          "voiceRecognitionFailed": "Speech recognition failed."
+        },
+        "buttons": {
+          "save": "Save"
+        }
+      },
+      "provider": {
+        "title": "Model Sources",
+        "labels": {
+          "source": "Model Sources",
+          "addCustomModel": "Add Custom Model",
+          "addLocalModel": "Add Local Model",
+          "custom": "Custom",
+          "configured": "Configured",
+          "unconfiguredKey": "Key Not Set",
+          "settings": "Settings",
+          "removeProvider": "Remove Provider",
+          "avatar": "Avatar",
+          "providerName": "Provider Name",
+          "providerValue": "Provider Key",
+          "modelConfig": "Model Configuration",
+          "modelName": "Model Name",
+          "modelId": "Model ID",
+          "apiKeyOptional": "API Key (Optional)",
+          "needProxy": "Requires Proxy",
+          "providerDesc": "Description (Optional)",
+          "addProvider": "Add Provider",
+          "apiKey": "API Key",
+          "baseUrl": "Base URL",
+          "defaultModel": "Default Model",
+          "running": "Local Model Service Running",
+          "loadedModels": "Loaded Local Models",
+          "usableForChat": "Ready for chat",
+          "ollamaBaseUrl": "Ollama API Base URL:",
+          "copy": "Copy",
+          "oneClickClean": "One-click Deep Clean",
+          "stopRunning": "Stop Running",
+          "useLocalModel": "Use Local Model",
+          "oneClickAI": "Enable AI Experience",
+          "paused": "Paused",
+          "modelDownloading": "Downloading Model",
+          "engineDownloading": "Downloading Engine",
+          "initializingEngine": "Initializing Local Engine",
+          "downloadPaused": "Download Paused"
+        },
+        "hints": {
+          "openAiCompatible": "Connect any OpenAI-compatible API",
+          "proxyDesc": "Enable this if the API requires a proxy to access",
+          "apiKeyLocalOnly": "The key is stored locally and never uploaded to any server",
+          "optimizingEnv": "Optimizing your local AI runtime environment...",
+          "configUnsupported": "Your Computer Is Not Supported",
+          "memoryLow": "Your computer has only {gb}GB of memory. Running local AI requires at least 4GB.",
+          "environmentReady": "Environment Ready",
+          "systemMemory": "Detected system memory of",
+          "recommendModel": "We will install the best lightweight model for your computer in one click:",
+          "pausedResumeHint": "Download paused. Click \"Resume Download\" to continue."
+        },
+        "messages": {
+          "copied": "Service address copied to clipboard!",
+          "copyFailed": "Copy failed, please copy manually",
+          "hardwareCheckFailed": "Hardware environment check failed, please restart the app",
+          "deploySuccess": "AI engine and model deployed successfully!",
+          "modelLoadError": "Model loading error: no valid model found. Please try re-initializing.",
+          "downloadCancelled": "Download cancelled, temporary files cleaned up",
+          "initFailed": "Initialization failed: {err}",
+          "downloadPaused": "Download paused",
+          "resuming": "Resuming download...",
+          "cleanupFailed": "Deep cleanup failed: {err}",
+          "stopFailed": "Failed to stop the service: {err}",
+          "removedProvider": "Removed provider: {provider}",
+          "addedCustomProvider": "Custom provider added: {provider}",
+          "defaultCustomDesc": "Custom Provider"
+        },
+        "dialogs": {
+          "removeConfirm": "Are you sure you want to remove this provider?",
+          "providerConfigTitle": "Provider Settings",
+          "cancelDownloadTitle": "Cancel the download?",
+          "cancelDownloadContent": "All downloaded temporary files will be deleted and the state will be restored.",
+          "confirmCancel": "Cancel",
+          "continueDownload": "Resume Download",
+          "cleanupTitle": "Completely remove local AI models?",
+          "cleanupContent": "This will physically delete all downloaded local model data and deeply free up disk space.",
+          "confirmCleanup": "Clean Up",
+          "thinkAgain": "Let Me Think",
+          "stopTitle": "Stop the local AI model service?",
+          "stopContent": "This will stop the local AI model service. The service will be unavailable, but no data will be deleted.",
+          "confirmStop": "Stop",
+          "cleanupSuccessTitle": "Deep Cleanup Successful",
+          "cleanupSuccessContent": "All local model cache files have been safely and completely removed.",
+          "stopSuccessTitle": "Service Stopped",
+          "stopSuccessContent": "All local model services have been stopped."
+        },
+        "errors": {
+          "noProvider": "Provider not found",
+          "fillComplete": "Please fill in all required fields",
+          "modelIdExists": "This model ID already exists, please use another one",
+          "providerNameRequired": "Please enter the provider name",
+          "providerValueRequired": "Please enter the provider key",
+          "baseUrlRequired": "Please enter the Base URL",
+          "providerValueExists": "This provider key already exists, please use another one"
+        },
+        "placeholders": {
+          "providerName": "e.g. DeepSeek, SiliconFlow",
+          "providerValue": "Unique English identifier, e.g. deepseek",
+          "baseUrl": "e.g. https://api.deepseek.com/v1/chat/completions",
+          "modelName": "Display name, e.g. Qwen 2.5",
+          "modelId": "Used for API calls, e.g. qwen2.5:0.5b",
+          "apiKey": "You can also fill it in later via the Settings button",
+          "providerDesc": "Briefly describe this provider",
+          "apiKeyInput": "Enter API Key, e.g. sk-xxxx",
+          "baseUrlInput": "Enter the API address",
+          "defaultModel": "Select the default model"
+        },
+        "buttons": {
+          "resume": "Resume Download",
+          "pause": "Pause Download",
+          "cancelDownload": "Cancel Download",
+          "saveConfig": "Save Settings"
+        },
+        "modelDialog": {
+          "labels": {
+            "modelName": "Model Name",
+            "modelId": "Model ID",
+            "description": "Description"
+          },
+          "placeholders": {
+            "modelName": "Enter the display name of the model",
+            "modelId": "Enter the model ID used for API calls"
+          },
+          "hints": {
+            "addModel": "Find models published on the provider's official website"
+          },
+          "buttons": {
+            "add": "Add",
+            "confirmAdd": "Add",
+            "cancel": "Cancel"
+          }
+        },
+        "status": {
+          "preparingDownload": "Preparing download channel...",
+          "preparingCleanup": "Preparing cleanup environment...",
+          "preparingInit": "Preparing initialization channel...",
+          "pullingEngine": "Starting the kernel engine...",
+          "verifyingModel": "Verifying local model integrity...",
+          "requestingConfig": "Securely requesting cloud environment configuration...",
+          "downloadingCore": "Downloading AI core components at high speed: {progress}%",
+          "extractingEnv": "Extracting and deeply optimizing the local AI GPU acceleration environment...",
+          "activatingChannel": "Kernel environment ready, activating the model channel...",
+          "downloadingModel": "Downloading the AI model at high speed: {progress}%",
+          "modelReady": "Model initialized successfully!",
+          "stoppingEngine": "Safely shutting down the local AI engine...",
+          "uninstallingModel": "Uninstalling model from local repository: {name}...",
+          "shreddingData": "Physically shredding the AI kernel, GPU driver, and model data...",
+          "cleanupComplete": "1.8GB of local AI components and models have been completely removed. Space fully released!"
+        }
+      },
       "cat": {
         "title": "Cat",
         "labels": {
@@ -88,7 +307,8 @@
       "model": {
         "title": "Model",
         "labels": {
-          "deleteModel": "Delete Model"
+          "deleteModel": "Delete Model",
+          "tips": "Pick a companion pet — you can switch anytime."
         },
         "hints": {
           "deleteSuccess": "Deleted Successfully",
@@ -119,14 +339,16 @@
           "togglePreferences": "Toggle Preferences",
           "mirrorMode": "Mirror Mode",
           "passThrough": "Pass Through",
-          "alwaysOnTop": "Always on Top"
+          "alwaysOnTop": "Always on Top",
+          "openMessageBox": "Open Message Input"
         },
         "hints": {
           "toggleCat": "Toggle the visibility of the cat window.",
           "togglePreferences": "Toggle the visibility of the preferences window.",
           "mirrorMode": "Toggle the cat's mirror mode.",
           "passThrough": "Toggle whether the cat window is pass-through.",
-          "alwaysOnTop": "Toggle whether the cat window stays on top."
+          "alwaysOnTop": "Toggle whether the cat window stays on top.",
+          "openMessageBox": "Open the message input box after pressing the shortcut"
         }
       },
       "about": {
@@ -177,6 +399,7 @@
   "composables": {
     "useAppMenu": {
       "labels": {
+        "chat": "Chat...",
         "preference": "Preferences...",
         "hideCat": "Hide Cat",
         "showCat": "Show Cat",
@@ -185,6 +408,29 @@
         "opacity": "Opacity",
         "restartApp": "Restart App",
         "quitApp": "Quit App"
+      }
+    },
+    "useTauriAIChat": {
+      "errors": {
+        "providerNotConfigured": "Provider is not configured",
+        "createStreamReaderFailed": "Failed to create the stream reader",
+        "selectPetFirst": "Please select your pet first",
+        "inputMessageRequired": "Please enter a message to send",
+        "createConversationFailed": "Failed to create the conversation",
+        "configureModelFirst": "Please configure a model first",
+        "selectConversation": "Please select a conversation"
+      }
+    },
+    "useTauriAiChatCommand": {
+      "labels": {
+        "pin": "Pin",
+        "delete": "Delete"
+      },
+      "errors": {
+        "selectConversation": "Please select a conversation"
+      },
+      "hints": {
+        "deleteConfirm": "Are you sure you want to delete it?"
       }
     },
     "useTray": {
@@ -197,6 +443,50 @@
       "hints": {
         "notFound": "Model master configuration file not found, please ensure the model files are complete."
       }
+    }
+  },
+  "stores": {
+    "chat": {
+      "defaultConversationTitle": "Default Conversation",
+      "defaultSystemPrompt": "You are a desktop companion that is always by my side on my computer desktop. Reply warmly, briefly, and playfully."
+    }
+  },
+  "providers": {
+    "names": {
+      "深度求索": "DeepSeek",
+      "字节跳动": "ByteDance",
+      "阿里巴巴": "Alibaba",
+      "google": "Google",
+      "openai": "OpenAI",
+      "anthropic": "Anthropic",
+      "智谱ai": "Zhipu AI",
+      "月之暗面": "Moonshot AI",
+      "Minimax": "MiniMax",
+      "本地大模型": "Local Model"
+    },
+    "descs": {
+      "深度求索": "DeepSeek's open platform providing high-performance LLM APIs.",
+      "字节跳动": "ByteDance's Doubao LLM platform offering dialog, image, and other multimodal capabilities.",
+      "阿里巴巴": "Alibaba's Tongyi Qianwen LLM open platform.",
+      "google": "Google Gemini LLM open platform.",
+      "openai": "OpenAI LLM open platform.",
+      "anthropic": "Anthropic Claude LLM open platform.",
+      "智谱ai": "Zhipu AI open platform providing the GLM series of LLMs.",
+      "月之暗面": "Moonshot AI's Kimi LLM open platform.",
+      "Minimax": "MiniMax open platform providing multimodal LLMs."
+    }
+  },
+  "common": {
+    "buttons": {
+      "confirm": "OK",
+      "cancel": "Cancel",
+      "close": "Close",
+      "reset": "Reset",
+      "save": "Save",
+      "apply": "Apply",
+      "settingNow": "Go to Settings",
+      "resetToDefault": "Restore Defaults",
+      "back": "Back"
     }
   }
 }

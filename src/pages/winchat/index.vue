@@ -7,15 +7,17 @@ import { ask } from '@tauri-apps/plugin-dialog'
 import { Button, TextArea } from 'antdv-next'
 import { throttle } from 'es-toolkit'
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useTauriAIChat } from '@/composables/useTauriAIChat'
-import { LISTEN_KEY } from '@/constants'
+import { LISTEN_KEY, WIN_MESSAGE_STATUS } from '@/constants'
 import { useRouteSettingStore } from '@/stores/route-setting'
 
 const appWindow = getCurrentWebviewWindow()
 const text = ref('')
 const textRef = ref<HTMLInputElement>()
 
+const { t } = useI18n()
 const routerStore = useRouteSettingStore()
 // 持久化实例，便于后续中断控制
 const chat = useTauriAIChat()
@@ -53,7 +55,7 @@ function submit() {
   const cloneTxt = text.value.trim()
   text.value = ''
   let lastAnswer = ''
-  emit(LISTEN_KEY.WIN_MESSAGE, '屏友思考中')
+  emit(LISTEN_KEY.WIN_MESSAGE, WIN_MESSAGE_STATUS.THINKING)
   chat.sendWinMessage(cloneTxt, {
     onChunk: (answer) => {
       lastAnswer = answer
@@ -61,7 +63,7 @@ function submit() {
       textRef.value?.focus()
     },
   }).catch((error) => {
-    ask(`发送失败，${error?.message ?? error}`, '消息发送提示')
+    ask(t('pages.winchat.hints.sendFailed', { error: error?.message ?? error }), t('pages.winchat.hints.sendFailedTitle'))
   }).finally(() => {
     // 确保最终回答完整展示（避免节流丢掉尾包）
     if (lastAnswer)
@@ -84,7 +86,7 @@ function handleMouseDown() {
       ref="textRef"
       v-model:value="text"
       class="chat-textarea w-full text-base text-gray-800 !bg-transparent !px-3 focus:outline-none"
-      placeholder="按Enter发送给屏友，按Esc关闭窗口，拖动图标可移动窗口"
+      :placeholder="t('pages.winchat.placeholders.input')"
       variant="borderless"
       @keydown.enter.prevent="submit"
       @keydown.esc="appWindow.close()"
@@ -102,7 +104,7 @@ function handleMouseDown() {
           class="cursor-pointer items-center justify-center text-gray-600 !w-9 !flex hover:!bg-gray-100"
           shape="circle"
           type="text"
-          @click.stop="routerStore.backHome(1)"
+          @click.stop="appWindow.close(); routerStore.backHome(1)"
           @mousedown.stop
         >
           <template #icon>
@@ -112,7 +114,7 @@ function handleMouseDown() {
         <Button
           class="cursor-move items-center justify-center text-gray-600 !w-9 !flex hover:!bg-gray-100"
           shape="circle"
-          title="拖动窗口"
+          :title="t('pages.winchat.hints.dragWindow')"
           type="text"
           @mousedown="handleMouseDown"
         >

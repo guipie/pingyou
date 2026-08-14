@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
@@ -13,6 +14,7 @@ import { useGeneralStore } from '@/stores/general'
 import { useShortcutStore } from '@/stores/shortcut.ts'
 
 const shortcutStore = useShortcutStore()
+const { t } = useI18n()
 const { visibleCat, visiblePreference, mirrorMode, penetrable, alwaysOnTop, messageInput } = storeToRefs(shortcutStore)
 const catStore = useCatStore()
 
@@ -90,8 +92,8 @@ watch(() => generalStore.appearance.isDark, (value) => {
       </ProListItem>
 
       <ProListItem
-        description="按下快捷键后打开消息输入框"
-        title="打开消息输入框"
+        :description="t('pages.preference.shortcut.hints.openMessageBox')"
+        :title="t('pages.preference.shortcut.labels.openMessageBox')"
       >
         <Shortcut v-model="shortcutStore.messageInput" />
       </ProListItem>
