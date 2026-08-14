@@ -4,148 +4,182 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
+
+# GitHub Actions 自带的 GITHUB_TOKEN
+# 允许 tauri-action 创建 Release、上传 Release Assets
+permissions:
+  contents: write
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.vars.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set output
-        id: vars
-        run: |
-          # 提取当前 Tag 或分支名
-          CLEAN_TAG=${GITHUB_REF#refs/tags/}
-          if [ "$CLEAN_TAG" = "$GITHUB_REF" ]; then
-            CLEAN_TAG=${GITHUB_REF#refs/heads/}
-          fi
-          echo "tag=$CLEAN_TAG" >> $GITHUB_OUTPUT
+  publish-tauri:
+    name: Build ${{ matrix.name }}
 
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      # 替代 changelogithub：使用更加健壮的 GitHub 官方 Release 动作
-      # 如果是手动触发且没有 Tag，它会创建一个以分支名为名字的 Draft
-      - name: Create Draft Release
-        id: create_draft
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.RELEASE_TOKEN }}
-          script: |
-            try {
-              await github.rest.repos.createRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag_name: "${{ steps.vars.outputs.tag }}",
-                name: "Pingyou ${{ steps.vars.outputs.tag }}",
-                body: "Automated release via GitHub Actions.",
-                draft: true,
-                prerelease: false
-              });
-            } catch (error) {
-              // 如果 Release 已经存在，防止任务报错中断
-              if (error.status === 422) {
-                core.info("Release already exists, moving on.");
-              } else {
-                throw error;
-              }
-            }
-
-  build-app:
-    needs: create-release
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
+
       matrix:
         include:
-          - platform: macos-latest
+          # =========================
+          # macOS Apple Silicon
+          # =========================
+          - name: macOS ARM64
+            platform: macos-latest
             target: aarch64-apple-darwin
-          - platform: macos-latest
+
+          # =========================
+          # macOS Intel
+          # =========================
+          - name: macOS x64
+            platform: macos-latest
             target: x86_64-apple-darwin
 
-          - platform: windows-latest
+          # =========================
+          # Windows x64
+          # =========================
+          - name: Windows x64
+            platform: windows-latest
             target: x86_64-pc-windows-msvc
-          - platform: windows-latest
+
+          # =========================
+          # Windows x86
+          # =========================
+          - name: Windows x86
+            platform: windows-latest
             target: i686-pc-windows-msvc
-          - platform: windows-latest
+
+          # =========================
+          # Windows ARM64
+          # =========================
+          - name: Windows ARM64
+            platform: windows-latest
             target: aarch64-pc-windows-msvc
 
-          - platform: ubuntu-22.04
+          # =========================
+          # Linux x64
+          # =========================
+          - name: Linux x64
+            platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          # 注意：GitHub 官方的 ubuntu-22.04-arm 可能需要特定的 Runner 权限，如果是标准免费账户请确保该环境可用
-          - platform: ubuntu-22.04-arm
+
+          # =========================
+          # Linux ARM64
+          # =========================
+          - name: Linux ARM64
+            platform: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
 
     runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Setup node
-        uses: actions/setup-node@v4
+    steps:
+      # ==========================================
+      # Checkout
+      # ==========================================
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ==========================================
+      # Node.js
+      # ==========================================
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
-          
-      - uses: pnpm/action-setup@v3
+          node-version: 24
+
+      # ==========================================
+      # pnpm
+      # ==========================================
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: latest
 
-      # 【修正 3】先安装并初始化 Rust 环境
+      # ==========================================
+      # Rust
+      # ==========================================
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
-      # 【修正 3】再添加对应的交叉编译 Target
-      - name: Install rust target
-        run: rustup target add ${{ matrix.target }}
-
-      # 【优化】如果是 Linux 且是编译 AArch64 (ARM64)，可能需要安装 gcc 交叉编译器
-      - name: Install cross-compiler for arm64 (ubuntu-arm only)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-      - name: Install dependencies (ubuntu only)
+      # ==========================================
+      # Linux dependencies
+      # ==========================================
+      - name: Install Linux dependencies
         if: startsWith(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libudev-dev patchelf xdg-utils
 
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libudev-dev \
+            patchelf \
+            xdg-utils
+
+      # ==========================================
+      # Linux ARM64 cross compiler
+      # ==========================================
+      - name: Install ARM64 cross compiler
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu
+
+      # ==========================================
+      # Rust cache
+      # ==========================================
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: target
+          workspaces: |
+            target
 
-      - name: Sync node version and setup cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install front-end dependencies
+      # ==========================================
+      # Install frontend dependencies
+      # ==========================================
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the app
-        uses: tauri-apps/tauri-action@v0
+      # ==========================================
+      # Build and publish Tauri application
+      # ==========================================
+      - name: Build and publish Tauri application
+        uses: tauri-apps/tauri-action@v0.6.2
+
         env:
-          CI: false
-          PLATFORM: ${{ matrix.platform }}
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          # GitHub 自动提供，不需要 RELEASE_TOKEN
+          GITHUB_TOKEN: ${{ github.token }}
+
+          # Tauri updater 签名
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+          # CI 环境
+          CI: true
+
         with:
-          # 【修正 4】使用前面 create-release 任务统一计算好的准确 tag
-          tagName: ${{ needs.create-release.outputs.tag }}
-          # 【修正 1】改为使用 needs 传过来的正确 tag 变量
-          releaseName: Pingyou ${{ needs.create-release.outputs.tag }}
-          releaseBody: ''
+          # 当前 Git tag，例如：
+          # v1.0.0
+          tagName: ${{ github.ref_name }}
+
+          # GitHub Release 名称
+          releaseName: Pingyou ${{ github.ref_name }}
+
+          # Release 描述
+          releaseBody: |
+            ## Pingyou ${{ github.ref_name }}
+
+            See the assets below to download the installer for your platform.
+
+          # 先创建 Draft Release
           releaseDraft: true
+
+          # 正式 Release，而不是 Pre-release
           prerelease: false
+
+          # 当前平台对应的 Rust target
           args: --target ${{ matrix.target }}
