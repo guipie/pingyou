@@ -183,8 +183,8 @@ jobs:
 
             See the assets below to download the installer.
 
-          # 多平台构建期间保持 Draft
-          releaseDraft: true
+          # 多平台构建期间不保持 Draft 直接发布
+          releaseDraft: false
 
           # 正式 Release，而不是 prerelease
           prerelease: false
