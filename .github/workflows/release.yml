@@ -9,7 +9,6 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    # 【修正 1】必须在这里声明输出，后续任务才能通过 needs 拿到
     outputs:
       tag: ${{ steps.vars.outputs.tag }}
     steps:
