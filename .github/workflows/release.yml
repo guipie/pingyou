@@ -92,7 +92,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           
       - uses: pnpm/action-setup@v3
         with:
@@ -127,7 +127,7 @@ jobs:
       - name: Sync node version and setup cache
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install front-end dependencies
