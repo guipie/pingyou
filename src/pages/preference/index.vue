@@ -1,103 +1,103 @@
 <script setup lang="ts">
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { Flex, Spin, Tooltip } from 'antdv-next'
-import { computed, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { Flex, Spin, Tooltip } from "antdv-next";
+import { computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-import UpdateApp from '@/components/update-app/index.vue'
-import { useTray } from '@/composables/useTray'
-import { RoutersName } from '@/router/roters.ts'
-import { useAppStore } from '@/stores/app'
-import { useGeneralStore } from '@/stores/general'
-import { useModelStore } from '@/stores/model'
-import { useRouteSettingStore } from '@/stores/route-setting'
-import { isMac } from '@/utils/platform'
+import UpdateApp from "@/components/update-app/index.vue";
+import { useTray } from "@/composables/useTray";
+import { RoutersName } from "@/router/roters.ts";
+import { useAppStore } from "@/stores/app";
+import { useGeneralStore } from "@/stores/general";
+import { useModelStore } from "@/stores/model";
+import { useRouteSettingStore } from "@/stores/route-setting";
+import { isMac } from "@/utils/platform";
 
-import About from './components/about/index.vue'
-import Cat from './components/cat/index.vue'
-import Chat from './components/chat/index.vue'
-import General from './components/general/index.vue'
-import Pingyou from './components/pingyou/index.vue'
-import Provider from './components/provider/index.vue'
-import Shortcut from './components/shortcut/index.vue'
+import About from "./components/about/index.vue";
+import Cat from "./components/cat/index.vue";
+import Chat from "./components/chat/index.vue";
+import General from "./components/general/index.vue";
+import Pingyou from "./components/pingyou/index.vue";
+import Provider from "./components/provider/index.vue";
+import Shortcut from "./components/shortcut/index.vue";
 
-useTray()
-const appStore = useAppStore()
-const routeSettingStore = useRouteSettingStore()
-const current = computed(() => routeSettingStore.currentMenuIndex)
-const { t } = useI18n()
-const generalStore = useGeneralStore()
-const modelStore = useModelStore()
-const appWindow = getCurrentWebviewWindow()
+useTray();
+const appStore = useAppStore();
+const routeSettingStore = useRouteSettingStore();
+const current = computed(() => routeSettingStore.currentMenuIndex);
+const { t } = useI18n();
+const generalStore = useGeneralStore();
+const modelStore = useModelStore();
+const appWindow = getCurrentWebviewWindow();
 
 watch(() => generalStore.appearance.language, () => {
-  appWindow.setTitle(t('pages.preference.title'))
-}, { immediate: true })
+  appWindow.setTitle(t("pages.preference.title"));
+}, { immediate: true });
 
 const menus = computed(() => [
   {
     index: 0,
-    key: 'model',
-    label: appStore.name,
-    icon: 'i-solar:magic-stick-3-bold',
+    key: "model",
+    label: t("name"),
+    icon: "i-solar:magic-stick-3-bold",
     component: Pingyou,
   },
   {
     index: 1,
-    key: 'chat',
-    label: t('pages.preference.chat.title'),
-    icon: 'i-solar:chat-round-dots-linear',
+    key: "chat",
+    label: t("pages.preference.chat.title"),
+    icon: "i-solar:chat-round-dots-linear",
     component: Chat,
   },
   {
     index: 2,
-    key: 'provider',
-    label: t('pages.preference.provider.title'),
-    icon: 'i-arcticons:openai-chatgpt',
+    key: "provider",
+    label: t("pages.preference.provider.title"),
+    icon: "i-arcticons:openai-chatgpt",
     component: Provider,
   },
   {
     index: 3,
-    key: 'cat',
-    label: t('pages.preference.cat.title'),
-    icon: 'i-solar:settings-broken',
+    key: "cat",
+    label: t("pages.preference.cat.title"),
+    icon: "i-solar:settings-broken",
     component: Cat,
   },
   {
     index: 4,
-    key: 'shortcut',
-    label: t('pages.preference.shortcut.title'),
+    key: "shortcut",
+    label: t("pages.preference.shortcut.title"),
     name: RoutersName.Shortcut,
-    icon: 'i-solar:keyboard-bold',
+    icon: "i-solar:keyboard-bold",
     component: Shortcut,
-    type: 'append',
+    type: "append",
   },
   {
     index: 5,
-    key: 'general',
+    key: "general",
     name: RoutersName.General,
-    label: t('pages.preference.general.title'),
-    icon: 'i-solar:settings-minimalistic-bold',
+    label: t("pages.preference.general.title"),
+    icon: "i-solar:settings-minimalistic-bold",
     component: General,
-    type: 'append',
+    type: "append",
   },
   {
     index: 6,
-    key: 'about',
-    label: t('pages.preference.about.title'),
+    key: "about",
+    label: t("pages.preference.about.title"),
     name: RoutersName.About,
-    icon: 'i-solar:info-circle-bold',
+    icon: "i-solar:info-circle-bold",
     component: About,
-    type: 'append',
+    type: "append",
   },
-])
+]);
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {
-    document.documentElement.classList.add('dark')
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove("dark");
   }
-}, { immediate: true })
+}, { immediate: true });
 </script>
 
 <template>

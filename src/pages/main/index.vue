@@ -1,201 +1,233 @@
 <script setup lang="ts">
-import type { MotionInfo } from 'easy-live2d'
+import type { MotionInfo } from "easy-live2d";
 
-import { convertFileSrc } from '@tauri-apps/api/core'
-import { PhysicalSize } from '@tauri-apps/api/dpi'
-import { Menu, PredefinedMenuItem } from '@tauri-apps/api/menu'
-import { sep } from '@tauri-apps/api/path'
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { exists, readDir } from '@tauri-apps/plugin-fs'
-import { useDebounceFn, useEventListener } from '@vueuse/core'
-import { round } from 'es-toolkit'
-import { nth } from 'es-toolkit/compat'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { PhysicalSize } from "@tauri-apps/api/dpi";
+import { Menu, PredefinedMenuItem } from "@tauri-apps/api/menu";
+import { sep } from "@tauri-apps/api/path";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { exists, readDir } from "@tauri-apps/plugin-fs";
+import { useDebounceFn, useEventListener } from "@vueuse/core";
+import { round } from "es-toolkit";
+import { nth } from "es-toolkit/compat";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { useAppMenu } from '@/composables/useAppMenu'
-import { useDevice } from '@/composables/useDevice'
-import { useGamepad } from '@/composables/useGamepad'
-import { useModel } from '@/composables/useModel'
-import { useTauriListen } from '@/composables/useTauriListen'
-import { LISTEN_KEY, WINDOW_LABEL } from '@/constants'
-import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
-import { useCatStore } from '@/stores/cat'
-import { useGeneralStore } from '@/stores/general.ts'
-import { useModelStore } from '@/stores/model'
-import { isImage } from '@/utils/is'
-import live2d from '@/utils/live2d'
-import { join } from '@/utils/path'
-import { isWindows } from '@/utils/platform'
-import { clearObject } from '@/utils/shared'
-import { openAdjacentWindow } from '@/utils/win-manager'
+import { useAppMenu } from "@/composables/useAppMenu";
+import { useDevice } from "@/composables/useDevice";
+import { useGamepad } from "@/composables/useGamepad";
+import { useModel } from "@/composables/useModel";
+import { useTauriListen } from "@/composables/useTauriListen";
+import { LISTEN_KEY, WINDOW_LABEL } from "@/constants";
+import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from "@/plugins/window";
+import { useCatStore } from "@/stores/cat";
+import { useGeneralStore } from "@/stores/general.ts";
+import { useModelStore } from "@/stores/model";
+import { isImage } from "@/utils/is";
+import live2d from "@/utils/live2d";
+import { join } from "@/utils/path";
+import { isWindows } from "@/utils/platform";
+import { clearObject } from "@/utils/shared";
+import { openAdjacentWindow } from "@/utils/win-manager";
 
-const { startListening } = useDevice()
-const appWindow = getCurrentWebviewWindow()
-const { modelSize, handleLoad, handleDestroy, handleResize, handleKeyChange, setMaxFPS } = useModel()
-const catStore = useCatStore()
-const { getBaseMenu, getExitMenu } = useAppMenu()
-const modelStore = useModelStore()
-const generalStore = useGeneralStore()
-const resizing = ref(false)
-const backgroundImagePath = ref<string>()
-const { stickActive } = useGamepad()
-const currentEngine = computed(() => modelStore.currentModel?.engine ?? 'live2d')
-onMounted(startListening)
+const { startListening } = useDevice();
+const appWindow = getCurrentWebviewWindow();
+const { modelSize, handleLoad, handleDestroy, handleResize, handleKeyChange, setMaxFPS }
+  = useModel();
+const catStore = useCatStore();
+const { getBaseMenu, getExitMenu } = useAppMenu();
+const modelStore = useModelStore();
+const generalStore = useGeneralStore();
+const resizing = ref(false);
+const backgroundImagePath = ref<string>();
+const { stickActive } = useGamepad();
+const currentEngine = computed(() => modelStore.currentModel?.engine ?? "live2d");
+onMounted(startListening);
 
-onUnmounted(handleDestroy)
+onUnmounted(handleDestroy);
 const debouncedResize = useDebounceFn(async () => {
-  await handleResize()
+  await handleResize();
 
-  resizing.value = false
-}, 100)
+  resizing.value = false;
+}, 100);
 
-useEventListener('resize', () => {
-  resizing.value = true
+useEventListener("resize", () => {
+  resizing.value = true;
 
-  debouncedResize()
-})
+  debouncedResize();
+});
 
-watch(() => modelStore.currentModel, async (model) => {
-  if (!model) return
-
-  await handleLoad()
-
-  const path = join(model.path, 'resources', 'background.png')
-
-  const existed = await exists(path)
-
-  backgroundImagePath.value = existed ? convertFileSrc(path) : void 0
-
-  clearObject([modelStore.supportKeys, modelStore.pressedKeys])
-
-  const resourcePath = join(model.path, 'resources')
-  const groups = ['left-keys', 'right-keys']
-
-  for await (const groupName of groups) {
-    const groupDir = join(resourcePath, groupName)
-    const files = await readDir(groupDir).catch(() => [])
-    const imageFiles = files.filter(file => isImage(file.name))
-
-    for (const file of imageFiles) {
-      const fileName = file.name.split('.')[0]
-
-      modelStore.supportKeys[fileName] = join(groupDir, file.name)
+watch(
+  () => modelStore.currentModel,
+  async (model) => {
+    if (!model) {
+      modelStore.modelReady = true;
+      return;
     }
-  }
+    try {
+      await handleLoad();
 
-  modelStore.modelReady = true
-}, { deep: true, immediate: true })
+      const path = join(model.path, "resources", "background.png");
 
-watch([() => catStore.window.scale, modelSize], async ([scale, modelSize]) => {
-  if (!modelSize) return
+      const existed = await exists(path);
 
-  const { width, height } = modelSize
+      backgroundImagePath.value = existed ? convertFileSrc(path) : void 0;
 
-  appWindow.setSize(
-    new PhysicalSize({
-      width: Math.round(width * (scale / 100)),
-      height: Math.round(height * (scale / 100)),
-    }),
-  )
-}, { immediate: true })
+      clearObject([modelStore.supportKeys, modelStore.pressedKeys]);
 
-watch([modelStore.pressedKeys, stickActive], ([keys, stickActive]) => {
-  const dirs = Object.values(keys as Record<string, string>).map((path: string) => {
-    return nth(path.split(sep()), -2)!
-  })
+      const resourcePath = join(model.path, "resources");
+      const groups = ["left-keys", "right-keys"];
 
-  const hasLeft = dirs.some(dir => dir.startsWith('left'))
-  const hasRight = dirs.some(dir => dir.startsWith('right'))
+      for await (const groupName of groups) {
+        const groupDir = join(resourcePath, groupName);
+        const files = await readDir(groupDir).catch(() => []);
+        const imageFiles = files.filter(file => isImage(file.name));
 
-  handleKeyChange(true, stickActive.left || hasLeft)
-  handleKeyChange(false, stickActive.right || hasRight)
-}, { deep: true })
+        for (const file of imageFiles) {
+          const fileName = file.name.split(".")[0];
 
-watch(() => catStore.window.visible, async (value) => {
-  value ? showWindow() : hideWindow()
-})
+          modelStore.supportKeys[fileName] = join(groupDir, file.name);
+        }
+      }
+      modelStore.modelReady = true;
+    } catch (error) {
+      console.error(error);
+      modelStore.modelReady = true;
+    }
+  },
+  { deep: true, immediate: true },
+);
 
-watch(() => catStore.window.passThrough, (value) => {
-  appWindow.setIgnoreCursorEvents(value)
-}, { immediate: true })
-watch(() => catStore.window.messageInput, (val) => {
-  if (val)
-    showWindow(WINDOW_LABEL.WINCHAT)
-  else
-    hideWindow(WINDOW_LABEL.WINCHAT)
-}, { immediate: true })
-watch(() => catStore.window.alwaysOnTop, setAlwaysOnTop, { immediate: true })
+watch(
+  [() => catStore.window.scale, modelSize],
+  async ([scale, modelSize]) => {
+    if (!modelSize) return;
 
-watch(() => generalStore.app.taskbarVisible, setTaskbarVisibility, { immediate: true })
+    const { width, height } = modelSize;
 
-watch(() => catStore.model.motionSound, live2d.setMotionSoundEnabled, { immediate: true })
+    appWindow.setSize(
+      new PhysicalSize({
+        width: Math.round(width * (scale / 100)),
+        height: Math.round(height * (scale / 100)),
+      }),
+    );
+  },
+  { immediate: true },
+);
 
-watch(() => catStore.model.maxFPS, (value) => {
-  setMaxFPS(value)
-}, { immediate: true })
+watch(
+  [modelStore.pressedKeys, stickActive],
+  ([keys, stickActive]) => {
+    const dirs = Object.values(keys as Record<string, string>).map((path: string) => {
+      return nth(path.split(sep()), -2)!;
+    });
+
+    const hasLeft = dirs.some(dir => dir.startsWith("left"));
+    const hasRight = dirs.some(dir => dir.startsWith("right"));
+
+    handleKeyChange(true, stickActive.left || hasLeft);
+    handleKeyChange(false, stickActive.right || hasRight);
+  },
+  { deep: true },
+);
+
+watch(
+  () => catStore.window.visible,
+  async (value) => {
+    value ? showWindow() : hideWindow();
+  },
+);
+
+watch(
+  () => catStore.window.passThrough,
+  (value) => {
+    appWindow.setIgnoreCursorEvents(value);
+  },
+  { immediate: true },
+);
+watch(
+  () => catStore.window.messageInput,
+  (val) => {
+    if (val) showWindow(WINDOW_LABEL.WINCHAT);
+    else hideWindow(WINDOW_LABEL.WINCHAT);
+  },
+  { immediate: true },
+);
+watch(() => catStore.window.alwaysOnTop, setAlwaysOnTop, { immediate: true });
+
+watch(() => generalStore.app.taskbarVisible, setTaskbarVisibility, { immediate: true });
+
+watch(() => catStore.model.motionSound, live2d.setMotionSoundEnabled, { immediate: true });
+
+watch(
+  () => catStore.model.maxFPS,
+  (value) => {
+    setMaxFPS(value);
+  },
+  { immediate: true },
+);
 
 useTauriListen<MotionInfo>(LISTEN_KEY.START_MOTION, ({ payload }) => {
-  if (modelStore.currentModel?.engine === '3d') return
+  if (modelStore.currentModel?.engine === "3d") return;
 
-  live2d.startMotion(payload)
-})
+  live2d.startMotion(payload);
+});
 
 useTauriListen<number>(LISTEN_KEY.SET_EXPRESSION, ({ payload }) => {
-  if (modelStore.currentModel?.engine === '3d') return
+  if (modelStore.currentModel?.engine === "3d") return;
 
-  live2d.setExpression(payload)
-})
+  live2d.setExpression(payload);
+});
 useTauriListen<string>(LISTEN_KEY.WIN_MESSAGE, ({ payload }) => {
-  openAdjacentWindow(WINDOW_LABEL.WINMSG, { msg: payload })
-})
+  openAdjacentWindow(WINDOW_LABEL.WINMSG, { msg: payload });
+});
 function handleMouseDown() {
-  appWindow.startDragging()
+  appWindow.startDragging();
 }
 
 async function handleContextmenu(event: MouseEvent) {
-  event.preventDefault()
+  event.preventDefault();
 
-  if (event.shiftKey) return
+  if (event.shiftKey) return;
 
   const menu = await Menu.new({
     items: [
-      ...await getBaseMenu(),
-      await PredefinedMenuItem.new({ item: 'Separator' }),
-      ...await getExitMenu(),
+      ...(await getBaseMenu()),
+      await PredefinedMenuItem.new({ item: "Separator" }),
+      ...(await getExitMenu()),
     ],
-  })
+  });
 
   // Temporarily disable always-on-top on Windows so the context menu is not covered
   if (isWindows && catStore.window.alwaysOnTop) {
-    setAlwaysOnTop(false)
+    setAlwaysOnTop(false);
   }
 
-  await menu.popup()
+  await menu.popup();
 
   // Restore always-on-top after the menu is closed
-  if (!isWindows || !catStore.window.alwaysOnTop) return
+  if (!isWindows || !catStore.window.alwaysOnTop) return;
 
-  setAlwaysOnTop(true)
+  setAlwaysOnTop(true);
 }
 
 function handleMouseMove(event: MouseEvent) {
-  const { buttons, shiftKey, movementX, movementY } = event
+  const { buttons, shiftKey, movementX, movementY } = event;
 
-  if (buttons !== 2 || !shiftKey) return
+  if (buttons !== 2 || !shiftKey) return;
 
-  const delta = (movementX + movementY) * 0.5
-  const nextScale = Math.max(10, Math.min(catStore.window.scale + delta, 500))
+  const delta = (movementX + movementY) * 0.5;
+  const nextScale = Math.max(10, Math.min(catStore.window.scale + delta, 500));
 
-  catStore.window.scale = round(nextScale)
+  catStore.window.scale = round(nextScale);
 }
-const isMouseOver = ref(false)
+const isMouseOver = ref(false);
 function handleMouseEnter() {
-  isMouseOver.value = true
+  isMouseOver.value = true;
 }
 
 function handleMouseLeave() {
   // appWindow.setShadow(false)
-  isMouseOver.value = false
+  isMouseOver.value = false;
 }
 </script>
 
@@ -237,14 +269,14 @@ function handleMouseLeave() {
     <div
       class="pointer-events-none absolute left-0 top-0 z-30 bg-black/20 transition-opacity duration-300"
       :class="{ 'opacity-0': !isMouseOver, 'opacity-100': isMouseOver }"
-      style="width: 100%;height: 100%;"
+      style="width: 100%; height: 100%"
     />
     <div
       v-show="resizing || !modelStore.modelReady"
       class="flex items-center justify-center bg-black"
     >
       <span class="text-center text-[10vw] text-[#fff]">
-        {{ resizing ? $t('pages.main.hints.redrawing') : $t('pages.main.hints.switching') }}
+        {{ resizing ? $t("pages.main.hints.redrawing") : $t("pages.main.hints.switching") }}
       </span>
     </div>
   </div>
