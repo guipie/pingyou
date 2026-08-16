@@ -29,7 +29,15 @@ pub fn run() {
                 .ok_or_else(|| format!("设置窗口 [{}] 未找到", PREFERENCE_WINDOW_LABEL))?;
 
             setup::default(&app_handle, main_window.clone(), preference_window.clone());
-
+            // 当启动带参数 --dev 时，才打开开发者工具
+            let args: Vec<String> = std::env::args().collect();
+            if args.contains(&"--pydev".to_string()) {
+                // 遍历所有已创建的webview窗口
+                let all_wins = app.webview_windows();
+                for (_label, win) in all_wins {
+                    win.open_devtools();
+                }
+            }
             Ok(())
         })
         .invoke_handler(generate_handler![

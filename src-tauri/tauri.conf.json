@@ -75,7 +75,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; media-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost https://asset.localhost http://127.0.0.1:11435",
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; media-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: blob: http://ipc.localhost asset: http://asset.localhost https://asset.localhost http://127.0.0.1:11435",
       "assetProtocol": {
         "enable": true,
         "scope": {
@@ -120,7 +120,7 @@
       ]
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVBRjJFMzE3MjEwMUZEMTAKUldRUS9RRWhGK1B5NmdkemhKcUFrVjZBQXlzdExpakdWVEJDeU9XckVsbzV2cFIycVJOempWa2UK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM1OTNCNUMyNjM2REM4MzcKUldRM3lHMWp3cldUTmRjdVluVnE1UkRCU3NERk40aEhRZStmT284dmhDWDBMUGpEdzdYVVo0YVEK",
       "endpoints": [
         "https://py.lm56.top/api/tauri/updates?target={{target}}&arch={{arch}}&version={{current_version}}"
       ]
