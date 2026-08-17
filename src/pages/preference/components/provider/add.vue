@@ -1,156 +1,156 @@
 <script setup lang="ts">
-import type { UploadEmits, UploadProps } from 'antdv-next'
+import type { UploadEmits, UploadProps } from "antdv-next";
 
-import { PlusOutlined } from '@antdv-next/icons'
-import { Button, Input, message, Switch, TextArea, Upload } from 'antdv-next'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { PlusOutlined } from "@antdv-next/icons";
+import { Button, Input, message, Switch, TextArea, Upload } from "antdv-next";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-import type { AIProvider } from '@/stores/shard/provider-shard'
+import type { AIProvider } from "@/stores/shard/provider-shard";
 
-import PyAvatar from '@/components/py-avatar.vue'
-import { LISTEN_KEY } from '@/constants'
-import { useProviderStore } from '@/stores/aiprovider'
-import { useGeneralStore } from '@/stores/general'
-import { getImgBase64 } from '@/utils/path'
+import PyAvatar from "@/components/py-avatar.vue";
+import { LISTEN_KEY } from "@/constants";
+import { useProviderStore } from "@/stores/aiprovider";
+import { useGeneralStore } from "@/stores/general";
+import { getImgBase64 } from "@/utils/path";
 
-type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
+type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
 
-const generalStore = useGeneralStore()
-const providerStore = useProviderStore()
-const { t } = useI18n()
+const generalStore = useGeneralStore();
+const providerStore = useProviderStore();
+const { t } = useI18n();
 
 const addForm = ref({
-  provider: '',
-  value: '',
-  avatar: '',
-  desc: '',
-  baseUrl: '',
-  apiKey: '',
+  provider: "",
+  value: "",
+  avatar: "aipingyou.png",
+  desc: "",
+  baseUrl: "",
+  apiKey: "",
   isNeedProxy: false,
   /** 模型名称（展示用） */
-  modelName: '',
+  modelName: "",
   /** 模型标识（API 调用用） */
-  modelId: '',
-})
+  modelId: "",
+});
 
 // ── 暗黑模式 ─────────────────────────────────────────────────────
 function applyDarkMode() {
   if (generalStore.appearance.isDark) {
-    document.documentElement.classList.add('dark')
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove("dark");
   }
 }
 
-const stopWatch = watch(() => generalStore.appearance.isDark, applyDarkMode)
+const stopWatch = watch(() => generalStore.appearance.isDark, applyDarkMode);
 
 onMounted(async () => {
   // 确保 store 已初始化（App.vue 的 onMounted 可能还未执行完）
   try {
-    await generalStore.$tauri.start()
-    await generalStore.init()
+    await generalStore.$tauri.start();
+    await generalStore.init();
   } catch {
     // store 可能已由 App.vue 初始化，忽略重复 start 错误
   }
-  applyDarkMode()
+  applyDarkMode();
   // ── 解析 URL query 参数，预填表单 ──
-  const hash = window.location.hash // e.g. "#/provider-add?baseUrl=xxx&modelId=yyy"
-  const queryStr = hash.includes('?') ? hash.split('?')[1] : ''
+  const hash = window.location.hash; // e.g. "#/provider-add?baseUrl=xxx&modelId=yyy"
+  const queryStr = hash.includes("?") ? hash.split("?")[1] : "";
 
   if (queryStr) {
-    const params = new URLSearchParams(queryStr)
-    const baseUrl = params.get('baseUrl')
-    const modelId = params.get('modelId')
-    const modelName = params.get('modelName')
-    const provider = params.get('provider')
+    const params = new URLSearchParams(queryStr);
+    const baseUrl = params.get("baseUrl");
+    const modelId = params.get("modelId");
+    const modelName = params.get("modelName");
+    const provider = params.get("provider");
 
-    if (baseUrl) addForm.value.baseUrl = decodeURIComponent(baseUrl)
-    if (modelId) addForm.value.modelId = decodeURIComponent(modelId)
-    if (modelName) addForm.value.modelName = decodeURIComponent(modelName)
+    if (baseUrl) addForm.value.baseUrl = decodeURIComponent(baseUrl);
+    if (modelId) addForm.value.modelId = decodeURIComponent(modelId);
+    if (modelName) addForm.value.modelName = decodeURIComponent(modelName);
     if (provider) {
-      addForm.value.provider = decodeURIComponent(provider)
+      addForm.value.provider = decodeURIComponent(provider);
       // 自动生成标识
       if (!addForm.value.value) {
         addForm.value.value = decodeURIComponent(provider)
-          .replace(/[^a-z0-9]/gi, '-')
-          .toLowerCase()
+          .replace(/[^a-z0-9]/gi, "-")
+          .toLowerCase();
       }
     }
   }
-})
+});
 
 onUnmounted(() => {
-  stopWatch()
-})
+  stopWatch();
+});
 
 // ── 提交 ─────────────────────────────────────────────────────────
 
 async function handleSubmit() {
-  const { provider, value, baseUrl } = addForm.value
+  const { provider, value, baseUrl } = addForm.value;
 
   if (!provider.trim()) {
-    message.warning(t('pages.preference.provider.errors.providerNameRequired'))
-    return
+    message.warning(t("pages.preference.provider.errors.providerNameRequired"));
+    return;
   }
   if (!value.trim()) {
-    message.warning(t('pages.preference.provider.errors.providerValueRequired'))
-    return
+    message.warning(t("pages.preference.provider.errors.providerValueRequired"));
+    return;
   }
   if (!baseUrl.trim()) {
-    message.warning(t('pages.preference.provider.errors.baseUrlRequired'))
-    return
+    message.warning(t("pages.preference.provider.errors.baseUrlRequired"));
+    return;
   }
 
   const existProvider = providerStore.stateProviders.find(
     (p: AIProvider) => p.value === value.trim(),
-  )
+  );
   if (existProvider) {
-    message.warning(t('pages.preference.provider.errors.providerValueExists'))
-    return
+    message.warning(t("pages.preference.provider.errors.providerValueExists"));
+    return;
   }
 
   // 构建模型列表
-  const models = []
-  const modelName = addForm.value.modelName.trim()
-  const modelId = addForm.value.modelId.trim()
+  const models = [];
+  const modelName = addForm.value.modelName.trim();
+  const modelId = addForm.value.modelId.trim();
   if (modelId) {
     models.push({
       name: modelName || modelId,
       modelId,
       desc: modelName || modelId,
-    })
+    });
   }
 
   const newProvider: AIProvider = {
     provider: provider.trim(),
     value: value.trim(),
-    avatar: addForm.value.avatar.trim() || provider.trim().charAt(0),
-    desc: addForm.value.desc.trim() || t('pages.preference.provider.messages.defaultCustomDesc'),
+    avatar: addForm.value.avatar.trim() || provider.trim().charAt(0) || "logo.png",
+    desc: addForm.value.desc.trim() || t("pages.preference.provider.messages.defaultCustomDesc"),
     baseUrl: baseUrl.trim(),
     isCustom: true,
     apiKey: addForm.value.apiKey.trim(),
     isNeedProxy: addForm.value.isNeedProxy,
-    defaultModel: modelId || '',
+    defaultModel: modelId || "",
     models,
-  }
-  providerStore.addProvider(newProvider)
-  message.success(t('pages.preference.provider.messages.addedCustomProvider', { provider: newProvider.provider }))
+  };
+  providerStore.addProvider(newProvider);
+  message.success(t("pages.preference.provider.messages.addedCustomProvider", { provider: newProvider.provider }));
 
   // 通知主窗口刷新供应商列表
   const [{ emit }, { getCurrentWebviewWindow }] = await Promise.all([
-    import('@tauri-apps/api/event'),
-    import('@tauri-apps/api/webviewWindow'),
-  ])
-  await emit(LISTEN_KEY.PROVIDER_ADDED, newProvider)
-  getCurrentWebviewWindow().close()
+    import("@tauri-apps/api/event"),
+    import("@tauri-apps/api/webviewWindow"),
+  ]);
+  await emit(LISTEN_KEY.PROVIDER_ADDED, newProvider);
+  getCurrentWebviewWindow().close();
 }
 
-const avatarChange: UploadEmits['change'] = async (info) => {
+const avatarChange: UploadEmits["change"] = async (info) => {
   if (info.file) {
-    addForm.value.avatar = await getImgBase64(info.file as FileType)
+    addForm.value.avatar = await getImgBase64(info.file as FileType);
   }
-}
+};
 </script>
 
 <template>

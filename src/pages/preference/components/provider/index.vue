@@ -1,80 +1,80 @@
 <script setup lang="ts">
-import { CheckCircleOutlined, ExclamationCircleOutlined, RedoOutlined, SettingOutlined } from '@antdv-next/icons'
-import { Button, message, Popconfirm, Tag } from 'antdv-next'
-import { computed, onUnmounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { CheckCircleOutlined, ExclamationCircleOutlined, RedoOutlined, SettingOutlined } from "@antdv-next/icons";
+import { Button, message, Popconfirm, Tag } from "antdv-next";
+import { computed, onUnmounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
-import type { AIProvider } from '@/stores/shard/provider-shard'
+import type { AIProvider } from "@/stores/shard/provider-shard";
 
-import ProList from '@/components/pro-list/index.vue'
-import PyAvatar from '@/components/py-avatar.vue'
-import { LISTEN_KEY } from '@/constants'
-import { RoutersName } from '@/router/roters'
-import { useProviderStore } from '@/stores/aiprovider'
-import { isBoolean } from '@/utils/is.ts'
-import { openNewWindow } from '@/utils/win-manager'
+import ProList from "@/components/pro-list/index.vue";
+import PyAvatar from "@/components/py-avatar.vue";
+import { LISTEN_KEY } from "@/constants";
+import { RoutersName } from "@/router/roters";
+import { useProviderStore } from "@/stores/aiprovider";
+import { isBoolean } from "@/utils/is.ts";
+import { openNewWindow } from "@/utils/win-manager";
 
-import Setting from './components/setting.vue'
-import Ollama from './ollama.vue'
+import Setting from "./components/setting.vue";
+import Ollama from "./ollama.vue";
 
-const providerStore = useProviderStore()
-const { t } = useI18n()
+const providerStore = useProviderStore();
+const { t } = useI18n();
 
 /** 供应商显示名称：优先使用 i18n 映射，找不到则回退数据库中的名称 */
 function providerDisplayName(provider: AIProvider) {
-  return t(`providers.names.${provider.provider}`, {}, provider.provider)
+  return t(`providers.names.${provider.provider}`, {}, provider.provider);
 }
 
 /** 供应商描述：优先使用 i18n 映射，找不到则回退数据库中的描述 */
 function providerDisplayDesc(provider: AIProvider) {
-  return t(`providers.descs.${provider.provider}`, {}, provider.desc || '')
+  return t(`providers.descs.${provider.provider}`, {}, provider.desc || "");
 }
 
 // 设置弹框状态
-const settingOpen = ref(false)
-const settingProvider = ref<AIProvider | null>(null)
-const providers = computed(() => providerStore.stateProviders)
+const settingOpen = ref(false);
+const settingProvider = ref<AIProvider | null>(null);
+const providers = computed(() => providerStore.stateProviders);
 
 // 监听来自 add 子窗口的供应商添加事件
-let unlistenAdd: (() => void) | null = null
+let unlistenAdd: (() => void) | null = null;
 
-import('@tauri-apps/api/event').then(({ listen }) => {
+import("@tauri-apps/api/event").then(({ listen }) => {
   listen(LISTEN_KEY.PROVIDER_ADDED, () => {
-    providerStore.initDbProviders()
+    providerStore.initDbProviders();
   }).then((fn) => {
-    unlistenAdd = fn
-  })
-})
+    unlistenAdd = fn;
+  });
+});
 
 onUnmounted(() => {
-  unlistenAdd?.()
-})
+  unlistenAdd?.();
+});
 
 function openSetting(provider: AIProvider) {
-  settingProvider.value = JSON.parse(JSON.stringify(provider))
-  settingOpen.value = true
+  settingProvider.value = JSON.parse(JSON.stringify(provider));
+  settingOpen.value = true;
 }
 
 /** 在新窗口中打开"添加自定义模型"表单，方便用户自由切换窗口复制地址/密钥 */
 function handleOpenAddModal() {
   openNewWindow(RoutersName.ProviderAdd, {
-    title: t('pages.preference.provider.labels.addCustomModel'),
-  })
+    title: t("pages.preference.provider.labels.addCustomModel"),
+  });
 }
 
 /** "使用本地大模型"按钮回调：打开预填了 Ollama 地址和模型名的添加窗口 */
 function handleUseLocalModel(payload: { baseUrl: string, modelName: string, modelId: string, provider: string }) {
-  const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}`
+  const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}`;
   openNewWindow(RoutersName.ProviderAdd, {
     isForeCreate: true,
-    title: t('pages.preference.provider.labels.addLocalModel'),
+    title: t("pages.preference.provider.labels.addLocalModel"),
     query,
-  })
+  });
 }
 
 function handleRemoveProvider(provider: AIProvider) {
-  providerStore.removeProvider(provider.provider)
-  message.success(t('pages.preference.provider.messages.removedProvider', { provider: providerDisplayName(provider) }))
+  providerStore.removeProvider(provider.provider);
+  message.success(t("pages.preference.provider.messages.removedProvider", { provider: providerDisplayName(provider) }));
 }
 </script>
 
@@ -94,13 +94,14 @@ function handleRemoveProvider(provider: AIProvider) {
           </template>
         </Button>
       </template>
-      <div class="flex justify-between">
+      <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
         <!-- 本地模型搭建卡片 -->
         <div
           class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
         >
           <Ollama @use-local-model="handleUseLocalModel" />
         </div>
+        <div />
         <!-- 添加自定义模型卡片 -->
         <div
           class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 flex flex-col cursor-pointer items-center justify-center gap-3 b-2 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
