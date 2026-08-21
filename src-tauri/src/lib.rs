@@ -7,12 +7,22 @@ use core::{
     gamepad::{start_gamepad_listing, stop_gamepad_listing},
     prevent_default, setup,
 };
-use tauri::{Manager, WindowEvent, generate_handler};
+use tauri::{Emitter, Manager, WindowEvent, command, generate_handler};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_custom_window::{
     MAIN_WINDOW_LABEL, PREFERENCE_WINDOW_LABEL, show_preference_window,
 };
 use utils::fs_extra::copy_dir;
+use utils::model_download::download_and_extract_model;
+
+/// 全局存储首次启动时收到的 deep link URL（Windows/Linux 下通过 CLI 参数传入）
+static INITIAL_DEEP_LINK: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// 前端调用：获取应用首次启动时的 deep link URL
+#[command]
+pub fn get_initial_deep_link() -> Option<String> {
+    INITIAL_DEEP_LINK.get().and_then(|opt| opt.clone())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,6 +48,12 @@ pub fn run() {
                     win.open_devtools();
                 }
             }
+            // 捕获首次启动时的 deep link URL（Windows/Linux 下通过 CLI 参数传入）
+            let initial_deep_link = args
+                .iter()
+                .find(|arg| arg.starts_with("pingyou://"))
+                .cloned();
+            let _ = INITIAL_DEEP_LINK.set(initial_deep_link);
             Ok(())
         })
         .invoke_handler(generate_handler![
@@ -59,6 +75,9 @@ pub fn run() {
             // apiKey 加密/解密
             utils::crypto::encrypt_string,
             utils::crypto::decrypt_string,
+            // 模型下载与解压（deep link 导入模型）
+            download_and_extract_model,
+            get_initial_deep_link,
         ])
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件
         .plugin(tauri_plugin_http::init()) // 注册插件
@@ -71,7 +90,13 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(prevent_default::init())
         .plugin(tauri_plugin_single_instance::init(
-            |app_handle, _argv, _cwd| {
+            |app_handle, argv, _cwd| {
+                // Windows/Linux 下 deep link 会启动新实例，single-instance 拦截后将 URL 转发给主实例
+                for arg in &argv {
+                    if arg.starts_with("pingyou://") {
+                        let _ = app_handle.emit("deep-link-url", arg.clone());
+                    }
+                }
                 show_preference_window(app_handle);
             },
         ))
@@ -99,6 +124,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_locale::init())
+        .plugin(tauri_plugin_deep_link::init())
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
                 let _ = window.hide();

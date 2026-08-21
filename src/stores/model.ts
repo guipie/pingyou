@@ -13,9 +13,6 @@ export type ModelEngine = "live2d" | "3d";
 export type ModelMode
   = | "standard"
     | "standard-keli"
-    | "standard-wendi"
-    | "keyboard"
-    | "gamepad"
     | "model3d";
 
 export interface Model {
@@ -24,6 +21,7 @@ export interface Model {
   mode: ModelMode
   engine: ModelEngine
   isPreset: boolean
+  isLoadMore?: boolean
 }
 
 export const useModelStore = defineStore(
@@ -47,11 +45,8 @@ export const useModelStore = defineStore(
       const presetModels = filter(models.value, { isPreset: true });
 
       const modesLive2d: ModelMode[] = [
-        "gamepad",
-        "keyboard",
         "standard",
         "standard-keli",
-        "standard-wendi",
       ];
 
       for (const mode of modesLive2d) {

@@ -79,9 +79,9 @@
         }
       },
       "provider": {
-        "title": "Model Sources",
+        "title": "Models",
         "labels": {
-          "source": "Model Sources",
+          "source": "Models",
           "addCustomModel": "Add Custom Model",
           "addLocalModel": "Add Local Model",
           "custom": "Custom",
@@ -229,7 +229,7 @@
         }
       },
       "cat": {
-        "title": "Cat",
+        "title": "Settings",
         "labels": {
           "modelSettings": "Model Settings",
           "mirrorMode": "Mirror Mode",

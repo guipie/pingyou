@@ -97,14 +97,13 @@ function handleRemoveProvider(provider: AIProvider) {
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
         <!-- 本地模型搭建卡片 -->
         <div
-          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
+          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
         >
           <Ollama @use-local-model="handleUseLocalModel" />
         </div>
-        <div />
         <!-- 添加自定义模型卡片 -->
         <div
-          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 min-w-66 flex flex-col cursor-pointer items-center justify-center gap-3 b-2 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
+          class="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 min-h-36 flex flex-col cursor-pointer items-center justify-center gap-3 b-2 rounded-xl b-dashed transition-all b-border-sec hover:b-blue-4"
           @click="handleOpenAddModal"
         >
           <div class="bg-blue-50 dark:bg-blue-900/30 size-12 flex items-center justify-center rounded-full text-7 text-blue-5">
