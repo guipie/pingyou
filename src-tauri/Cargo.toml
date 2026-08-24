@@ -3,7 +3,7 @@ name = "pingyou"
 version = "1.1.11"
 description = "a screen friend app"
 authors = ["guipie"]
-edition = "2024"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,8 +23,10 @@ tauri = { workspace = true, features = [
   "protocol-asset",
   "macos-private-api",
   "image-png",
-  "devtools",
 ] }
+# 开发时使用: cargo run --features dev
+# [features]
+# dev = ["tauri/devtools"]
 serde = { workspace = true, features = ["derive"] }
 sysinfo = "0.39.6" # 硬件检测 
 ollama-rs = { version = "0.3.5", features = ["stream"] }
@@ -76,3 +78,12 @@ tauri-nspanel.workspace = true
 
 [features]
 cargo-clippy = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+incremental = false
+overflow-checks = false

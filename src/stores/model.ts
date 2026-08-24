@@ -13,7 +13,7 @@ export type ModelEngine = "live2d" | "3d";
 export type ModelMode
   = | "standard"
     | "standard-keli"
-    | "model3d";
+    | "model3d" | any;
 
 export interface Model {
   id: string

@@ -100,8 +100,14 @@
     {
       "identifier": "fs:scope",
       "allow": [
+        "$EXEDIR/**",
+        "$EXEDIR/assets/custom-models/**",
         "$APPDATA/**",
+        "$APPDATA/custom-models/**",
+        "$APPCONFIG/**",
+        "$APPLOCALDATA/**",
         "$RESOURCE/**",
+        "$APPLOG/**",
         "$HOME/**"
       ]
     },

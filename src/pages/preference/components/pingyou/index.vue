@@ -1,46 +1,151 @@
 <script setup lang="ts">
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { appDataDir } from "@tauri-apps/api/path";
-import { remove } from "@tauri-apps/plugin-fs";
+import { exists, readDir, remove } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
-import { Card, Masonry, message, Popconfirm } from "antdv-next";
+import { Card, Masonry, message, Popconfirm, Progress, Tag } from "antdv-next";
 import { nanoid } from "nanoid";
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { Model, ModelEngine, ModelMode } from "@/stores/model";
 
 import { useCatStore } from "@/stores/cat";
 import { useModelStore } from "@/stores/model";
+import { useRouteSettingStore } from "@/stores/route-setting";
 import { join } from "@/utils/path";
 
 import BehaviorModal from "./components/behavior-modal/index.vue";
 import Preview3d from "./components/preview-3d/index.vue";
-// import Upload from './components/upload/index.vue'
 
+// --------------------------------------------------------------------------
+// 屏友商城 API Base
+// --------------------------------------------------------------------------
+const LOAD_MORE_KEY = "__load_more__";
+const WEB_BASE = (() => {
+  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
+  if (env) return env.replace(/\/$/, "");
+  if (import.meta.env.DEV) return "http://localhost:3000";
+  return "https://py.lm56.top";
+})();
+const LOAD_MORE_URL = `${WEB_BASE}/pingyou`;
+
+// --------------------------------------------------------------------------
+// Stores / i18n
+// --------------------------------------------------------------------------
 const catStore = useCatStore();
 const modelStore = useModelStore();
 const { t } = useI18n();
 const openBehaviorModal = ref(false);
 const curType = ref<ModelEngine | "all">("all");
-// const live2dModels = computed(() => modelStore.models.filter(item => item.engine === 'live2d'))
-// const model3dModels = computed(() => modelStore.models.filter(item => item.engine === '3d'))
 
-const LOAD_MORE_KEY = "__load_more__";
-const LOAD_MORE_URL = "https://py.lm56.top/pingyou";
-let unlistenDeepLink: (() => void) | null = null;
+// --------------------------------------------------------------------------
+// 下载进度 UI
+// --------------------------------------------------------------------------
+type DownloadStage = "download" | "extract" | "done" | "error";
+interface DownloadTask {
+  jobId: string
+  /** 线上模型 id（可能暂无，显示 fallback 名时用） */
+  remoteId: string
+  name: string
+  stage: DownloadStage
+  current: number
+  total: number
+  percent: number // 0~100
+  message?: string
+}
 
+/** 正在进行 / 已完成的下载任务（按 jobId 存） */
+const downloadTasks = reactive<Record<string, DownloadTask>>({});
+
+/** 按创建顺序返回任务列表（未完成的在上面） */
+function activeTasks() {
+  return Object.values(downloadTasks).sort((a, b) => {
+    if (a.stage === "done" && b.stage !== "done") return 1;
+    if (a.stage !== "done" && b.stage === "done") return -1;
+    return 0;
+  });
+}
+
+const STAGE_LABEL: Record<DownloadStage, string> = {
+  download: "下载中",
+  extract: "解压中",
+  done: "已完成",
+  error: "失败",
+};
+
+/** 人类可读的字节大小（下载进度里显示：已下载/总共） */
+function formatBytes(bytes: number): string {
+  if (!bytes) return "—";
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+/** 清除已完成 / 失败超过 10s 的任务（避免列表无限增长） */
+function sweepFinishedJobs() {
+  const now = Date.now();
+  for (const jobId of Object.keys(downloadTasks)) {
+    const t = downloadTasks[jobId] as DownloadTask & { _finishedAt?: number };
+    if ((t.stage === "done" || t.stage === "error") && t._finishedAt) {
+      if (now - t._finishedAt > 15_000) delete downloadTasks[jobId];
+    }
+  }
+}
+
+/**
+ * 压缩包解压后可能套了一层目录（如 菲比·标准模式/），
+ * 此函数自动「剥掉」外层包装，返回真正包含模型文件的目录路径。
+ * 规则：如果 toPath 下**只有一个子目录**且该子目录包含 .model3.json/.glb 等模型文件，
+ * 就把那个子目录作为真正的模型根路径。
+ */
+async function resolveEffectiveModelPath(toPath: string): Promise<string> {
+  try {
+    const entries = await readDir(toPath);
+    if (!entries || entries.length === 0) return toPath;
+
+    // 1) 当前层已经有模型文件 → 直接用 toPath
+    const hasModelHere = entries.some((e) => {
+      if (e.isDirectory) return false;
+      const n = e.name.toLowerCase();
+      return n.endsWith(".model3.json") || n.endsWith(".glb") || n.endsWith(".gltf") || n.endsWith(".vrm") || n.endsWith(".fbx");
+    });
+    if (hasModelHere) return toPath;
+
+    // 2) 如果只有一个子目录 → 进入那层继续判断
+    const dirs = entries.filter(e => e.isDirectory);
+    if (dirs.length === 1) {
+      return resolveEffectiveModelPath(join(toPath, dirs[0].name));
+    }
+
+    // 3) 多个子目录 → 找第一个包含模型文件的子目录
+    for (const d of dirs) {
+      const sub = join(toPath, d.name);
+      const subEntries = await readDir(sub).catch(() => []);
+      const hasModel = subEntries.some((e) => {
+        const n = e.name.toLowerCase();
+        return n.endsWith(".model3.json") || n.endsWith(".glb") || n.endsWith(".gltf") || n.endsWith(".vrm") || n.endsWith(".fbx");
+      });
+      if (hasModel) return sub;
+    }
+
+    return toPath;
+  } catch {
+    return toPath;
+  }
+}
+
+// --------------------------------------------------------------------------
+// 模型列表排序（字典序），末尾追加「加载更多」Card
+// --------------------------------------------------------------------------
 function getMasonryItems(models: Model[]) {
-  // 按模型 id 字典序排序（注释修正：原注释"随机排序"有误）
-  // 创建副本再排序，避免原地修改 store 中的 models 数组导致数据污染
   const items = [...models]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map(item => ({
       key: item.id,
       data: item,
     }));
-  // 末尾追加「加载更多」卡片
   items.push({
     key: LOAD_MORE_KEY,
     data: {
@@ -54,26 +159,22 @@ function getMasonryItems(models: Model[]) {
   });
   return items;
 }
+
 function handleToggle(nextModel: Model) {
   if (modelStore.currentModel?.id === nextModel.id) return;
-
   modelStore.modelReady = false;
   modelStore.currentModel = nextModel;
 }
 
 async function handleDelete(item: Model) {
   const { id, path } = item;
-
   try {
     await remove(path, { recursive: true });
-
     message.success(t("pages.preference.model.hints.deleteSuccess"));
   } catch (error) {
     message.error(String(error));
   } finally {
     modelStore.models = modelStore.models.filter(item => item.id !== id);
-
-    // 删除后若当前模型被清空，回退到列表首项；列表为空时置为 undefined，避免访问 undefined 的属性
     if (id === modelStore.currentModel?.id) {
       modelStore.currentModel = modelStore.models[0];
     }
@@ -88,81 +189,305 @@ async function handleOpenFolder(path: string) {
   }
 }
 
-async function handleDeepLink(url: string) {
+// --------------------------------------------------------------------------
+/**
+ * 判定一个目录"看起来"是已经解压成功的模型目录。
+ * 递归扫描所有层级，避免多层嵌套的压缩包被误判为未完成。
+ */
+async function isExtractedModelDir(folder: string): Promise<boolean> {
+  if (!(await exists(folder))) return false;
   try {
-    // pingyou://import-model?id=xxx
+    // BFS 递归搜索所有层级
+    const queue: string[] = [folder];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const entries = await readDir(current).catch(() => []);
+      if (!entries?.length) continue;
+      // 不能有 __temp.zip（下载中途残留）
+      if (entries.some(e => e.name === "__temp.zip")) return false;
+      // 当前层级有模型文件 → 完整
+      const hasModel = entries.some((e) => {
+        if (e.isDirectory) return false;
+        const n = e.name.toLowerCase();
+        return (
+          n.endsWith(".model3.json")
+          || n.endsWith(".glb")
+          || n.endsWith(".gltf")
+          || n.endsWith(".vrm")
+          || n.endsWith(".fbx")
+          || n.endsWith(".moc3")
+        );
+      });
+      if (hasModel) return true;
+      // 继续搜子目录
+      for (const e of entries) {
+        if (e.isDirectory) queue.push(join(current, e.name));
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// 核心：导入模型（deep-link 触发 & 本地 HTTP 触发都走这里）
+// --------------------------------------------------------------------------
+async function handleDeepLink(url: string) {
+  // 自动跳转到屏友 tab（index=0），确保用户能看到下载进度
+  const routeSettingStore = useRouteSettingStore();
+  routeSettingStore.backHome(0);
+
+  try {
     if (!url.startsWith("pingyou://import-model")) return;
-
     const parsed = new URL(url);
-    const id = parsed.searchParams.get("id");
-    if (!id) return;
+    const remoteId = parsed.searchParams.get("id");
+    if (!remoteId) return;
 
-    // 调用 API 获取模型信息
-    const model = await fetch(
-      `https://py.lm56.top/api/models/${id}`,
-    ).then(r => r.json());
-
+    // 拉取模型元信息
+    const res = await fetch(`${WEB_BASE}/api/models/${remoteId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const model = (await res.json()) as {
+      id: number
+      name: string
+      type?: "live2d" | "3d"
+      zipUrl?: string
+    };
     if (!model?.zipUrl) {
       message.error("未找到模型下载地址");
       return;
     }
 
-    const idNanoid = nanoid();
-    const toPath = join(await appDataDir(), "custom-models", idNanoid);
+    // 用「模型 key id」当目录名，保证同一模型多次点击不会重复下载。
+    // 前缀加 `m` 避免纯数字目录导致的路径问题。
+    const modelKeyId = `m${model.id}`;
+    const root = await invoke<string>("resolve_custom_models_dir");
+    const toPath = join(root, modelKeyId);
 
-    // 调用 Rust 后端下载并解压
-    await invoke("download_and_extract_model", {
-      url: model.zipUrl,
-      toPath,
-      modelType: model.type ?? "live2d",
-    });
-
-    // 根据类型推断 mode / engine
-    let mode: ModelMode = "standard";
-    let engine: ModelEngine = "live2d";
-    if (model.type === "3d") {
-      mode = "model3d";
-      engine = "3d";
+    // 先在 store 里查找：模型已存在 → 直接切换到该模型
+    const existingInStore = modelStore.models.find(
+      m =>
+        // id 就是 modelKeyId（新版）或路径指向同一个目录（旧版兼容）
+        m.id === modelKeyId || m.path === toPath,
+    );
+    if (existingInStore) {
+      message.info(`「${model.name}」已经存在，已切换到该模型`);
+      if (modelStore.currentModel?.id !== existingInStore.id) {
+        modelStore.currentModel = existingInStore;
+      }
+      return;
     }
 
-    modelStore.models.push({
-      id: idNanoid,
-      path: toPath,
-      mode,
-      engine,
-      isPreset: false,
-    });
+    // 再查磁盘：目录存在且解压完整 → 直接加入 store
+    if (await isExtractedModelDir(toPath)) {
+      // 剥掉外层包装目录，拿到真正的模型根路径
+      const effectivePath = await resolveEffectiveModelPath(toPath);
+      let mode: ModelMode = "standard";
+      let engine: ModelEngine = "live2d";
+      if (model.type === "3d") {
+        mode = "model3d";
+        engine = "3d";
+      }
+      modelStore.models.push({
+        id: modelKeyId,
+        path: effectivePath,
+        mode,
+        engine,
+        isPreset: false,
+      });
+      message.success(`「${model.name}」本地已存在，已加入模型列表`);
+      // 自动切换到新加入的模型
+      const added = modelStore.models[modelStore.models.length - 1];
+      if (added) modelStore.currentModel = added;
+      return;
+    }
 
-    message.success("模型下载成功！");
+    // 否则：真正下载
+    const jobId = nanoid();
+    // 注册 UI 任务
+    downloadTasks[jobId] = {
+      jobId,
+      remoteId: String(model.id),
+      name: model.name,
+      stage: "download",
+      current: 0,
+      total: 0,
+      percent: 0,
+    };
+
+    try {
+      // 调用 Rust 后端下载 & 解压（新加了 job_id / app_handle 两个参数，会 emit 进度事件）
+      await invoke("download_and_extract_model", {
+        jobId,
+        url: model.zipUrl,
+        toPath,
+        modelType: model.type ?? "live2d",
+      });
+
+      // 剥掉外层包装目录，拿到真正的模型根路径
+      const effectivePath = await resolveEffectiveModelPath(toPath);
+
+      // → done 事件会把 stage 改成 done，这里再把模型加到 store 里
+      let mode: ModelMode = "standard";
+      let engine: ModelEngine = "live2d";
+      if (model.type === "3d") {
+        mode = "model3d";
+        engine = "3d";
+      }
+      modelStore.models.push({
+        id: modelKeyId,
+        path: effectivePath,
+        mode,
+        engine,
+        isPreset: false,
+      });
+      message.success(`「${model.name}」下载完成`);
+      // 自动切换到新模型
+      const added = modelStore.models[modelStore.models.length - 1];
+      if (added) modelStore.currentModel = added;
+    } catch (error: any) {
+      if (downloadTasks[jobId]) {
+        downloadTasks[jobId].stage = "error";
+        downloadTasks[jobId].message = String(error?.message ?? error);
+      }
+      message.error(String(error?.message ?? error));
+      throw error;
+    } finally {
+      // 标记完成时间，15s 后自动从列表清理
+      const t = downloadTasks[jobId] as DownloadTask & { _finishedAt?: number };
+      if (t) t._finishedAt = Date.now();
+      setTimeout(sweepFinishedJobs, 16_000);
+    }
   } catch (error) {
-    message.error(String(error));
+    // 外层 message 已打印，这里仅兜底避免静默失败
+    console.error("[handleDeepLink] failed:", error);
   }
 }
 
-onMounted(async () => {
-  // 检查应用首次启动时的 deep link（Windows/Linux 下通过 CLI 参数传入）
-  try {
-    const initialUrl = await invoke<string | null>("get_initial_deep_link");
-    if (initialUrl) {
-      handleDeepLink(initialUrl);
-    }
-  } catch {
-    // 命令未注册时忽略
-  }
+// --------------------------------------------------------------------------
+// Lifecycle: 监听事件
+// --------------------------------------------------------------------------
+let unlistenDeepLink: (() => void) | null = null;
+let unlistenProgress: (() => void) | null = null;
+let sweepTimer: ReturnType<typeof setInterval> | null = null;
 
-  // 监听后续 deep link 事件（应用已运行时，single-instance 转发）
+onMounted(async () => {
   unlistenDeepLink = await listen<string>("deep-link-url", (event) => {
     handleDeepLink(event.payload);
   });
+
+  // 监听 Rust 端推送的下载/解压进度
+  unlistenProgress = await listen<{
+    job_id: string
+    jobId?: string
+    stage: DownloadStage
+    current: number
+    total: number
+    percent: number
+    message?: string
+  }>("model-download-progress", (event) => {
+    const p = event.payload;
+    const jobId = p.jobId ?? p.job_id;
+    if (!jobId || !downloadTasks[jobId]) return;
+    const t = downloadTasks[jobId];
+    t.stage = p.stage;
+    t.current = p.current;
+    t.total = p.total;
+    t.percent = Math.max(0, Math.min(100, p.percent));
+    if (p.message) t.message = p.message;
+  });
+
+  // 定期清理已完成任务
+  sweepTimer = setInterval(sweepFinishedJobs, 5000);
 });
 
 onUnmounted(() => {
   unlistenDeepLink?.();
+  unlistenProgress?.();
+  if (sweepTimer) clearInterval(sweepTimer);
 });
 </script>
 
 <template>
-  <div class="flex flex-col gap-8">
+  <div class="flex flex-col gap-6">
+    <!-- ============================================================
+         下载任务进度（顶部展示）
+         ============================================================ -->
+    <section
+      v-if="activeTasks().length > 0"
+      class="flex flex-col gap-4 border rounded-2xl p-5 bg-ant-container border-ant-border-sec"
+    >
+      <div class="c-ant-heading flex items-center gap-2 text-base font-semibold">
+        <i class="i-lucide:download-cloud c-ant-primary" />
+        <span>下载任务</span>
+        <Tag
+          class="ml-2 !m-0"
+          color="blue"
+        >
+          {{ activeTasks().filter((t) => t.stage === "download" || t.stage === "extract").length }}
+          进行中
+        </Tag>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-3 md:grid-cols-2">
+        <div
+          v-for="task in activeTasks()"
+          :key="task.jobId"
+          class="bg-ant-fill-quaternary/60 flex flex-col gap-2 b rounded-xl p-4 border-ant-border-sec"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="c-ant-heading flex-1 truncate font-medium text-sm">
+              {{ task.name }}
+            </div>
+            <Tag
+              class="shrink-0 !m-0 !text-xs"
+              :color="{
+                download: 'processing',
+                extract: 'cyan',
+                done: 'success',
+                error: 'error',
+              }[task.stage]"
+            >
+              {{ STAGE_LABEL[task.stage] }}
+            </Tag>
+          </div>
+
+          <Progress
+            :percent="Math.round(task.percent) || 0"
+            :show-info="true"
+            size="small"
+            :status="
+              task.stage === 'error'
+                ? 'exception'
+                : task.stage === 'done'
+                  ? 'success'
+                  : 'active'
+            "
+          />
+
+          <div class="flex items-center justify-between text-xs c-ant-text-tertiary">
+            <template v-if="task.stage === 'download'">
+              <span>{{ formatBytes(task.current) }}</span>
+              <span>/ {{ task.total > 0 ? formatBytes(task.total) : "未知" }}</span>
+            </template>
+            <template v-else-if="task.stage === 'extract'">
+              <span>解压文件 {{ task.current }}</span>
+              <span>/ {{ task.total }} 项</span>
+            </template>
+            <template v-else-if="task.stage === 'done'">
+              <span>已加入模型列表</span>
+              <span>✓</span>
+            </template>
+            <template v-else>
+              <span class="color-error-6 truncate pr-2">{{ task.message ?? "失败" }}</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         原有的模型选择区
+         ============================================================ -->
     <section class="flex flex-col gap-4">
       <div class="flex gap-4">
         <div class="flex items-center gap-2 text-base font-medium">
@@ -187,41 +512,53 @@ onUnmounted(() => {
           <span>3D</span>
         </div>
         <div
+          class="flex cursor-pointer items-center text-blueGray hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
+          :class="{ 'text-info': curType === '3d' }"
+          @click="() => openUrl(LOAD_MORE_URL)"
+        >
+          <i class="i-lucide:cloud-upload" />
+          <span>更多</span>
+        </div>
+        <div
           class="flex cursor-pointer items-center text-blueGray text-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
           @click="curType = 'all'"
         >
           <i class="i-lucide:refresh-ccw" />
         </div>
       </div>
+
       <Masonry
         :columns="{ xs: 3, lg: 4, xxl: 6 }"
         :gutter="16"
         :items="getMasonryItems(modelStore.models)"
       >
         <template #itemRender="{ data }">
-          <!-- 加载更多卡片 -->
+          <!-- ---------- 加载更多 Card ---------- -->
           <Card
             v-if="data.isLoadMore"
-            class="border-dashed!"
+            class="flex flex-col"
+            :cover="false"
             hoverable
             size="small"
-            @click="openUrl(LOAD_MORE_URL)"
+            @click="() => openUrl(LOAD_MORE_URL)"
           >
-            <template #cover>
-              <div
-                class="h-38 w-full flex flex-col items-center justify-center gap-2 text-gray-400"
-              >
-                <i class="i-lucide:plus text-4xl" />
-                <span class="text-sm">加载更多屏友</span>
+            <div
+              class="hover:text-ant-primary flex flex-col items-center justify-center gap-3 px-3 py-12 color-blueGray hover:(c-ant-primary)"
+            >
+              <div class="i-lucide:plus-circle text-6xl opacity-60 c-ant-primary" />
+              <div class="text-xs c-ant-text-tertiary">
+                加载更多 Live2D / 3D 模型
               </div>
-            </template>
+            </div>
           </Card>
 
+          <!-- ---------- Live2D ---------- -->
           <Card
             v-else-if="data.engine === 'live2d'"
             v-show="curType === 'all' || curType === 'live2d'"
             :classes="{
-              actions: `[&>li]:(flex justify-center) [&>li>span]:(inline-flex! justify-center text-4!)`,
+              actions:
+                '[&>li]:(flex justify-center) [&>li>span]:(inline-flex! justify-center text-4!)',
             }"
             hoverable
             size="small"
@@ -242,7 +579,9 @@ onUnmounted(() => {
               />
 
               <i
-                v-if="catStore.model.behavior && modelStore.currentModel?.id === data.id"
+                v-if="
+                  catStore.model.behavior && modelStore.currentModel?.id === data.id
+                "
                 class="i-lucide:smile"
                 @click.stop="openBehaviorModal = true"
               />
@@ -268,11 +607,13 @@ onUnmounted(() => {
             </template>
           </Card>
 
+          <!-- ---------- 3D ---------- -->
           <Card
             v-else-if="data.engine === '3d'"
             v-show="curType === 'all' || curType === '3d'"
             :classes="{
-              actions: `[&>li]:(flex justify-center) [&>li>span]:(inline-flex! justify-center text-4!)`,
+              actions:
+                '[&>li]:(flex justify-center) [&>li>span]:(inline-flex! justify-center text-4!)',
             }"
             hoverable
             size="small"
@@ -312,13 +653,10 @@ onUnmounted(() => {
         </template>
       </Masonry>
     </section>
-    <!-- <Upload class="min-h-40" /> -->
+
+    <BehaviorModal
+      v-if="catStore.model.behavior"
+      v-model="openBehaviorModal"
+    />
   </div>
-
-  <!-- <FloatMenu /> -->
-
-  <BehaviorModal
-    v-if="catStore.model.behavior"
-    v-model="openBehaviorModal"
-  />
 </template>

@@ -13,6 +13,11 @@ import { i18n } from "@/locales";
 
 import { join } from "./path";
 
+/** Windows 安全版：convertFileSrc 前统一把 \ 换成 /，防止 asset scope 匹配失败 */
+function toAssetUrl(path: string): string {
+  return convertFileSrc(path.split("\\").join("/"));
+}
+
 Config.MouseFollow = false;
 
 class Live2d {
@@ -42,24 +47,23 @@ class Live2d {
 
     this.destroy();
 
-    const files = await readDir(path);
-
-    const modelFile = files.find(file => file.name.endsWith(".model3.json"));
-
+    // 递归搜索 .model3.json（zip 可能套多层目录）
+    const modelFile = await this.findModel3Json(path);
     if (!modelFile) {
       throw new Error(i18n.global.t("utils.live2d.hints.notFound"));
     }
 
-    const modelPath = join(path, modelFile.name);
+    // modelFile 是完整文件路径，模型目录 = 文件所在目录
+    const modelDir = modelFile.substring(0, modelFile.lastIndexOf("/") + 1) || modelFile.substring(0, modelFile.lastIndexOf("\\") + 1) || path;
 
-    const modelJSON = JSON5.parse(await readTextFile(modelPath));
+    const modelJSON = JSON5.parse(await readTextFile(modelFile));
 
     const modelSetting = new CubismSetting({
       modelJSON,
     });
 
     modelSetting.redirectPath(({ file }) => {
-      return convertFileSrc(join(path, file));
+      return toAssetUrl(join(modelDir, file));
     });
 
     this.model = new Live2DSprite({
@@ -92,6 +96,27 @@ class Live2d {
     this.model = null;
 
     this.app?.renderer.clear();
+  }
+
+  /**
+   * 递归搜索目录下的 .model3.json 文件（支持多层嵌套）。
+   * 返回完整文件路径，找不到返回 null。
+   */
+  private async findModel3Json(dir: string): Promise<string | null> {
+    const queue: string[] = [dir];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const entries = await readDir(current).catch(() => []);
+      for (const entry of entries) {
+        if (!entry.isDirectory && entry.name.endsWith(".model3.json")) {
+          return join(current, entry.name);
+        }
+        if (entry.isDirectory) {
+          queue.push(join(current, entry.name));
+        }
+      }
+    }
+    return null;
   }
 
   public resizeModel(modelSize: ModelSize) {

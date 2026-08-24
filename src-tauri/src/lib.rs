@@ -7,22 +7,14 @@ use core::{
     gamepad::{start_gamepad_listing, stop_gamepad_listing},
     prevent_default, setup,
 };
-use tauri::{Emitter, Manager, WindowEvent, command, generate_handler};
+use tauri::{Emitter, Manager, WindowEvent, generate_handler};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_custom_window::{
     MAIN_WINDOW_LABEL, PREFERENCE_WINDOW_LABEL, show_preference_window,
 };
 use utils::fs_extra::copy_dir;
-use utils::model_download::download_and_extract_model;
-
-/// 全局存储首次启动时收到的 deep link URL（Windows/Linux 下通过 CLI 参数传入）
-static INITIAL_DEEP_LINK: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
-
-/// 前端调用：获取应用首次启动时的 deep link URL
-#[command]
-pub fn get_initial_deep_link() -> Option<String> {
-    INITIAL_DEEP_LINK.get().and_then(|opt| opt.clone())
-}
+use utils::local_http::spawn_local_http_server;
+use utils::model_download::{download_and_extract_model, ensure_custom_models_dir};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -49,11 +41,22 @@ pub fn run() {
                 }
             }
             // 捕获首次启动时的 deep link URL（Windows/Linux 下通过 CLI 参数传入）
-            let initial_deep_link = args
-                .iter()
-                .find(|arg| arg.starts_with("pingyou://"))
-                .cloned();
-            let _ = INITIAL_DEEP_LINK.set(initial_deep_link);
+            // 直接 emit 事件，前端 onMounted 里通过 listen("deep-link-url") 接收
+            if let Some(url) = args.iter().find(|arg| arg.starts_with("pingyou://")) {
+                let _ = app_handle.emit("deep-link-url", url.clone());
+            }
+
+            // 启动本地 HTTP 回调服务（http://127.0.0.1:14201）：
+            //   - 浏览器可以通过 GET /ping 探测应用是否在运行
+            //   - GET /import-model?id=xxx 直接触发模型下载（不依赖 pingyou:// 协议）
+            spawn_local_http_server(&app_handle);
+
+            // 启动时一次性修复 custom-models 目录权限（解决 Windows ERROR_ACCESS_DENIED / os error 5）
+            // 目录从 APPDATA 迁移到了 <EXEDIR>/assets/custom-models（dev 下=target/debug/assets/custom-models）
+            if let Ok(root_dir) = ensure_custom_models_dir() {
+                let _ = utils::model_download::fixup_acl_recursive(&root_dir);
+            }
+
             Ok(())
         })
         .invoke_handler(generate_handler![
@@ -77,7 +80,7 @@ pub fn run() {
             utils::crypto::decrypt_string,
             // 模型下载与解压（deep link 导入模型）
             download_and_extract_model,
-            get_initial_deep_link,
+            utils::model_download::resolve_custom_models_dir
         ])
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件
         .plugin(tauri_plugin_http::init()) // 注册插件
