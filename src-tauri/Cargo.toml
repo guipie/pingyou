@@ -23,12 +23,13 @@ tauri = { workspace = true, features = [
   "protocol-asset",
   "macos-private-api",
   "image-png",
+  "devtools",          # ← 新增这一行
 ] }
 # 开发时使用: cargo run --features dev
 # [features]
 # dev = ["tauri/devtools"]
 serde = { workspace = true, features = ["derive"] }
-sysinfo = "0.39.6" # 硬件检测 
+sysinfo = "0.39.6"                                       # 硬件检测 
 ollama-rs = { version = "0.3.5", features = ["stream"] }
 serde_json.workspace = true
 # 确保版本与你使用的 @tauri-apps/plugin-http npm 包版本兼容

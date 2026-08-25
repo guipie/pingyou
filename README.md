@@ -36,14 +36,14 @@
     <th>屏友广场</th>
   </tr>
   <tr>
-    <td style="height:260px;padding:0;"><img alt="live2D演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/live2d.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
-    <td style="height:260px;padding:0;"><img alt="3D演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/3dchat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
-    <td style="height:260px;padding:0;"><img alt="屏友广场演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/pingyou.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="live2D演示" src="https://github.com/guipie/pingyou/blob/main/demo/live2d.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="3D演示" src="https://github.com/guipie/pingyou/blob/main/demo/3dchat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="屏友广场演示" src="https://github.com/guipie/pingyou/blob/main/demo/pingyou.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
   </tr>
   <tr>
-    <td style="height:260px;padding:0;"><img alt="聊天演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/chat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
-    <td style="height:260px;padding:0;"><img alt="供应商演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/provider.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
-    <td style="height:260px;padding:0;"><img alt="Ollama下载演示" src="https://github.com/guipie/pingyou/blob/main/public/demo/ollama-download.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="聊天演示" src="https://github.com/guipie/pingyou/blob/main/demo/chat.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="供应商演示" src="https://github.com/guipie/pingyou/blob/main/demo/provider.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
+    <td style="height:260px;padding:0;"><img alt="Ollama下载演示" src="https://github.com/guipie/pingyou/blob/main/demo/ollama-download.png?raw=true" style="width:100%;height:260px;object-fit:cover;display:block;" /></td>
   </tr>
 </table>
 <!-- markdownlint-enable MD033 -->
