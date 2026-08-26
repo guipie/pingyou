@@ -14,7 +14,7 @@ use tauri_plugin_custom_window::{
 };
 use utils::fs_extra::copy_dir;
 use utils::local_http::spawn_local_http_server;
-use utils::model_download::{download_and_extract_model, ensure_custom_models_dir};
+use utils::model_download::{copy_model_file, download_and_extract_model, download_model_file, ensure_custom_models_dir, extract_local_zip};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -80,7 +80,10 @@ pub fn run() {
             utils::crypto::decrypt_string,
             // 模型下载与解压（deep link 导入模型）
             download_and_extract_model,
-            utils::model_download::resolve_custom_models_dir
+            download_model_file,
+            utils::model_download::resolve_custom_models_dir,
+            extract_local_zip,
+            copy_model_file
         ])
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件
         .plugin(tauri_plugin_http::init()) // 注册插件

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { exists, readDir, remove } from "@tauri-apps/plugin-fs";
+import { remove } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { Card, Masonry, message, Popconfirm, Progress, Tag } from "antdv-next";
 import { nanoid } from "nanoid";
@@ -13,11 +13,14 @@ import type { Model, ModelEngine, ModelMode } from "@/stores/model";
 import { useCatStore } from "@/stores/cat";
 import { useModelStore } from "@/stores/model";
 import { useRouteSettingStore } from "@/stores/route-setting";
+import { isExtractedModelDir, resolveEffectiveModelPath } from "@/utils/model";
 import { join } from "@/utils/path";
 
 import BehaviorModal from "./components/behavior-modal/index.vue";
 import Preview3d from "./components/preview-3d/index.vue";
+import Upload from "./components/upload/index.vue";
 
+const uploadShow = ref(false);
 // --------------------------------------------------------------------------
 // 屏友商城 API Base
 // --------------------------------------------------------------------------
@@ -25,7 +28,7 @@ const LOAD_MORE_KEY = "__load_more__";
 const WEB_BASE = (() => {
   const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
   if (env) return env.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://localhost:3000";
+  if (import.meta.env.DEV) return "http://localhost:4000";
   return "https://py.lm56.top";
 })();
 const LOAD_MORE_URL = `${WEB_BASE}/pingyou`;
@@ -94,48 +97,6 @@ function sweepFinishedJobs() {
   }
 }
 
-/**
- * 压缩包解压后可能套了一层目录（如 菲比·标准模式/），
- * 此函数自动「剥掉」外层包装，返回真正包含模型文件的目录路径。
- * 规则：如果 toPath 下**只有一个子目录**且该子目录包含 .model3.json/.glb 等模型文件，
- * 就把那个子目录作为真正的模型根路径。
- */
-async function resolveEffectiveModelPath(toPath: string): Promise<string> {
-  try {
-    const entries = await readDir(toPath);
-    if (!entries || entries.length === 0) return toPath;
-
-    // 1) 当前层已经有模型文件 → 直接用 toPath
-    const hasModelHere = entries.some((e) => {
-      if (e.isDirectory) return false;
-      const n = e.name.toLowerCase();
-      return n.endsWith(".model3.json") || n.endsWith(".glb") || n.endsWith(".gltf") || n.endsWith(".vrm") || n.endsWith(".fbx");
-    });
-    if (hasModelHere) return toPath;
-
-    // 2) 如果只有一个子目录 → 进入那层继续判断
-    const dirs = entries.filter(e => e.isDirectory);
-    if (dirs.length === 1) {
-      return resolveEffectiveModelPath(join(toPath, dirs[0].name));
-    }
-
-    // 3) 多个子目录 → 找第一个包含模型文件的子目录
-    for (const d of dirs) {
-      const sub = join(toPath, d.name);
-      const subEntries = await readDir(sub).catch(() => []);
-      const hasModel = subEntries.some((e) => {
-        const n = e.name.toLowerCase();
-        return n.endsWith(".model3.json") || n.endsWith(".glb") || n.endsWith(".gltf") || n.endsWith(".vrm") || n.endsWith(".fbx");
-      });
-      if (hasModel) return sub;
-    }
-
-    return toPath;
-  } catch {
-    return toPath;
-  }
-}
-
 // --------------------------------------------------------------------------
 // 模型列表排序（字典序），末尾追加「加载更多」Card
 // --------------------------------------------------------------------------
@@ -189,47 +150,6 @@ async function handleOpenFolder(path: string) {
   }
 }
 
-// --------------------------------------------------------------------------
-/**
- * 判定一个目录"看起来"是已经解压成功的模型目录。
- * 递归扫描所有层级，避免多层嵌套的压缩包被误判为未完成。
- */
-async function isExtractedModelDir(folder: string): Promise<boolean> {
-  if (!(await exists(folder))) return false;
-  try {
-    // BFS 递归搜索所有层级
-    const queue: string[] = [folder];
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const entries = await readDir(current).catch(() => []);
-      if (!entries?.length) continue;
-      // 不能有 __temp.zip（下载中途残留）
-      if (entries.some(e => e.name === "__temp.zip")) return false;
-      // 当前层级有模型文件 → 完整
-      const hasModel = entries.some((e) => {
-        if (e.isDirectory) return false;
-        const n = e.name.toLowerCase();
-        return (
-          n.endsWith(".model3.json")
-          || n.endsWith(".glb")
-          || n.endsWith(".gltf")
-          || n.endsWith(".vrm")
-          || n.endsWith(".fbx")
-          || n.endsWith(".moc3")
-        );
-      });
-      if (hasModel) return true;
-      // 继续搜子目录
-      for (const e of entries) {
-        if (e.isDirectory) queue.push(join(current, e.name));
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
 // 核心：导入模型（deep-link 触发 & 本地 HTTP 触发都走这里）
 // --------------------------------------------------------------------------
 async function handleDeepLink(url: string) {
@@ -250,9 +170,11 @@ async function handleDeepLink(url: string) {
       id: number
       name: string
       type?: "live2d" | "3d"
+      modelUrl?: string
       zipUrl?: string
     };
-    if (!model?.zipUrl) {
+    const is3d = model.type === "3d";
+    if (!model?.modelUrl || (!is3d && !model?.zipUrl)) {
       message.error("未找到模型下载地址");
       return;
     }
@@ -315,24 +237,30 @@ async function handleDeepLink(url: string) {
     };
 
     try {
-      // 调用 Rust 后端下载 & 解压（新加了 job_id / app_handle 两个参数，会 emit 进度事件）
-      await invoke("download_and_extract_model", {
-        jobId,
-        url: model.zipUrl,
-        toPath,
-        modelType: model.type ?? "live2d",
-      });
+      if (is3d) {
+        // 3D：下载单文件
+        const modelFileName = model.modelUrl!.split("/").pop()?.split("?")[0] || "model.glb";
+        await invoke("download_model_file", {
+          jobId,
+          url: model.modelUrl,
+          toPath,
+          fileName: modelFileName,
+        });
+      } else {
+        // Live2D：下载 zip 并解压
+        await invoke("download_and_extract_model", {
+          jobId,
+          url: model.zipUrl,
+          toPath,
+        });
+      }
 
       // 剥掉外层包装目录，拿到真正的模型根路径
       const effectivePath = await resolveEffectiveModelPath(toPath);
 
       // → done 事件会把 stage 改成 done，这里再把模型加到 store 里
-      let mode: ModelMode = "standard";
-      let engine: ModelEngine = "live2d";
-      if (model.type === "3d") {
-        mode = "model3d";
-        engine = "3d";
-      }
+      const mode: ModelMode = is3d ? "model3d" : "standard";
+      const engine: ModelEngine = is3d ? "3d" : "live2d";
       modelStore.models.push({
         id: modelKeyId,
         path: effectivePath,
@@ -513,11 +441,19 @@ onUnmounted(() => {
         </div>
         <div
           class="flex cursor-pointer items-center text-blueGray hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
-          :class="{ 'text-info': curType === '3d' }"
+
           @click="() => openUrl(LOAD_MORE_URL)"
         >
           <i class="i-lucide:cloud-upload" />
           <span>更多</span>
+        </div>
+        <div
+          class="flex cursor-pointer items-center text-blueGray hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
+
+          @click="() => uploadShow = !uploadShow"
+        >
+          <i class="i-lucide:upload" />
+          <span>本地</span>
         </div>
         <div
           class="flex cursor-pointer items-center text-blueGray text-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
@@ -526,7 +462,7 @@ onUnmounted(() => {
           <i class="i-lucide:refresh-ccw" />
         </div>
       </div>
-
+      <Upload v-if="uploadShow" />
       <Masonry
         :columns="{ xs: 3, lg: 4, xxl: 6 }"
         :gutter="16"

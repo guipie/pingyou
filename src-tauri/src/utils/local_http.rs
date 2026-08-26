@@ -23,10 +23,10 @@ fn cors_origin(req_origin: &str) -> String {
     let allow_list = [
         "https://py.lm56.top",
         "https://www.py.lm56.top",
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
+        "http://localhost:4000",
+        "http://localhost:4001",
+        "http://127.0.0.1:4000",
+        "http://127.0.0.1:4001",
     ];
     // 如果是浏览器直接请求会带 Origin；如果直接 fetch，未匹配的就回 *（但带 credentials 时不能 *）
     for allowed in allow_list {

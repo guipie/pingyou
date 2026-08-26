@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter, command};
@@ -119,6 +119,189 @@ pub fn fixup_acl_recursive(_root: &std::path::Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// 复制单个模型文件到目标目录（用于本地导入单个 .glb/.vrm/.fbx 等文件）。
+#[command]
+pub async fn copy_model_file(
+    file_path: String,
+    dest_dir: String,
+) -> Result<String, String> {
+    let src = Path::new(&file_path);
+    if !src.is_file() {
+        return Err("源路径必须是文件".to_string());
+    }
+
+    let file_name = src
+        .file_name()
+        .ok_or_else(|| "无法获取文件名".to_string())?
+        .to_string_lossy()
+        .into_owned();
+
+    let dest = PathBuf::from(&dest_dir);
+    std::fs::create_dir_all(&dest)
+        .map_err(|e| format!("创建目录失败: {}", e))?;
+
+    let target = dest.join(&file_name);
+    std::fs::copy(src, &target)
+        .map_err(|e| format!("复制文件失败: {}", e))?;
+
+    let _ = fixup_acl_recursive(&dest);
+    if let Some(parent) = dest.parent() {
+        let _ = fixup_acl_recursive(parent);
+    }
+
+    Ok(target.to_string_lossy().into_owned())
+}
+
+/// 解压本地 zip 文件到目标目录（用于本地导入 zip 模型包）。
+#[command]
+pub async fn extract_local_zip(
+    zip_path: String,
+    to_path: String,
+) -> Result<(), String> {
+    let dest = PathBuf::from(&to_path);
+    std::fs::create_dir_all(&dest)
+        .map_err(|e| format!("创建目录失败: {}", e))?;
+
+    let zip_file = File::open(&zip_path)
+        .map_err(|e| format!("打开zip失败: {}", e))?;
+    let mut archive = ZipArchive::new(zip_file)
+        .map_err(|e| format!("解压失败: {}", e))?;
+
+    let total_entries = archive.len();
+    for i in 0..total_entries {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| format!("读取zip条目失败: {}", e))?;
+        let entry_path = match entry.enclosed_name() {
+            Some(p) => p.to_owned(),
+            None => continue,
+        };
+        let target_path = dest.join(&entry_path);
+
+        if entry.is_dir() {
+            std::fs::create_dir_all(&target_path)
+                .map_err(|e| format!("创建目录失败: {}", e))?;
+        } else {
+            if let Some(parent) = target_path.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("创建目录失败: {}", e))?;
+            }
+            let mut outfile = File::create(&target_path)
+                .map_err(|e| format!("创建文件失败: {}", e))?;
+            std::io::copy(&mut entry, &mut outfile)
+                .map_err(|e| format!("写入文件失败: {}", e))?;
+            outfile.sync_all().ok();
+        }
+    }
+
+    // Windows 权限修复
+    let _ = fixup_acl_recursive(&dest);
+    if let Some(parent) = dest.parent() {
+        let _ = fixup_acl_recursive(parent);
+    }
+
+    Ok(())
+}
+
+/// 下载单个模型文件到目标目录，全程 emit 进度事件（用于 3D 单文件模型）。
+#[command]
+pub async fn download_model_file(
+    app: AppHandle,
+    job_id: String,
+    url: String,
+    to_path: String,
+    file_name: String,
+) -> Result<(), String> {
+    let resp = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("下载失败: {}", e))?;
+
+    if !resp.status().is_success() {
+        let err = format!("下载失败: HTTP {}", resp.status());
+        emit_progress(
+            &app,
+            DownloadProgress {
+                job_id: job_id.clone(),
+                stage: "error".into(),
+                current: 0,
+                total: 0,
+                percent: 0.0,
+                message: Some(err.clone()),
+            },
+        );
+        return Err(err);
+    }
+
+    let total_bytes = resp.content_length().unwrap_or(0);
+
+    let dest = PathBuf::from(&to_path);
+    std::fs::create_dir_all(&dest)
+        .and_then(|_| {
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+                let _ = fixup_acl_recursive(parent);
+            }
+            fixup_acl_recursive(&dest)
+        })
+        .map_err(|e| format!("创建目录失败: {}", e))?;
+
+    let target = dest.join(&file_name);
+    let file_size: u64 = {
+        let mut file = File::create(&target)
+            .map_err(|e| format!("创建文件失败: {}", e))?;
+        let mut downloaded: u64 = 0;
+        let mut stream = resp.bytes_stream();
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| format!("下载流中断: {}", e))?;
+            file.write_all(&chunk)
+                .map_err(|e| format!("写入文件失败: {}", e))?;
+            downloaded = downloaded.saturating_add(chunk.len() as u64);
+
+            let percent = if total_bytes > 0 {
+                (downloaded as f64 / total_bytes as f64 * 100.0) as f32
+            } else {
+                (downloaded.min(1) as f32) * 0.1
+            };
+
+            emit_progress(
+                &app,
+                DownloadProgress {
+                    job_id: job_id.clone(),
+                    stage: "download".into(),
+                    current: downloaded,
+                    total: total_bytes,
+                    percent,
+                    message: None,
+                },
+            );
+        }
+        file.sync_all().ok();
+        downloaded
+    };
+
+    if let Err(e) = fixup_acl_recursive(&dest) {
+        eprintln!("[model_download] fixup ACL 失败（不影响主流程）: {} path={}", e, dest.display());
+    }
+    if let Some(parent) = dest.parent() {
+        let _ = fixup_acl_recursive(parent);
+    }
+
+    emit_progress(
+        &app,
+        DownloadProgress {
+            job_id: job_id.clone(),
+            stage: "done".into(),
+            current: file_size,
+            total: file_size,
+            percent: 100.0,
+            message: Some("完成".into()),
+        },
+    );
+
+    Ok(())
+}
+
 /// 下载 zip 模型包并解压到目标目录，全程 emit 进度事件。
 ///
 /// 前端可以通过 `listen("model-download-progress", ...)` 渲染进度条 UI。
@@ -128,7 +311,6 @@ pub async fn download_and_extract_model(
     job_id: String,
     url: String,
     to_path: String,
-    _model_type: String,
 ) -> Result<(), String> {
     // 1. 发起 HTTP 请求并获取 content-length（如果有）
     let resp = reqwest::get(&url)
