@@ -1,25 +1,24 @@
 <script setup lang="ts">
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Flex, Spin, Tooltip } from "antdv-next";
-import { computed, watch } from "vue";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Button, Flex, message, Spin, Tag, Tooltip } from "antdv-next";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import UpdateApp from "@/components/update-app/index.vue";
 import { useTray } from "@/composables/useTray";
-import { RoutersName } from "@/router/roters.ts";
 import { useAppStore } from "@/stores/app";
 import { useGeneralStore } from "@/stores/general";
 import { useModelStore } from "@/stores/model";
 import { useRouteSettingStore } from "@/stores/route-setting";
+import { useUserStore } from "@/stores/user";
 import { isMac } from "@/utils/platform";
 
-import About from "./components/about/index.vue";
-import Cat from "./components/cat/index.vue";
 import Chat from "./components/chat/index.vue";
-import General from "./components/general/index.vue";
 import Pingyou from "./components/pingyou/index.vue";
 import Provider from "./components/provider/index.vue";
-import Shortcut from "./components/shortcut/index.vue";
+import Settings from "./components/settings/index.vue";
 
 useTray();
 const appStore = useAppStore();
@@ -28,7 +27,49 @@ const current = computed(() => routeSettingStore.currentMenuIndex);
 const { t } = useI18n();
 const generalStore = useGeneralStore();
 const modelStore = useModelStore();
+const userStore = useUserStore();
 const appWindow = getCurrentWebviewWindow();
+
+// 屏友商城 Web 地址
+const WEB_BASE = (() => {
+  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
+  if (env) return env.replace(/\/$/, "");
+  if (import.meta.env.DEV) return "http://localhost:4000";
+  return "https://py.lm56.top";
+})();
+
+/** 打开浏览器跳转到 Web 登录页 */
+function openLogin() {
+  openUrl(`${WEB_BASE}/login?desktop=1`);
+}
+
+/** 处理桌面端登录回调（从本地 HTTP 服务或 deep-link 触发） */
+let unlistenDeepLink: (() => void) | null = null;
+
+onMounted(async () => {
+  unlistenDeepLink = await listen<string>("deep-link-url", (event) => {
+    const url = event.payload;
+    if (!url.startsWith("pingyou://auth-callback")) return;
+
+    try {
+      const parsed = new URL(url);
+      const token = parsed.searchParams.get("token") || "";
+      const userStr = parsed.searchParams.get("user") || "";
+
+      if (!token || !userStr) return;
+
+      const user = JSON.parse(decodeURIComponent(userStr));
+      userStore.setLogin({ user, token });
+      message.success(`欢迎回来，${user.nickname || user.email}`);
+    } catch (err) {
+      console.error("[auth-callback] 解析失败:", err);
+    }
+  });
+});
+
+onUnmounted(() => {
+  unlistenDeepLink?.();
+});
 
 watch(() => generalStore.appearance.language, () => {
   appWindow.setTitle(t("pages.preference.title"));
@@ -61,35 +102,35 @@ const menus = computed(() => [
     key: "cat",
     label: t("pages.preference.cat.title"),
     icon: "i-solar:settings-broken",
-    component: Cat,
+    component: Settings,
   },
-  {
-    index: 4,
-    key: "shortcut",
-    label: t("pages.preference.shortcut.title"),
-    name: RoutersName.Shortcut,
-    icon: "i-solar:keyboard-bold",
-    component: Shortcut,
-    type: "append",
-  },
-  {
-    index: 5,
-    key: "general",
-    name: RoutersName.General,
-    label: t("pages.preference.general.title"),
-    icon: "i-solar:settings-minimalistic-bold",
-    component: General,
-    type: "append",
-  },
-  {
-    index: 6,
-    key: "about",
-    label: t("pages.preference.about.title"),
-    name: RoutersName.About,
-    icon: "i-solar:info-circle-bold",
-    component: About,
-    type: "append",
-  },
+  // {
+  //   index: 4,
+  //   key: "shortcut",
+  //   label: t("pages.preference.shortcut.title"),
+  //   name: RoutersName.Shortcut,
+  //   icon: "i-solar:keyboard-bold",
+  //   component: Shortcut,
+  //   type: "append",
+  // },
+  // {
+  //   index: 5,
+  //   key: "general",
+  //   name: RoutersName.General,
+  //   label: t("pages.preference.general.title"),
+  //   icon: "i-solar:settings-minimalistic-bold",
+  //   component: General,
+  //   type: "append",
+  // },
+  // {
+  //   index: 6,
+  //   key: "about",
+  //   label: t("pages.preference.about.title"),
+  //   name: RoutersName.About,
+  //   icon: "i-solar:info-circle-bold",
+  //   component: About,
+  //   type: "append",
+  // },
 ]);
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {
@@ -128,7 +169,7 @@ watch(() => generalStore.appearance.isDark, (value) => {
 
       <div class="flex flex-col gap-2">
         <div
-          v-for="item in menus.filter(item => item.type !== 'append')"
+          v-for="item in menus"
           :key="item.key"
         >
           <div
@@ -148,7 +189,7 @@ watch(() => generalStore.appearance.isDark, (value) => {
       <!-- 空div  填充剩余空间 -->
       <div class="flex-1" />
       <div
-        class="size-8 flex cursor-pointer items-center justify-center transition color-text-tertiary rounded-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
+        class="w-full cursor-pointer py-1 transition color-text-tertiary rounded-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
       >
         <Tooltip
           :color="generalStore.appearance.isDark ? '#1f1f1f' : '#ffffff'"
@@ -159,22 +200,43 @@ watch(() => generalStore.appearance.isDark, (value) => {
           <template #title>
             <div class="flex flex-col gap-2 overflow-auto">
               <div
-                v-for="item in menus.filter(item => item.type === 'append')"
-                :key="item.key"
                 class="flex cursor-pointer gap-2 transition color-text-tertiary rounded-lg hover:bg-[--ant-color-fill-tertiary] dark:color-text-secondary"
-                @click="routeSettingStore.backHome(item.index); "
+                @click="userStore.logout(); message.success('已退出登录'); "
               >
                 <div
-                  class="size-6"
-                  :class="item.icon"
+                  class="i-solar:logout-broken size-6"
                 />
-                <span>{{ item.label }}</span>
+                <span>退出登录</span>
               </div>
             </div>
           </template>
-          <div
-            class="i-solar:hamburger-menu-linear size-6 rounded-lg dark:color-text-secondary hover:bg-sec"
-          />
+          <div class="w-full flex cursor-pointer items-center justify-between">
+            <!-- 已登录：显示用户名 + 登出 -->
+            <template v-if="userStore.loggedIn">
+              <div class="min-w-0 flex flex-1 items-center gap-1.5 p-1">
+                <i class="i-lucide:user-circle shrink-0 text-base c-ant-primary" />
+                <span class="truncate text-sm">{{ userStore.displayName }}</span>
+                <Tag
+                  class="shrink-0 !m-0 !text-xs"
+                  :color="userStore.user?.plan === 'pro' ? 'gold' : userStore.user?.plan === 'team' ? 'purple' : 'default'"
+                >
+                  {{ userStore.planLabel }}
+                </Tag>
+              </div>
+            </template>
+            <!-- 未登录：显示登录按钮 -->
+            <template v-else>
+              <Button
+                type="link"
+                @click.stop="openLogin"
+              >
+                登录
+              </Button>
+              <div
+                class="i-solar:alt-arrow-right-line-duotone rounded-lg dark:color-text-secondary hover:bg-sec"
+              />
+            </template>
+          </div>
         </Tooltip>
       </div>
     </div>
@@ -183,7 +245,7 @@ watch(() => generalStore.appearance.isDark, (value) => {
       v-for="(item, index) in menus"
       v-show="current === index && !routeSettingStore.curPage"
       :key="item.key"
-      class="h-full min-w-0 flex-1 bg-[--ant-color-fill-quaternary] dark:bg-container"
+      class="custom-container h-full min-w-0 flex-1 bg-[--ant-color-fill-quaternary] dark:bg-container"
       :class="item.key === 'chat' ? 'overflow-hidden p-0' : 'overflow-auto p-4'"
       data-tauri-drag-region
     >

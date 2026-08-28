@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir } from "@tauri-apps/plugin-fs";
-import { message } from "antdv-next";
+import { Button, message, Spin } from "antdv-next";
 import { nanoid } from "nanoid";
 import { onMounted, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -173,11 +173,11 @@ watch(selectPaths, async (paths) => {
 
       // 剥掉外层包装目录，拿到真正的模型根路径
       const effectivePath = await resolveEffectiveModelPath(toPath);
-
       // 验证模型文件存在
       const isValid = await validateModelDir(effectivePath);
       if (!isValid) {
-        message.error("未找到有效的模型文件（.model3.json / .glb / .gltf / .vrm / .moc3），请检查目录结构");
+        // （.model3.json / .glb / .gltf / .vrm / .moc3）
+        message.error("不是本软件支持的模型文件，请检查目录结构");
         continue;
       }
 
@@ -228,7 +228,7 @@ watch(selectPaths, async (paths) => {
 
     <!-- 操作按钮 -->
     <div class="flex gap-2">
-      <a-button
+      <Button
         block
         :loading="importing"
         @click="handleUploadZip"
@@ -237,8 +237,8 @@ watch(selectPaths, async (paths) => {
           <i class="i-lucide:file-archive" />
         </template>
         选择文件
-      </a-button>
-      <a-button
+      </Button>
+      <Button
         block
         :loading="importing"
         @click="handleUploadDir"
@@ -247,7 +247,7 @@ watch(selectPaths, async (paths) => {
           <i class="i-lucide:folder-open" />
         </template>
         选择文件夹
-      </a-button>
+      </Button>
     </div>
 
     <!-- 导入中提示 -->
@@ -255,7 +255,7 @@ watch(selectPaths, async (paths) => {
       v-if="importing"
       class="flex items-center gap-2 c-ant-primary text-sm"
     >
-      <a-spin size="small" />
+      <Spin size="small" />
       <span>正在导入模型…</span>
     </div>
   </div>

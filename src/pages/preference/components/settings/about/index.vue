@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import { getTauriVersion } from '@tauri-apps/api/app'
-import { emit } from '@tauri-apps/api/event'
-import { appLogDir } from '@tauri-apps/api/path'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { openPath, openUrl } from '@tauri-apps/plugin-opener'
-import { arch, platform, version } from '@tauri-apps/plugin-os'
-import { Button, message } from 'antdv-next'
-import { onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { getTauriVersion } from "@tauri-apps/api/app";
+import { emit } from "@tauri-apps/api/event";
+import { appLogDir } from "@tauri-apps/api/path";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { arch, platform, version } from "@tauri-apps/plugin-os";
+import { Button, message, Switch } from "antdv-next";
+import { onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-import ProListItem from '@/components/pro-list-item/index.vue'
-import ProList from '@/components/pro-list/index.vue'
-import { GITHUB_LINK, LISTEN_KEY } from '@/constants'
-import { useAppStore } from '@/stores/app'
-import { useGeneralStore } from '@/stores/general'
+import ProListItem from "@/components/pro-list-item/index.vue";
+import ProList from "@/components/pro-list/index.vue";
+import { GITHUB_LINK, LISTEN_KEY } from "@/constants";
+import { useAppStore } from "@/stores/app";
+import { useGeneralStore } from "@/stores/general";
 
-const generalStore = useGeneralStore()
-const appStore = useAppStore()
-const logDir = ref('')
-const { t } = useI18n()
+const generalStore = useGeneralStore();
+const appStore = useAppStore();
+const logDir = ref("");
+const { t } = useI18n();
 
 onMounted(async () => {
-  logDir.value = await appLogDir()
-})
+  logDir.value = await appLogDir();
+});
 
 function handleUpdate() {
-  emit(LISTEN_KEY.UPDATE_APP)
+  emit(LISTEN_KEY.UPDATE_APP);
 }
 
 async function copyInfo() {
@@ -36,28 +36,34 @@ async function copyInfo() {
     platform: platform(),
     platformArch: arch(),
     platformVersion: version(),
-  }
+  };
 
-  await writeText(JSON.stringify(info, null, 2))
+  await writeText(JSON.stringify(info, null, 2));
 
-  message.success(t('pages.preference.about.hints.copySuccess'))
+  message.success(t("pages.preference.about.hints.copySuccess"));
 }
 
 function feedbackIssue() {
-  openUrl(`${GITHUB_LINK}/issues/new/choose`)
+  openUrl(`${GITHUB_LINK}/issues/new/choose`);
 }
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {
-    document.documentElement.classList.add('dark')
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove("dark");
   }
-}, { immediate: true })
+}, { immediate: true });
 </script>
 
 <template>
-  <div class="min-w-40 p-6">
+  <div
+    id="about"
+    class="py-2"
+  >
     <ProList :title="$t('pages.preference.about.labels.aboutApp')">
+      <ProListItem :title="$t('pages.preference.general.labels.autoCheckUpdate')">
+        <Switch v-model:checked="generalStore.update.autoCheck" />
+      </ProListItem>
       <ProListItem
         :description="`v${appStore.version}`"
         :title="appStore.name"

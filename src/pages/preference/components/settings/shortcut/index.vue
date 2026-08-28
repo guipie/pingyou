@@ -1,60 +1,63 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { storeToRefs } from "pinia";
+import { watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-import ProListItem from '@/components/pro-list-item/index.vue'
-import ProList from '@/components/pro-list/index.vue'
-import Shortcut from '@/components/shortcut/index.vue'
-import { useKeyPress } from '@/composables/useKeyPress'
-import { WINDOW_LABEL } from '@/constants'
-import { toggleWindowVisible } from '@/plugins/window'
-import { useCatStore } from '@/stores/cat'
-import { useGeneralStore } from '@/stores/general'
-import { useShortcutStore } from '@/stores/shortcut.ts'
+import ProListItem from "@/components/pro-list-item/index.vue";
+import ProList from "@/components/pro-list/index.vue";
+import Shortcut from "@/components/shortcut/index.vue";
+import { useKeyPress } from "@/composables/useKeyPress";
+import { WINDOW_LABEL } from "@/constants";
+import { toggleWindowVisible } from "@/plugins/window";
+import { useCatStore } from "@/stores/cat";
+import { useGeneralStore } from "@/stores/general";
+import { useShortcutStore } from "@/stores/shortcut.ts";
 
-const shortcutStore = useShortcutStore()
-const { t } = useI18n()
-const { visibleCat, visiblePreference, mirrorMode, penetrable, alwaysOnTop, messageInput } = storeToRefs(shortcutStore)
-const catStore = useCatStore()
+const shortcutStore = useShortcutStore();
+const { t } = useI18n();
+const { visibleCat, visiblePreference, mirrorMode, penetrable, alwaysOnTop, messageInput } = storeToRefs(shortcutStore);
+const catStore = useCatStore();
 
-const generalStore = useGeneralStore()
+const generalStore = useGeneralStore();
 
 useKeyPress(visibleCat, () => {
-  catStore.window.visible = !catStore.window.visible
-})
+  catStore.window.visible = !catStore.window.visible;
+});
 
 useKeyPress(visiblePreference, () => {
-  toggleWindowVisible(WINDOW_LABEL.PREFERENCE)
-})
+  toggleWindowVisible(WINDOW_LABEL.PREFERENCE);
+});
 
 useKeyPress(mirrorMode, () => {
-  catStore.model.mirror = !catStore.model.mirror
-})
+  catStore.model.mirror = !catStore.model.mirror;
+});
 
 useKeyPress(penetrable, () => {
-  catStore.window.passThrough = !catStore.window.passThrough
-})
+  catStore.window.passThrough = !catStore.window.passThrough;
+});
 
 useKeyPress(alwaysOnTop, () => {
-  catStore.window.alwaysOnTop = !catStore.window.alwaysOnTop
-})
+  catStore.window.alwaysOnTop = !catStore.window.alwaysOnTop;
+});
 
 useKeyPress(messageInput, () => {
-  catStore.window.messageInput = !catStore.window.messageInput
-})
+  catStore.window.messageInput = !catStore.window.messageInput;
+});
 
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {
-    document.documentElement.classList.add('dark')
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark')
+    document.documentElement.classList.remove("dark");
   }
-}, { immediate: true })
+}, { immediate: true });
 </script>
 
 <template>
-  <div class="p-6">
+  <div
+    id="shortcut"
+    class="py-2"
+  >
     <ProList :title="$t('pages.preference.shortcut.title')">
       <ProListItem
         :description="$t('pages.preference.shortcut.hints.toggleCat')"

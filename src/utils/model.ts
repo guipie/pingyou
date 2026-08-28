@@ -5,13 +5,13 @@ import { exists, readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@/utils/path";
 
 /** 单个模型文件扩展名（3D + Live2D） */
-export const MODEL_FILE_EXTS = ["glb", "gltf", "vrm", "fbx", "moc3"];
+export const MODEL_FILE_EXTS = ["glb", "gltf", "vrm", "fbx", "moc3", "moc"];
 
 /** 3D 模型文件扩展名 */
 export const MODEL_3D_EXTS = ["glb", "gltf", "vrm", "fbx"];
 
 /** Live2D 模型文件扩展名 */
-export const MODEL_LIVE2D_EXTS = ["model3.json", "moc3"];
+export const MODEL_LIVE2D_EXTS = ["model3.json", "moc3", "moc"];
 
 /** 判断文件名是否是模型主文件 */
 export function isModelFileName(name: string): boolean {

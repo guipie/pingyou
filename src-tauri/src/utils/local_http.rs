@@ -5,6 +5,7 @@
 //!   * `GET /ping`             → 200 "pong"，供 Web 端探测应用是否已启动
 //!   * `GET /import-model?id=xxx&src=xxx`  → 200，内部 emit `deep-link-url` 事件走
 //!                                            现有的 download_and_extract_model 流程
+//!   * `GET /auth-callback?token=xxx&user=xxx`  → 200，Web 登录回调，将 token 传回桌面端
 //!
 //! 完全使用 std::net 手写 HTTP/1.1 解析，避免引入新依赖。
 
@@ -180,6 +181,37 @@ fn handle_conn(mut stream: TcpStream, app: AppHandle) {
             "OK",
             &cors,
             &format!(r#"{{"ok":true,"id":{}}}"#, id),
+        );
+        return;
+    }
+
+    // 4) GET /auth-callback?token=xxx&user=xxx
+    //    Web 端登录成功后回调，将 token 和用户信息传回桌面端
+    if req.method.eq_ignore_ascii_case("GET") && route == "/auth-callback" {
+        let token = qs_get(&qs, "token").unwrap_or("");
+        let user = qs_get(&qs, "user").unwrap_or("");
+        if token.is_empty() {
+            write_response(
+                &mut stream,
+                400,
+                "Bad Request",
+                &cors,
+                r#"{"ok":false,"error":"token required"}"#,
+            );
+            return;
+        }
+        let url = format!("pingyou://auth-callback?token={}&user={}", token, user);
+        let _ = app.emit("deep-link-url", url);
+        // 前置偏好设置窗口
+        let _ = app
+            .get_webview_window("preference")
+            .and_then(|w| w.show().ok().and_then(|_| w.set_focus().ok()));
+        write_response(
+            &mut stream,
+            200,
+            "OK",
+            &cors,
+            r#"{"ok":true}"#,
         );
         return;
     }
