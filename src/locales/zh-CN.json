@@ -82,6 +82,9 @@
         "title": "模型源",
         "labels": {
           "source": "模型源",
+          "cloudTab": "云端模型",
+          "customTab": "自定义第三方",
+          "localTab": "本地模型",
           "addCustomModel": "添加自定义模型",
           "addLocalModel": "添加本地大模型",
           "custom": "自定义",
@@ -143,7 +146,36 @@
           "stopFailed": "服务停止失败: {err}",
           "removedProvider": "已移除供应商：{provider}",
           "addedCustomProvider": "已添加自定义供应商：{provider}",
-          "defaultCustomDesc": "自定义供应商"
+          "defaultCustomDesc": "自定义供应商",
+          "cloudEnabled": "云端模型已启用：{provider}"
+        },
+        "cloud": {
+          "title": "云端模型",
+          "desc": "使用屏友官方云端大模型，登录后即可直连七牛算力，额度由会员套餐自动管理",
+          "labels": {
+            "login": "登录后使用",
+            "quota": "当前额度",
+            "monthlyQuota": "每月额度",
+            "yearlyQuota": "每年额度",
+            "dailyQuota": "每日额度",
+            "enable": "一键启用",
+            "enabled": "已启用",
+            "use": "使用",
+            "switchTo": "切换",
+            "current": "当前"
+          },
+          "hints": {
+            "loginToUse": "登录屏友账号即可使用官方云端大模型",
+            "unlimited": "不限制",
+            "noKey": "尚未获取到云端密钥，请重新登录后重试",
+            "noModels": "暂无可用模型"
+          },
+          "messages": {
+            "loginFirst": "请先登录后再启用云端模型",
+            "loadFailed": "获取云端额度失败，请稍后重试",
+            "loadModelsFailed": "获取可用模型列表失败，请稍后重试",
+            "enabled": "云端模型已启用，可在对话中选择使用"
+          }
         },
         "dialogs": {
           "removeConfirm": "确定要移除该供应商吗？",
@@ -419,7 +451,10 @@
         "inputMessageRequired": "请输入发送消息",
         "createConversationFailed": "创建会话失败",
         "configureModelFirst": "请先配置好模型",
-        "selectConversation": "请选择一个会话"
+        "selectConversation": "请选择一个会话",
+        "modelUnavailable": "当前模型服务暂时不可用，请更换其他模型后重试",
+        "rateLimited": "请求过于频繁，请稍后重试",
+        "quotaExceeded": "云端额度不足，请开通会员或联系客服"
       }
     },
     "useTauriAiChatCommand": {
@@ -463,7 +498,8 @@
       "智谱ai": "智谱AI",
       "月之暗面": "月之暗面",
       "Minimax": "MiniMax",
-      "本地大模型": "本地大模型"
+      "本地大模型": "本地大模型",
+      "云端模型": "云端模型"
     },
     "descs": {
       "深度求索": "深度求索（DeepSeek）开放平台，提供高性能大模型 API。",

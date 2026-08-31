@@ -47,6 +47,18 @@
         },
         {
           "url": "http://127.0.0.1:11435/*"
+        },
+        {
+          "url": "http://localhost:4000/*"
+        },
+        {
+          "url": "http://127.0.0.1:4000/*"
+        },
+        {
+          "url": "https://py.lm56.top/*"
+        },
+        {
+          "url": "https://api.qnaigc.com/*"
         }
       ]
     },
