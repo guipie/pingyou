@@ -127,7 +127,10 @@
           "environmentReady": "環境準備就緒",
           "systemMemory": "偵測到系統記憶體為",
           "recommendModel": "我們將為您一鍵安裝最適合您電腦的極速輕量模型：",
-          "pausedResumeHint": "下載已暫停，點擊「繼續下載」恢復"
+          "pausedResumeHint": "下載已暫停，點擊「繼續下載」恢復",
+          "dragEngineHint": "拖曳 Ollama 安裝包到此處，或點擊選擇檔案",
+          "dragEngineFormats": "支援 .zip / .tgz / .tar.gz 安裝包",
+          "importingEngine": "正在匯入引擎安裝包…"
         },
         "messages": {
           "copied": "服務位址已成功複製到剪貼簿！",
@@ -141,6 +144,8 @@
           "resuming": "繼續下載中…",
           "cleanupFailed": "深度清理失敗：{err}",
           "stopFailed": "服務停止失敗：{err}",
+          "importEngineSuccess": "引擎安裝包匯入成功！",
+          "importEngineFailed": "引擎安裝包匯入失敗：{err}",
           "removedProvider": "已移除供應商：{provider}",
           "addedCustomProvider": "已新增自訂供應商：{provider}",
           "defaultCustomDesc": "自訂供應商"
@@ -162,7 +167,11 @@
           "cleanupSuccessTitle": "空間深度清理成功",
           "cleanupSuccessContent": "所有本機大模型快取檔案已被安全、乾淨地實體移除。",
           "stopSuccessTitle": "服務停止成功",
-          "stopSuccessContent": "所有本機大模型服務已停止。"
+          "stopSuccessContent": "所有本機大模型服務已停止。",
+          "downloadFailedTitle": "下載失敗",
+          "downloadFailedContent": "自動下載失敗。您可以前往網盤位址手動下載安裝包，然後拖曳到視窗中匯入。",
+          "openPanel": "前往網盤下載",
+          "later": "暫不"
         },
         "errors": {
           "noProvider": "未取得供應商",

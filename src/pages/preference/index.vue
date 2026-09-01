@@ -14,6 +14,7 @@ import { useModelStore } from "@/stores/model";
 import { useRouteSettingStore } from "@/stores/route-setting";
 import { useUserStore } from "@/stores/user";
 import { isMac } from "@/utils/platform";
+import { getStorage } from "@/utils/storage.ts";
 
 import Chat from "./components/chat/index.vue";
 import Pingyou from "./components/pingyou/index.vue";
@@ -47,6 +48,17 @@ function openLogin() {
 let unlistenDeepLink: (() => void) | null = null;
 
 onMounted(async () => {
+  // 检查是否有本地登录状态
+  const user = await getStorage("user");
+  const token = await getStorage("token");
+  if (user && token) {
+    try {
+      const parsedUser = JSON.parse(decodeURIComponent(user));
+      userStore.setLogin({ user: parsedUser, token });
+    } catch (err) {
+      console.error("[preference] 本地登录状态解析失败:", err);
+    }
+  }
   unlistenDeepLink = await listen<string>("deep-link-url", (event) => {
     const url = event.payload;
     if (!url.startsWith("pingyou://auth-callback")) return;
@@ -104,33 +116,6 @@ const menus = computed(() => [
     icon: "i-solar:settings-broken",
     component: Settings,
   },
-  // {
-  //   index: 4,
-  //   key: "shortcut",
-  //   label: t("pages.preference.shortcut.title"),
-  //   name: RoutersName.Shortcut,
-  //   icon: "i-solar:keyboard-bold",
-  //   component: Shortcut,
-  //   type: "append",
-  // },
-  // {
-  //   index: 5,
-  //   key: "general",
-  //   name: RoutersName.General,
-  //   label: t("pages.preference.general.title"),
-  //   icon: "i-solar:settings-minimalistic-bold",
-  //   component: General,
-  //   type: "append",
-  // },
-  // {
-  //   index: 6,
-  //   key: "about",
-  //   label: t("pages.preference.about.title"),
-  //   name: RoutersName.About,
-  //   icon: "i-solar:info-circle-bold",
-  //   component: About,
-  //   type: "append",
-  // },
 ]);
 watch(() => generalStore.appearance.isDark, (value) => {
   if (value) {

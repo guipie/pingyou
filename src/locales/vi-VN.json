@@ -127,7 +127,10 @@
           "environmentReady": "Môi trường đã sẵn sàng",
           "systemMemory": "Phát hiện bộ nhớ hệ thống",
           "recommendModel": "Chúng tôi sẽ cài mô hình nhẹ nhanh phù hợp nhất cho máy của bạn chỉ với một cú nhấp chuột:",
-          "pausedResumeHint": "Đã tạm dừng tải. Nhấp \"Tiếp tục tải\" để tiếp tục."
+          "pausedResumeHint": "Đã tạm dừng tải. Nhấp \"Tiếp tục tải\" để tiếp tục.",
+          "dragEngineHint": "Kéo gói Ollama vào đây hoặc nhấp để chọn tệp",
+          "dragEngineFormats": "Hỗ trợ gói .zip / .tgz / .tar.gz",
+          "importingEngine": "Đang nhập gói engine..."
         },
         "messages": {
           "copied": "Đã sao chép địa chỉ dịch vụ vào clipboard!",
@@ -141,6 +144,8 @@
           "resuming": "Đang tiếp tục tải...",
           "cleanupFailed": "Dọn sạch thất bại: {err}",
           "stopFailed": "Dừng dịch vụ thất bại: {err}",
+          "importEngineSuccess": "Đã nhập gói engine thành công!",
+          "importEngineFailed": "Nhập gói engine thất bại: {err}",
           "removedProvider": "Đã xóa nhà cung cấp: {provider}",
           "addedCustomProvider": "Đã thêm nhà cung cấp tùy chỉnh: {provider}",
           "defaultCustomDesc": "Nhà cung cấp tùy chỉnh"
@@ -162,7 +167,11 @@
           "cleanupSuccessTitle": "Dọn sạch thành công",
           "cleanupSuccessContent": "Tất cả tệp bộ nhớ đệm mô hình cục bộ đã được xóa vật lý an toàn và sạch sẽ.",
           "stopSuccessTitle": "Đã dừng dịch vụ",
-          "stopSuccessContent": "Tất cả dịch vụ mô hình cục bộ đã được dừng."
+          "stopSuccessContent": "Tất cả dịch vụ mô hình cục bộ đã được dừng.",
+          "downloadFailedTitle": "Tải xuống thất bại",
+          "downloadFailedContent": "Tải tự động thất bại. Bạn có thể tải gói từ liên kết panel rồi kéo vào cửa sổ để nhập.",
+          "openPanel": "Mở Panel",
+          "later": "Để sau"
         },
         "errors": {
           "noProvider": "Không tìm thấy nhà cung cấp",

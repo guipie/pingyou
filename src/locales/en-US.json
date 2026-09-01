@@ -130,7 +130,10 @@
           "environmentReady": "Environment Ready",
           "systemMemory": "Detected system memory of",
           "recommendModel": "We will install the best lightweight model for your computer in one click:",
-          "pausedResumeHint": "Download paused. Click \"Resume Download\" to continue."
+          "pausedResumeHint": "Download paused. Click \"Resume Download\" to continue.",
+          "dragEngineHint": "Drag the Ollama package here, or click to select a file",
+          "dragEngineFormats": "Supports .zip / .tgz / .tar.gz packages",
+          "importingEngine": "Importing engine package..."
         },
         "messages": {
           "copied": "Service address copied to clipboard!",
@@ -144,6 +147,8 @@
           "resuming": "Resuming download...",
           "cleanupFailed": "Deep cleanup failed: {err}",
           "stopFailed": "Failed to stop the service: {err}",
+          "importEngineSuccess": "Engine package imported successfully!",
+          "importEngineFailed": "Failed to import engine package: {err}",
           "removedProvider": "Removed provider: {provider}",
           "addedCustomProvider": "Custom provider added: {provider}",
           "defaultCustomDesc": "Custom Provider",
@@ -194,7 +199,11 @@
           "cleanupSuccessTitle": "Deep Cleanup Successful",
           "cleanupSuccessContent": "All local model cache files have been safely and completely removed.",
           "stopSuccessTitle": "Service Stopped",
-          "stopSuccessContent": "All local model services have been stopped."
+          "stopSuccessContent": "All local model services have been stopped.",
+          "downloadFailedTitle": "Download Failed",
+          "downloadFailedContent": "Auto-download failed. You can download the package from the panel URL and drag it into the window to import.",
+          "openPanel": "Open Panel",
+          "later": "Later"
         },
         "errors": {
           "noProvider": "Provider not found",

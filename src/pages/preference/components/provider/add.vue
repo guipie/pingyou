@@ -44,7 +44,7 @@ function applyDarkMode() {
 }
 
 const stopWatch = watch(() => generalStore.appearance.isDark, applyDarkMode);
-
+const isLocal = ref(false);
 onMounted(async () => {
   // 确保 store 已初始化（App.vue 的 onMounted 可能还未执行完）
   try {
@@ -64,7 +64,7 @@ onMounted(async () => {
     const modelId = params.get("modelId");
     const modelName = params.get("modelName");
     const provider = params.get("provider");
-
+    isLocal.value = params.get("isLocal") === "true";
     if (baseUrl) addForm.value.baseUrl = decodeURIComponent(baseUrl);
     if (modelId) addForm.value.modelId = decodeURIComponent(modelId);
     if (modelName) addForm.value.modelName = decodeURIComponent(modelName);
@@ -198,6 +198,7 @@ const avatarChange: UploadEmits["change"] = async (info) => {
             </label>
             <Input
               v-model:value="addForm.provider"
+              :disabled="isLocal"
               :placeholder="t('pages.preference.provider.placeholders.providerName')"
             />
           </div>

@@ -127,7 +127,10 @@
           "environmentReady": "Ambiente Pronto",
           "systemMemory": "Memória do sistema detectada",
           "recommendModel": "Instalaremos o melhor modelo leve para o seu computador com um clique:",
-          "pausedResumeHint": "Download pausado. Clique em \"Retomar Download\" para continuar."
+          "pausedResumeHint": "Download pausado. Clique em \"Retomar Download\" para continuar.",
+          "dragEngineHint": "Arraste o pacote do Ollama aqui ou clique para selecionar um arquivo",
+          "dragEngineFormats": "Suporta pacotes .zip / .tgz / .tar.gz",
+          "importingEngine": "Importando pacote do motor..."
         },
         "messages": {
           "copied": "Endereço do serviço copiado para a área de transferência!",
@@ -141,6 +144,8 @@
           "resuming": "Retomando download...",
           "cleanupFailed": "Falha na limpeza profunda: {err}",
           "stopFailed": "Falha ao parar o serviço: {err}",
+          "importEngineSuccess": "Pacote do motor importado com sucesso!",
+          "importEngineFailed": "Falha ao importar o pacote do motor: {err}",
           "removedProvider": "Provedor removido: {provider}",
           "addedCustomProvider": "Provedor personalizado adicionado: {provider}",
           "defaultCustomDesc": "Provedor Personalizado"
@@ -162,7 +167,11 @@
           "cleanupSuccessTitle": "Limpeza Profunda Bem-sucedida",
           "cleanupSuccessContent": "Todos os arquivos de cache de modelos locais foram removidos com segurança e totalmente.",
           "stopSuccessTitle": "Serviço Parado",
-          "stopSuccessContent": "Todos os serviços de modelo local foram interrompidos."
+          "stopSuccessContent": "Todos os serviços de modelo local foram interrompidos.",
+          "downloadFailedTitle": "Falha no Download",
+          "downloadFailedContent": "O download automático falhou. Você pode baixar o pacote pelo link do painel e arrastá-lo para a janela para importar.",
+          "openPanel": "Abrir Painel",
+          "later": "Depois"
         },
         "errors": {
           "noProvider": "Provedor não encontrado",

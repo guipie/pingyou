@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { PauseOutlined } from '@antdv-next/icons'
-import { Button, message, Select, TextArea } from 'antdv-next'
-import { computed, ref, useTemplateRef } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { PauseOutlined } from "@antdv-next/icons";
+import { Button, message, Select, TextArea } from "antdv-next";
+import { computed, ref, useTemplateRef } from "vue";
+import { useI18n } from "vue-i18n";
 
-import { useTauriAIChat } from '@/composables/useTauriAIChat'
-import { useChatStore } from '@/stores/aichat'
+import { useTauriAIChat } from "@/composables/useTauriAIChat";
+import { useChatStore } from "@/stores/aichat";
 
-const chatStore = useChatStore()
-const { t } = useI18n()
-const selectedImage = ref<any>()
-const imageInputRef = useTemplateRef<HTMLInputElement>('imageInputRef')
-const chatLoading = computed(() => useTauriAIChat().loading.value)
+const chatStore = useChatStore();
+const { t } = useI18n();
+const selectedImage = ref<any>();
+const imageInputRef = useTemplateRef<HTMLInputElement>("imageInputRef");
+const chatLoading = computed(() => useTauriAIChat().loading.value);
 
 interface SpeechRecognitionLike {
   lang: string
@@ -26,87 +26,87 @@ interface SpeechRecognitionLike {
 interface SpeechRecognitionConstructor {
   new (): SpeechRecognitionLike
 }
-const input = ref('')
-const voiceMode = ref(false)
-const listening = ref(false)
-const recognition = ref<SpeechRecognitionLike>()
-const curConversation = computed(() => chatStore.currentConversation)
+const input = ref("");
+const voiceMode = ref(false);
+const listening = ref(false);
+const recognition = ref<SpeechRecognitionLike>();
+const curConversation = computed(() => chatStore.currentConversation);
 const canSend = computed(() => {
-  return Boolean(curConversation.value && (input.value.trim() || selectedImage.value))
-})
+  return Boolean(curConversation.value && (input.value.trim() || selectedImage.value));
+});
 
 function handleSelectImage() {
-  imageInputRef.value?.click()
+  imageInputRef.value?.click();
 }
 
 function handleImageChange(event: Event) {
-  const imageInput = event.target as HTMLInputElement
-  const file = imageInput.files?.[0]
+  const imageInput = event.target as HTMLInputElement;
+  const file = imageInput.files?.[0];
 
-  imageInput.value = ''
+  imageInput.value = "";
 
-  if (!file) return
+  if (!file) return;
 
-  if (!file.type.startsWith('image/')) {
-    message.warning(t('pages.preference.chat.messages.selectImage'))
+  if (!file.type.startsWith("image/")) {
+    message.warning(t("pages.preference.chat.messages.selectImage"));
 
-    return
+    return;
   }
 
-  const reader = new FileReader()
+  const reader = new FileReader();
 
   reader.onload = () => {
-    const dataUrl = String(reader.result)
-    const [, base64 = ''] = dataUrl.split(',')
+    const dataUrl = String(reader.result);
+    const [, base64 = ""] = dataUrl.split(",");
 
     selectedImage.value = {
       name: file.name,
       mediaType: file.type,
       dataUrl,
       base64,
-    }
-  }
-  reader.readAsDataURL(file)
+    };
+  };
+  reader.readAsDataURL(file);
 }
 
 async function sendMessage() {
-  if (!canSend.value || chatLoading.value) return
+  if (!canSend.value || chatLoading.value) return;
 
-  const content = input.value.trim()
-  const image = selectedImage.value
+  const content = input.value.trim();
+  const image = selectedImage.value;
 
-  input.value = ''
-  selectedImage.value = undefined
+  input.value = "";
+  selectedImage.value = undefined;
 
   try {
-    await useTauriAIChat().sendMessage(content, { file: image })
+    await useTauriAIChat().sendMessage(content, { file: image });
   } catch (error) {
-    input.value = content
-    console.error('send error:', error)
-    message.error(error instanceof Error ? error.message : String(error))
+    input.value = content;
+    console.error("send error:", error);
+    message.error(error instanceof Error ? error.message : String(error));
   }
 }
 
 function toggleListening() {
-  if (!voiceMode.value) return
+  if (!voiceMode.value) return;
 
-  recognition.value ??= createSpeechRecognition()
+  recognition.value ??= createSpeechRecognition();
 
   if (!recognition.value) {
-    message.warning(t('pages.preference.chat.messages.webviewNotSupportVoice'))
+    message.warning(t("pages.preference.chat.messages.webviewNotSupportVoice"));
 
-    return
+    return;
   }
 
   if (listening.value) {
-    recognition.value.stop()
-    listening.value = false
+    recognition.value.stop();
+    listening.value = false;
 
-    return
+    return;
   }
 
-  listening.value = true
-  recognition.value.start()
+  listening.value = true;
+  recognition.value.start();
 }
 
 function createSpeechRecognition() {
@@ -115,29 +115,29 @@ function createSpeechRecognition() {
     webkitSpeechRecognition?: SpeechRecognitionConstructor
   }).SpeechRecognition ?? (window as Window & {
     webkitSpeechRecognition?: SpeechRecognitionConstructor
-  }).webkitSpeechRecognition
+  }).webkitSpeechRecognition;
 
-  if (!SpeechRecognition) return
+  if (!SpeechRecognition) return;
 
-  const nextRecognition = new SpeechRecognition()
+  const nextRecognition = new SpeechRecognition();
 
-  nextRecognition.lang = 'zh-CN'
-  nextRecognition.continuous = false
-  nextRecognition.interimResults = false
+  nextRecognition.lang = "zh-CN";
+  nextRecognition.continuous = false;
+  nextRecognition.interimResults = false;
   nextRecognition.onresult = (event) => {
-    const transcript = event.results[0]?.[0]?.transcript
+    const transcript = event.results[0]?.[0]?.transcript;
 
     if (transcript)
-      input.value = input.value ? `${input.value} ${transcript}` : transcript
-  }
+      input.value = input.value ? `${input.value} ${transcript}` : transcript;
+  };
   nextRecognition.onerror = (event) => {
-    message.error(event.error ?? t('pages.preference.chat.messages.voiceRecognitionFailed'))
-  }
+    message.error(event.error ?? t("pages.preference.chat.messages.voiceRecognitionFailed"));
+  };
   nextRecognition.onend = () => {
-    listening.value = false
-  }
+    listening.value = false;
+  };
 
-  return nextRecognition
+  return nextRecognition;
 }
 </script>
 
@@ -193,10 +193,12 @@ function createSpeechRecognition() {
         </button>
       </div>
       <Select
+        v-model:value="curConversation!.provider!.defaultModel"
         :options="curConversation?.provider.models?.map(m => ({ label: m.modelId, value: m.modelId }))"
         :placeholder="t('pages.preference.chat.placeholders.model')"
         size="small"
-        :value="curConversation?.provider?.defaultModel"
+        style="min-width: 130px;"
+        @change="chatStore.updateConversation(curConversation!)"
       />
     </div>
     <div

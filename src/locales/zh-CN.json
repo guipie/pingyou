@@ -130,7 +130,10 @@
           "environmentReady": "环境准备就绪",
           "systemMemory": "检测到系统内存为",
           "recommendModel": "我们将为您一键安装最适合您电脑的极速轻量模型：",
-          "pausedResumeHint": "下载已暂停，点击\"继续下载\"恢复"
+          "pausedResumeHint": "下载已暂停，点击\"继续下载\"恢复",
+          "dragEngineHint": "若网络问题开启失败，可手动下载后拖拽安装包到此处",
+          "dragEngineFormats": "支持 .zip / .tgz / .tar.gz 安装包",
+          "importingEngine": "正在导入引擎安装包..."
         },
         "messages": {
           "copied": "服务地址已成功复制到剪贴板！",
@@ -144,6 +147,8 @@
           "resuming": "继续下载中...",
           "cleanupFailed": "深度清理失败: {err}",
           "stopFailed": "服务停止失败: {err}",
+          "importEngineSuccess": "引擎安装包导入成功！",
+          "importEngineFailed": "引擎安装包导入失败：{err}",
           "removedProvider": "已移除供应商：{provider}",
           "addedCustomProvider": "已添加自定义供应商：{provider}",
           "defaultCustomDesc": "自定义供应商",
@@ -194,7 +199,11 @@
           "cleanupSuccessTitle": "空间深度清理成功",
           "cleanupSuccessContent": "所有本地大模型缓存文件已被安全、干净地物理移除。",
           "stopSuccessTitle": "服务停止成功",
-          "stopSuccessContent": "所有本地大模型服务已被停止。"
+          "stopSuccessContent": "所有本地大模型服务已被停止。",
+          "downloadFailedTitle": "下载失败",
+          "downloadFailedContent": "自动下载失败。您可以前往网盘地址手动下载安装包，然后拖拽到窗口中导入。",
+          "openPanel": "前往网盘下载",
+          "later": "暂不"
         },
         "errors": {
           "noProvider": "未获取到供应商",

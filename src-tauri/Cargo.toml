@@ -25,6 +25,8 @@ tauri = { workspace = true, features = [
   "image-png",
   "devtools",          # ← 新增这一行
 ] }
+
+tauri-plugin-store = "2.0"
 # 开发时使用: cargo run --features dev
 # [features]
 # dev = ["tauri/devtools"]
@@ -44,6 +46,8 @@ tauri-plugin-http = { version = "2", default-features = false, features = [
 reqwest = { version = "0.13.4", features = ["stream"] }
 tokio = { version = "1.0", features = ["full", "fs"] }
 zip = "2.0"                                             # 用于 Windows 解压 zip 包
+tar = "0.4"                                             # 用于 Linux 解压 tgz 包
+flate2 = "1"                                            # 用于 gzip 解压（.tgz = .tar.gz）
 
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-custom-window.workspace = true

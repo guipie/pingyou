@@ -1,6 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { removeStorage, setStorage } from "@/utils/storage";
+
 export interface UserInfo {
   id: string
   email: string
@@ -24,15 +26,19 @@ export const useUserStore = defineStore("user", () => {
   });
 
   /** 设置登录状态（从 deep-link 回调或手动调用） */
-  function setLogin(data: { user: UserInfo, token: string }) {
+  async function setLogin(data: { user: UserInfo, token: string }) {
     user.value = data.user;
     token.value = data.token;
+    await setStorage("user", encodeURIComponent(JSON.stringify(data.user)));
+    await setStorage("token", data.token);
   }
 
   /** 登出 */
-  function logout() {
+  async function logout() {
     user.value = null;
     token.value = "";
+    await removeStorage("user");
+    await removeStorage("token");
   }
 
   return {

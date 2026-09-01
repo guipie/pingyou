@@ -1,59 +1,62 @@
 <script setup lang="ts">
-import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { UnlistenFn } from "@tauri-apps/api/event";
 
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
-import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { message } from '@tauri-apps/plugin-dialog'
-import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from 'antdv-next'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { message, open } from "@tauri-apps/plugin-dialog";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from "antdv-next";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
-import type { DownloadPayload, HardwareReport, InitStep } from '@/stores/shard/app-shard'
+import type { DownloadPayload, HardwareReport, InitStep } from "@/stores/shard/app-shard";
 
 const emit = defineEmits<{
-  (e: 'useLocalModel', payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
-}>()
+  (e: "useLocalModel", payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
+}>();
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 /** 本地大模型供应商标识（数据库主键，不可按语言翻译，展示时通过 i18n 映射） */
-const LOCAL_MODEL_PROVIDER = '本地大模型'
+const LOCAL_MODEL_PROVIDER = "本地大模型";
 
 /**
  * 将 Rust 侧推送的中文状态文本翻译为当前语言。
  * 未匹配到的状态（例如 Ollama 自身的英文状态消息）原样返回。
  */
 function translateStatus(status: string): string {
-  if (!status) return ''
-  const trimmed = status.trim()
+  if (!status) return "";
+  const trimmed = status.trim();
 
-  const engineDownload = /^正在高速下载AI核心组件:\s*([\d.]+)%$/.exec(trimmed)
+  const engineDownload = /^正在高速下载AI核心组件:\s*([\d.]+)%$/.exec(trimmed);
   if (engineDownload) {
-    return t('pages.preference.provider.status.downloadingCore', { progress: engineDownload[1] })
+    return t("pages.preference.provider.status.downloadingCore", { progress: engineDownload[1] });
   }
-  const modelDownload = /^正在高速下载AI大模型:\s*([\d.]+)%$/.exec(trimmed)
+  const modelDownload = /^正在高速下载AI大模型:\s*([\d.]+)%$/.exec(trimmed);
   if (modelDownload) {
-    return t('pages.preference.provider.status.downloadingModel', { progress: modelDownload[1] })
+    return t("pages.preference.provider.status.downloadingModel", { progress: modelDownload[1] });
   }
-  const UNINSTALL_PREFIX = '正在从本地仓库卸载模型:'
-  if (trimmed.startsWith(UNINSTALL_PREFIX) && trimmed.endsWith('...')) {
-    return t('pages.preference.provider.status.uninstallingModel', {
+  const UNINSTALL_PREFIX = "正在从本地仓库卸载模型:";
+  if (trimmed.startsWith(UNINSTALL_PREFIX) && trimmed.endsWith("...")) {
+    return t("pages.preference.provider.status.uninstallingModel", {
       name: trimmed.slice(UNINSTALL_PREFIX.length, -3).trim(),
-    })
+    });
   }
 
   const statusKeyMap: Record<string, string> = {
-    '正在安全请求云端环境配置...': 'requestingConfig',
-    '正在解压并深度优化本地 AI 显卡加速环境...': 'extractingEnv',
-    '内核环境就绪，正在激活大模型通道...': 'activatingChannel',
-    '模型初始化成功！': 'modelReady',
-    '正在安全关闭本地 AI 引擎...': 'stoppingEngine',
-    '正在全量物理粉碎 AI 内核、显卡驱动及模型数据...': 'shreddingData',
-    '1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！': 'cleanupComplete',
-  }
-  const key = statusKeyMap[trimmed]
-  return key ? t(`pages.preference.provider.status.${key}`) : status
+    "正在安全请求云端环境配置...": "requestingConfig",
+    "正在解压并深度优化本地 AI 显卡加速环境...": "extractingEnv",
+    "内核环境就绪，正在激活大模型通道...": "activatingChannel",
+    "模型初始化成功！": "modelReady",
+    "正在安全关闭本地 AI 引擎...": "stoppingEngine",
+    "正在全量物理粉碎 AI 内核、显卡驱动及模型数据...": "shreddingData",
+    "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！": "cleanupComplete",
+  };
+  const key = statusKeyMap[trimmed];
+  return key ? t(`pages.preference.provider.status.${key}`) : status;
 }
 
 interface CleanupPayload {
@@ -79,32 +82,47 @@ interface PersistedDownloadState {
   phase: string
 }
 
-const STORAGE_KEY = 'ollama_download_state'
+const STORAGE_KEY = "ollama_download_state";
 
-const [messageApi, ContextHolder] = AntdMessage.useMessage()
+const [messageApi, ContextHolder] = AntdMessage.useMessage();
 
 // 引擎服务地址（与 Rust 启动参数配置的端口保持一致）
-const OLLAMA_HOST = 'http://127.0.0.1:11435/v1/chat/completions'
+const OLLAMA_HOST = "http://127.0.0.1:11435/v1/chat/completions";
 
-const step = ref<InitStep | 'completed'>('checking')
-const downloadProgress = ref<number>(0)
-const downloadStatusText = ref<string>(t('pages.preference.provider.status.preparingDownload'))
+/** 屏友 Web 后端地址（与 preference/index.vue 保持一致），用于拉取 Ollama 下载配置 */
+const WEB_BASE = (() => {
+  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
+  if (env) return env.replace(/\/$/, "");
+  if (import.meta.env.DEV) return "http://localhost:4000";
+  return "https://py.lm56.top";
+})();
+
+const step = ref<InitStep | "completed">("checking");
+const downloadProgress = ref<number>(0);
+const downloadStatusText = ref<string>(t("pages.preference.provider.status.preparingDownload"));
 /** 当前下载阶段: 空字符串表示未开始 */
-const downloadPhase = ref<string>('')
+const downloadPhase = ref<string>("");
 /** 是否处于暂停状态 */
-const isPaused = ref<boolean>(false)
+const isPaused = ref<boolean>(false);
 
-const isCleaning = ref<boolean>(false)
-const cleanupStatusText = ref<string>(t('pages.preference.provider.status.preparingCleanup'))
+const isCleaning = ref<boolean>(false);
+const cleanupStatusText = ref<string>(t("pages.preference.provider.status.preparingCleanup"));
+
+// 拖拽导入 Ollama 引擎安装包（网盘下载后拖入）
+const dropRef = ref<HTMLElement | null>(null);
+const isDragging = ref<boolean>(false);
+const importing = ref<boolean>(false);
+// 后台配置的网盘兜底地址（下载失败时引导用户前往下载后拖拽导入）
+const panelUrl = ref<string>("");
 
 // 存储已安装的模型列表
-const localModels = ref<LocalModel[]>([])
+const localModels = ref<LocalModel[]>([]);
 
 const hardwareInfo = ref<HardwareReport>({
   total_memory_gb: 0,
-  status: 'Unsupported',
-  recommend_model: '',
-})
+  status: "Unsupported",
+  recommend_model: "",
+});
 
 // ─── 合并进度：引擎 0-50%，模型 50-100%，永不回退 ─────────────
 
@@ -116,17 +134,17 @@ const hardwareInfo = ref<HardwareReport>({
  *   模型阶段:  raw 0-100%  →  display 50-100%
  */
 function computeDisplayProgress(raw: number, phase: string): number {
-  if (phase === 'model') {
-    return 50 + (raw / 100) * 50
+  if (phase === "model") {
+    return 50 + (raw / 100) * 50;
   }
   // engine 阶段 (或未知阶段也按 engine 处理)
-  return (raw / 100) * 50
+  return (raw / 100) * 50;
 }
 
 /** 展示用的进度 (0-100)，只增不减 */
 const displayProgress = computed(() => {
-  return computeDisplayProgress(downloadProgress.value, downloadPhase.value)
-})
+  return computeDisplayProgress(downloadProgress.value, downloadPhase.value);
+});
 
 // ─── localStorage 持久化 ──────────────────────────────────────────
 
@@ -137,362 +155,446 @@ function saveDownloadState() {
     displayProgress: displayProgress.value,
     status: downloadStatusText.value,
     phase: downloadPhase.value,
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function clearDownloadState() {
-  localStorage.removeItem(STORAGE_KEY)
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 function loadPersistedState(): PersistedDownloadState | null {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) return null
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
   try {
-    return JSON.parse(raw) as PersistedDownloadState
+    return JSON.parse(raw) as PersistedDownloadState;
   } catch {
-    return null
+    return null;
   }
 }
 
 // ─── 工具函数 ──────────────────────────────────────────────────────
 
 function formatSize(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`;
 }
 
 async function copyHost() {
   try {
-    await navigator.clipboard.writeText(OLLAMA_HOST)
-    messageApi.success(t('pages.preference.provider.messages.copied'))
+    await navigator.clipboard.writeText(OLLAMA_HOST);
+    messageApi.success(t("pages.preference.provider.messages.copied"));
   } catch {
-    messageApi.error(t('pages.preference.provider.messages.copyFailed'))
+    messageApi.error(t("pages.preference.provider.messages.copyFailed"));
   }
 }
 
 async function fetchLocalModels(): Promise<boolean> {
   try {
-    const models = await invoke<LocalModel[]>('list_local_models')
-    localModels.value = models
-    return models.length > 0
+    const models = await invoke<LocalModel[]>("list_local_models");
+    localModels.value = models;
+    return models.length > 0;
   } catch (err) {
-    console.warn('暂未检测到已运行的模型服务:', err)
-    localModels.value = []
-    return false
+    console.warn("暂未检测到已运行的模型服务:", err);
+    localModels.value = [];
+    return false;
   }
 }
 
 // ─── 事件监听 ──────────────────────────────────────────────────────
 
-let unlistenFn: UnlistenFn | null = null
-let cleanupUnlistenFn: UnlistenFn | null = null
+let unlistenFn: UnlistenFn | null = null;
+let cleanupUnlistenFn: UnlistenFn | null = null;
 
 async function startProgressListener() {
-  if (unlistenFn) return
+  if (unlistenFn) return;
 
-  unlistenFn = await listen<DownloadPayload>('download-progress', (event) => {
-    const payload = event.payload
-    downloadProgress.value = payload.progress
-    downloadStatusText.value = translateStatus(payload.status)
+  unlistenFn = await listen<DownloadPayload>("download-progress", (event) => {
+    const payload = event.payload;
+    downloadProgress.value = payload.progress;
+    downloadStatusText.value = translateStatus(payload.status);
 
     // 首次收到事件时记录阶段（避免 phase 为空导致进度计算错误）
     if (payload.phase && payload.phase !== downloadPhase.value) {
-      downloadPhase.value = payload.phase
+      downloadPhase.value = payload.phase;
     }
 
     // 实时持久化到 localStorage
-    saveDownloadState()
-  })
+    saveDownloadState();
+  });
 }
 
 function stopProgressListener() {
   if (unlistenFn) {
-    unlistenFn()
-    unlistenFn = null
+    unlistenFn();
+    unlistenFn = null;
   }
 }
 
 // ─── 生命周期 ──────────────────────────────────────────────────────
 
 onMounted(async () => {
-  try {
-    const report = await invoke<HardwareReport>('check_hardware')
-    hardwareInfo.value = report
-
-    if (report.status === 'Low' || report.total_memory_gb < 4) {
-      step.value = 'unsupported'
-      clearDownloadState()
-      return
+  // 拖拽导入：监听系统拖入的文件，落在拖拽区内时触发导入
+  const appWindow = getCurrentWebviewWindow();
+  appWindow.onDragDropEvent(({ payload }) => {
+    const { type } = payload;
+    if (type === "over") {
+      const { x, y } = payload.position;
+      if (dropRef.value) {
+        const { left, right, top, bottom } = dropRef.value.getBoundingClientRect();
+        isDragging.value = x >= left && x <= right && y >= top && y <= bottom;
+      }
+    } else if (type === "drop" && isDragging.value) {
+      isDragging.value = false;
+      const file = payload.paths[0];
+      if (file) importEngineFile(file);
+    } else {
+      isDragging.value = false;
     }
+  });
 
+  try {
+    const report = await invoke<HardwareReport>("check_hardware");
+    hardwareInfo.value = report;
+
+    if (report.status === "Low" || report.total_memory_gb < 4) {
+      step.value = "unsupported";
+      clearDownloadState();
+      return;
+    }
+    loadPanelUrl();
     // ★ 刷新恢复：检查是否有正在进行的下载
-    const isActive = await invoke<boolean>('is_downloading').catch(() => false)
+    const isActive = await invoke<boolean>("is_downloading").catch(() => false);
 
     if (isActive) {
       // Rust 侧有下载正在进行 → 恢复 downloading 状态
-      const saved = loadPersistedState()
-      if (saved && saved.step === 'downloading') {
-        step.value = 'downloading'
-        downloadProgress.value = saved.rawProgress
-        downloadPhase.value = saved.phase || 'engine'
-        downloadStatusText.value = saved.status
+      const saved = loadPersistedState();
+      if (saved && saved.step === "downloading") {
+        step.value = "downloading";
+        downloadProgress.value = saved.rawProgress;
+        downloadPhase.value = saved.phase || "engine";
+        downloadStatusText.value = saved.status;
       } else {
-        step.value = 'downloading'
+        step.value = "downloading";
         // 无持久化数据时，从 0 开始
-        downloadProgress.value = 0
-        downloadPhase.value = 'engine'
+        downloadProgress.value = 0;
+        downloadPhase.value = "engine";
       }
       // 重新绑定进度监听
-      await startProgressListener()
-      return
+      await startProgressListener();
+      return;
     }
 
     // 检查持久化状态（可能刚完成）
-    const saved = loadPersistedState()
-    if (saved && saved.step === 'downloading') {
-      const hasModels = await fetchLocalModels()
+    const saved = loadPersistedState();
+    if (saved && saved.step === "downloading") {
+      const hasModels = await fetchLocalModels();
       if (hasModels) {
-        step.value = 'completed'
-        clearDownloadState()
+        step.value = "completed";
+        clearDownloadState();
       } else {
-        step.value = 'ready'
-        clearDownloadState()
+        step.value = "ready";
+        clearDownloadState();
       }
-      return
+      return;
     }
 
     // 正常检测
-    const hasModels = await fetchLocalModels()
+    const hasModels = await fetchLocalModels();
     if (hasModels) {
-      step.value = 'completed'
-      clearDownloadState()
+      step.value = "completed";
+      clearDownloadState();
     } else {
-      step.value = 'ready'
-      clearDownloadState()
+      step.value = "ready";
+      clearDownloadState();
     }
   } catch (err) {
-    message(t('pages.preference.provider.messages.hardwareCheckFailed'))
-    console.error(err)
+    message(t("pages.preference.provider.messages.hardwareCheckFailed"));
+    console.error(err);
   }
-})
+});
 
 onUnmounted(() => {
-  stopProgressListener()
+  stopProgressListener();
   if (cleanupUnlistenFn) {
-    cleanupUnlistenFn()
-    cleanupUnlistenFn = null
+    cleanupUnlistenFn();
+    cleanupUnlistenFn = null;
   }
-})
+});
 
 // ─── 下载流程 ──────────────────────────────────────────────────────
 
 async function handleInit(): Promise<void> {
-  step.value = 'downloading'
-  downloadProgress.value = 0
-  downloadPhase.value = 'engine'
-  downloadStatusText.value = t('pages.preference.provider.status.preparingInit')
-  isPaused.value = false
-  saveDownloadState()
+  step.value = "downloading";
+  downloadProgress.value = 0;
+  downloadPhase.value = "engine";
+  downloadStatusText.value = t("pages.preference.provider.status.preparingInit");
+  isPaused.value = false;
+  saveDownloadState();
 
   try {
-    await startProgressListener()
+    await startProgressListener();
 
     // 1. 拉起引擎
-    downloadStatusText.value = t('pages.preference.provider.status.pullingEngine')
-    await invoke<void>('start_ollama_engine')
+    downloadStatusText.value = t("pages.preference.provider.status.pullingEngine");
+    await invoke<void>("start_ollama_engine", { web_base: WEB_BASE });
 
     // 2. 下载模型
-    await invoke<void>('download_model', { model_name: hardwareInfo.value.recommend_model })
+    await invoke<void>("download_model", { model_name: hardwareInfo.value.recommend_model });
 
     // 3. 验证
-    downloadStatusText.value = t('pages.preference.provider.status.verifyingModel')
-    saveDownloadState()
+    downloadStatusText.value = t("pages.preference.provider.status.verifyingModel");
+    saveDownloadState();
 
-    const hasModels = await fetchLocalModels()
+    const hasModels = await fetchLocalModels();
 
     if (hasModels) {
-      messageApi.success(t('pages.preference.provider.messages.deploySuccess'))
-      step.value = 'completed'
-      clearDownloadState()
+      messageApi.success(t("pages.preference.provider.messages.deploySuccess"));
+      step.value = "completed";
+      clearDownloadState();
     } else {
-      messageApi.error(t('pages.preference.provider.messages.modelLoadError'))
-      step.value = 'ready'
-      clearDownloadState()
+      messageApi.error(t("pages.preference.provider.messages.modelLoadError"));
+      step.value = "ready";
+      clearDownloadState();
     }
   } catch (err) {
-    const errMsg = String(err)
-    if (errMsg.includes('已被用户取消') || errMsg.includes('cancelled')) {
-      messageApi.info(t('pages.preference.provider.messages.downloadCancelled'))
+    const errMsg = String(err);
+    if (errMsg.includes("已被用户取消") || errMsg.includes("cancelled")) {
+      messageApi.info(t("pages.preference.provider.messages.downloadCancelled"));
     } else {
-      message(t('pages.preference.provider.messages.initFailed', { err }))
+      message(t("pages.preference.provider.messages.initFailed", { err }));
+      // 下载失败时，若后台配置了网盘兜底地址，引导用户前往下载后拖拽导入
+      const panel = await loadPanelUrl();
+      if (panel) showPanelFallback(panel);
     }
-    step.value = 'ready'
-    isPaused.value = false
-    clearDownloadState()
+    step.value = "ready";
+    isPaused.value = false;
+    clearDownloadState();
   } finally {
-    stopProgressListener()
+    stopProgressListener();
   }
 }
 
 // ★ 暂停下载
 async function handlePause() {
   try {
-    await invoke<void>('pause_download')
-    isPaused.value = true
-    messageApi.info(t('pages.preference.provider.messages.downloadPaused'))
-    saveDownloadState()
+    await invoke<void>("pause_download");
+    isPaused.value = true;
+    messageApi.info(t("pages.preference.provider.messages.downloadPaused"));
+    saveDownloadState();
   } catch (err) {
-    console.error('暂停失败:', err)
+    console.error("暂停失败:", err);
   }
 }
 
 // ★ 继续下载
 async function handleResume() {
   try {
-    await invoke<void>('resume_download')
-    isPaused.value = false
-    messageApi.info(t('pages.preference.provider.messages.resuming'))
-    saveDownloadState()
+    await invoke<void>("resume_download");
+    isPaused.value = false;
+    messageApi.info(t("pages.preference.provider.messages.resuming"));
+    saveDownloadState();
   } catch (err) {
-    console.error('继续下载失败:', err)
+    console.error("继续下载失败:", err);
   }
 }
 
 // ★ 取消下载（Rust 侧会清理临时文件）
 async function handleCancel() {
   Modal.confirm({
-    title: t('pages.preference.provider.dialogs.cancelDownloadTitle'),
-    content: t('pages.preference.provider.dialogs.cancelDownloadContent'),
-    okText: t('pages.preference.provider.dialogs.confirmCancel'),
-    okType: 'danger',
-    cancelText: t('pages.preference.provider.dialogs.continueDownload'),
+    title: t("pages.preference.provider.dialogs.cancelDownloadTitle"),
+    content: t("pages.preference.provider.dialogs.cancelDownloadContent"),
+    okText: t("pages.preference.provider.dialogs.confirmCancel"),
+    okType: "danger",
+    cancelText: t("pages.preference.provider.dialogs.continueDownload"),
     onOk: async () => {
       try {
         // 如果暂停中，先恢复再取消（避免死锁）
         if (isPaused.value) {
-          await invoke<void>('resume_download')
+          await invoke<void>("resume_download");
         }
-        await invoke<void>('cancel_download')
-        messageApi.info(t('pages.preference.provider.messages.downloadCancelled'))
-        step.value = 'ready'
-        isPaused.value = false
-        clearDownloadState()
+        await invoke<void>("cancel_download");
+        messageApi.info(t("pages.preference.provider.messages.downloadCancelled"));
+        step.value = "ready";
+        isPaused.value = false;
+        clearDownloadState();
       } catch (err) {
-        console.error('取消下载失败:', err)
+        console.error("取消下载失败:", err);
         // 即使出错也重置状态
-        step.value = 'ready'
-        isPaused.value = false
-        clearDownloadState()
+        step.value = "ready";
+        isPaused.value = false;
+        clearDownloadState();
       }
     },
     onCancel: () => {
       // 用户点了"继续下载"，不做任何操作
     },
-  })
+  });
 }
 
 // ─── 使用本地大模型 ────────────────────────────────────────────
 
 function handleUseLocalModel() {
-  const firstModel = localModels.value[0]
-  const modelName = firstModel?.name || hardwareInfo.value.recommend_model || 'local-model'
+  const firstModel = localModels.value[0];
+  const modelName = firstModel?.name || hardwareInfo.value.recommend_model || "local-model";
 
-  emit('useLocalModel', {
+  emit("useLocalModel", {
     baseUrl: OLLAMA_HOST,
     modelName,
     modelId: modelName,
     provider: LOCAL_MODEL_PROVIDER,
-  })
+  });
+}
+
+// ─── 拖拽导入 Ollama 引擎安装包 ──────────────────────────────────
+
+/** 拉取后台配置的网盘兜底地址（下载失败时引导用户前往下载后拖拽导入），结果缓存 */
+async function loadPanelUrl(): Promise<string> {
+  if (panelUrl.value) return panelUrl.value;
+  try {
+    const res = await tauriFetch(`${WEB_BASE}/api/ollama/config`, { method: "GET" });
+    if (!res.ok) return "";
+    const data = await res.json() as { panelUrl?: string };
+    panelUrl.value = (data.panelUrl || "").trim();
+    return panelUrl.value;
+  } catch {
+    return "";
+  }
+}
+
+/** 下载失败时弹出网盘兜底提示，用户可前往网盘下载后拖拽导入 */
+function showPanelFallback(panel: string) {
+  Modal.confirm({
+    title: t("pages.preference.provider.dialogs.downloadFailedTitle"),
+    content: t("pages.preference.provider.dialogs.downloadFailedContent"),
+    okText: t("pages.preference.provider.dialogs.openPanel"),
+    cancelText: t("pages.preference.provider.dialogs.later"),
+    onOk: () => openUrl(panel),
+  });
+}
+
+/** 点击拖拽区，通过系统文件选择器选取安装包（zip/tgz/tar.gz），随后走同一导入流程 */
+async function selectEngineFile() {
+  if (importing.value) return;
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "Ollama 安装包", extensions: ["zip", "tgz", "tar.gz"] }],
+  });
+  if (!selected) return;
+  const filePath = Array.isArray(selected) ? selected[0] : selected;
+  if (filePath) await importEngineFile(filePath);
+}
+
+/** 将拖入的安装包（zip/tgz/裸二进制）导入到沙箱 engine 目录，随后可直接一键部署 */
+async function importEngineFile(filePath: string) {
+  if (importing.value) return;
+  importing.value = true;
+  try {
+    await invoke<void>("import_engine_file", { file_path: filePath });
+    messageApi.success(t("pages.preference.provider.messages.importEngineSuccess"));
+    // 导入成功后重新检测：若已有模型则进入完成态，否则回到就绪态
+    const hasModels = await fetchLocalModels();
+    if (hasModels) {
+      step.value = "completed";
+      clearDownloadState();
+    } else {
+      step.value = "ready";
+      clearDownloadState();
+    }
+  } catch (err) {
+    messageApi.error(t("pages.preference.provider.messages.importEngineFailed", { err: String(err) }));
+  } finally {
+    importing.value = false;
+  }
 }
 
 // ─── 清理 / 停止 ──────────────────────────────────────────────────
 
 function cleanupModels() {
   Modal.confirm({
-    title: t('pages.preference.provider.dialogs.cleanupTitle'),
-    content: t('pages.preference.provider.dialogs.cleanupContent'),
-    okText: t('pages.preference.provider.dialogs.confirmCleanup'),
-    okType: 'danger',
-    cancelText: t('pages.preference.provider.dialogs.thinkAgain'),
+    title: t("pages.preference.provider.dialogs.cleanupTitle"),
+    content: t("pages.preference.provider.dialogs.cleanupContent"),
+    okText: t("pages.preference.provider.dialogs.confirmCleanup"),
+    okType: "danger",
+    cancelText: t("pages.preference.provider.dialogs.thinkAgain"),
     onOk: async () => {
-      isCleaning.value = true
+      isCleaning.value = true;
       try {
-        cleanupUnlistenFn = await listen<CleanupPayload>('cleanup-status', (event) => {
-          cleanupStatusText.value = translateStatus(event.payload.status)
-        })
+        cleanupUnlistenFn = await listen<CleanupPayload>("cleanup-status", (event) => {
+          cleanupStatusText.value = translateStatus(event.payload.status);
+        });
 
-        await invoke<void>('cleanup_local_models', { model_name: null })
+        await invoke<void>("cleanup_local_models", { model_name: null });
 
         Modal.success({
-          title: t('pages.preference.provider.dialogs.cleanupSuccessTitle'),
-          content: t('pages.preference.provider.dialogs.cleanupSuccessContent'),
-        })
+          title: t("pages.preference.provider.dialogs.cleanupSuccessTitle"),
+          content: t("pages.preference.provider.dialogs.cleanupSuccessContent"),
+        });
 
-        localModels.value = []
-        step.value = 'ready'
-        clearDownloadState()
+        localModels.value = [];
+        step.value = "ready";
+        clearDownloadState();
       } catch (err) {
-        message(t('pages.preference.provider.messages.cleanupFailed', { err }))
-        console.error(err)
+        message(t("pages.preference.provider.messages.cleanupFailed", { err }));
+        console.error(err);
       } finally {
-        isCleaning.value = false
+        isCleaning.value = false;
         if (cleanupUnlistenFn) {
-          cleanupUnlistenFn()
-          cleanupUnlistenFn = null
+          cleanupUnlistenFn();
+          cleanupUnlistenFn = null;
         }
       }
     },
-  })
+  });
 }
 
 async function stopModels(): Promise<void> {
   Modal.confirm({
-    title: t('pages.preference.provider.dialogs.stopTitle'),
-    content: t('pages.preference.provider.dialogs.stopContent'),
-    okText: t('pages.preference.provider.dialogs.confirmStop'),
-    okType: 'danger',
-    cancelText: t('pages.preference.provider.dialogs.thinkAgain'),
+    title: t("pages.preference.provider.dialogs.stopTitle"),
+    content: t("pages.preference.provider.dialogs.stopContent"),
+    okText: t("pages.preference.provider.dialogs.confirmStop"),
+    okType: "danger",
+    cancelText: t("pages.preference.provider.dialogs.thinkAgain"),
     onOk: async () => {
-      isCleaning.value = true
+      isCleaning.value = true;
       try {
-        cleanupUnlistenFn = await listen<CleanupPayload>('cleanup-status', (event) => {
-          cleanupStatusText.value = translateStatus(event.payload.status)
-        })
+        cleanupUnlistenFn = await listen<CleanupPayload>("cleanup-status", (event) => {
+          cleanupStatusText.value = translateStatus(event.payload.status);
+        });
 
-        await invoke<void>('stop_ollama_engine')
+        await invoke<void>("stop_ollama_engine");
 
         Modal.success({
-          title: t('pages.preference.provider.dialogs.stopSuccessTitle'),
-          content: t('pages.preference.provider.dialogs.stopSuccessContent'),
-        })
+          title: t("pages.preference.provider.dialogs.stopSuccessTitle"),
+          content: t("pages.preference.provider.dialogs.stopSuccessContent"),
+        });
 
-        localModels.value = []
-        step.value = 'ready'
-        clearDownloadState()
+        localModels.value = [];
+        step.value = "ready";
+        clearDownloadState();
       } catch (err) {
-        message(t('pages.preference.provider.messages.stopFailed', { err }))
-        console.error(err)
+        message(t("pages.preference.provider.messages.stopFailed", { err }));
+        console.error(err);
       } finally {
-        isCleaning.value = false
+        isCleaning.value = false;
         if (cleanupUnlistenFn) {
-          cleanupUnlistenFn()
-          cleanupUnlistenFn = null
+          cleanupUnlistenFn();
+          cleanupUnlistenFn = null;
         }
       }
     },
-  })
+  });
 }
 </script>
 
 <template>
   <ContextHolder />
-  <div class="relative h-full w-full overflow-auto">
+  <div class="relative h-full w-full overflow-auto rounded-xl bg-elevated">
     <div class="flex flex-col items-center justify-center gap-6">
-      <div class="max-w-md w-full border border-slate-100 rounded-xl p-4 shadow-md">
+      <div class="m-4 w-full border border-slate-100 rounded-xl p-4">
         <!-- 状态 1：正在检测 -->
         <div
           v-if="step === 'checking'"
@@ -542,6 +644,42 @@ async function stopModels(): Promise<void> {
           >
             {{ t('pages.preference.provider.labels.oneClickAI') }}
           </Button>
+
+          <!-- 拖拽导入引擎安装包（网盘下载后拖入，或点击选择文件） -->
+          <div
+            ref="dropRef"
+            class="mt-4 w-full flex flex-col cursor-pointer items-center justify-center gap-2 b-1 b-dashed py-4 transition-colors rounded-lg"
+            :class="isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 hover:border-primary'"
+            @click="selectEngineFile"
+          >
+            <div class="i-solar:upload-square-outline text-blue-600 text-24px" />
+            <span class="text-13px text-slate-500 font-medium">
+              {{ t('pages.preference.provider.hints.dragEngineHint') }}
+            </span>
+            <span
+              v-if="importing"
+              class="text-blue-600 flex items-center gap-2 text-12px"
+            >
+              <Spin size="small" />
+              {{ t('pages.preference.provider.hints.importingEngine') }}
+            </span>
+            <span class="text-11px text-slate-400">
+              {{ t('pages.preference.provider.hints.dragEngineFormats') }}
+            </span>
+          </div>
+          <!-- 下载地址 -->
+          <div
+            v-if="panelUrl"
+            class="mt-4 text-center text-12px text-slate-400 font-mono"
+          >
+            <a
+              class="text-blue-600 hover:underline"
+              :href="panelUrl"
+              target="_blank"
+            >
+              download link
+            </a>
+          </div>
         </div>
 
         <!-- 状态 4：正在下载 / 已暂停 -->
@@ -676,17 +814,15 @@ async function stopModels(): Promise<void> {
           </div>
         </div>
         <div
-          class="flex flex-wrap justify-between gap-2"
+          class="flex flex-wrap justify-end gap-2"
         >
           <Button
             v-if="step === 'completed'"
-            danger
-            :loading="isCleaning"
             size="small"
             type="primary"
-            @click="cleanupModels"
+            @click="handleUseLocalModel"
           >
-            {{ t('pages.preference.provider.labels.oneClickClean') }}
+            {{ t('pages.preference.provider.labels.useLocalModel') }}
           </Button>
           <Button
             v-if="step === 'completed'"
@@ -699,11 +835,13 @@ async function stopModels(): Promise<void> {
           </Button>
           <Button
             v-if="step === 'completed'"
+            danger
+            :loading="isCleaning"
             size="small"
             type="primary"
-            @click="handleUseLocalModel"
+            @click="cleanupModels"
           >
-            {{ t('pages.preference.provider.labels.useLocalModel') }}
+            {{ t('pages.preference.provider.labels.oneClickClean') }}
           </Button>
         </div>
       </div>

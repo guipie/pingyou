@@ -45,6 +45,7 @@ function openSetting(provider: AIProvider) {
 function handleOpenAddModal() {
   openNewWindow(RoutersName.ProviderAdd, {
     title: t("pages.preference.provider.labels.addCustomModel"),
+    isForeCreate: true,
   });
 }
 

@@ -7,14 +7,17 @@ use core::{
     gamepad::{start_gamepad_listing, stop_gamepad_listing},
     prevent_default, setup,
 };
-use tauri::{Emitter, Manager, WindowEvent, generate_handler};
+use tauri::{generate_handler, Emitter, Manager, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_custom_window::{
-    MAIN_WINDOW_LABEL, PREFERENCE_WINDOW_LABEL, show_preference_window,
+    show_preference_window, MAIN_WINDOW_LABEL, PREFERENCE_WINDOW_LABEL,
 };
 use utils::fs_extra::copy_dir;
 use utils::local_http::spawn_local_http_server;
-use utils::model_download::{copy_model_file, download_and_extract_model, download_model_file, ensure_custom_models_dir, extract_local_zip};
+use utils::model_download::{
+    copy_model_file, download_and_extract_model, download_model_file, ensure_custom_models_dir,
+    extract_local_zip,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -67,6 +70,7 @@ pub fn run() {
             // 硬件检测-检查硬件-ollma管理
             utils::sys_info::check_hardware,
             ollama::ollama_manager::start_ollama_engine,
+            ollama::ollama_manager::import_engine_file,
             ollama::ollama_manager::download_model,
             ollama::ollama_manager::pause_download,
             ollama::ollama_manager::resume_download,
@@ -85,6 +89,7 @@ pub fn run() {
             extract_local_zip,
             copy_model_file
         ])
+        .plugin(tauri_plugin_store::Builder::default().build())
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件
         .plugin(tauri_plugin_http::init()) // 注册插件
         .plugin(tauri_plugin_admin_status::init())

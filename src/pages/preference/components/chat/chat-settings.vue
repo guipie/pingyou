@@ -1,71 +1,71 @@
 <script setup lang="ts">
-import type { UploadEmits, UploadProps } from 'antdv-next'
+import type { UploadEmits, UploadProps } from "antdv-next";
 
-import { PlusOutlined } from '@antdv-next/icons'
-import { Button, Input, InputPassword, message, Popover, Select, Space, Switch, Tag, TextArea, Upload } from 'antdv-next'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { PlusOutlined } from "@antdv-next/icons";
+import { Button, Input, InputPassword, message, Select, Space, Switch, Tag, TextArea, Upload } from "antdv-next";
+import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-import type { TauriAIConversation } from '@/stores/shard/chat-shard'
-import type { AIProvider, AiProviderModels } from '@/stores/shard/provider-shard'
+import type { TauriAIConversation } from "@/stores/shard/chat-shard";
+import type { AIProvider, AiProviderModels } from "@/stores/shard/provider-shard";
 
-import ProListItem from '@/components/pro-list-item/index.vue'
-import ProList from '@/components/pro-list/index.vue'
-import PyAvatar from '@/components/py-avatar.vue'
-import { useChatStore } from '@/stores/aichat'
-import { useProviderStore } from '@/stores/aiprovider'
-import { useRouteSettingStore } from '@/stores/route-setting'
-import { isBoolean } from '@/utils/is'
-import { getImgBase64 } from '@/utils/path'
+import ProListItem from "@/components/pro-list-item/index.vue";
+import ProList from "@/components/pro-list/index.vue";
+import PyAvatar from "@/components/py-avatar.vue";
+import { useChatStore } from "@/stores/aichat";
+import { useProviderStore } from "@/stores/aiprovider";
+import { useRouteSettingStore } from "@/stores/route-setting";
+import { isBoolean } from "@/utils/is";
+import { getImgBase64 } from "@/utils/path";
 
-type FileType = Parameters<NonNullable<UploadProps['beforeUpload']>>[0]
-const pvStore = useProviderStore()
-const chatStore = useChatStore()
-const routeStore = useRouteSettingStore()
-const curConversation = ref<TauriAIConversation | null>(JSON.parse(JSON.stringify(chatStore.currentConversation ?? 'null')))
-const curSelectedProviderVal = ref<string | null>(curConversation.value?.provider.value ?? null)
-const curSeletedProvider = computed(() => pvStore.stateProviders.find((item: AIProvider) => item.value === curSelectedProviderVal.value))
-const curSeletedModel = ref(curSeletedProvider.value?.defaultModel)
+type FileType = Parameters<NonNullable<UploadProps["beforeUpload"]>>[0];
+const pvStore = useProviderStore();
+const chatStore = useChatStore();
+const routeStore = useRouteSettingStore();
+const curConversation = ref<TauriAIConversation | null>(JSON.parse(JSON.stringify(chatStore.currentConversation ?? "null")));
+const curSelectedProviderVal = ref<string | null>(curConversation.value?.provider.value ?? null);
+const curSeletedProvider = computed(() => pvStore.stateProviders.find((item: AIProvider) => item.value === curSelectedProviderVal.value));
+const curSeletedModel = ref(curSeletedProvider.value?.defaultModel);
 watch(() => curSelectedProviderVal.value, (_) => {
-  curSeletedModel.value = curSeletedProvider.value?.defaultModel
-})
-const { t } = useI18n()
-const cloneConversation = ref<TauriAIConversation | null>(null)
-const customModel = ref('')
+  curSeletedModel.value = curSeletedProvider.value?.defaultModel;
+});
+const { t } = useI18n();
+const cloneConversation = ref<TauriAIConversation | null>(null);
+// const customModel = ref("");
 onMounted(() => {
   if (!curConversation.value) {
-    routeStore.backHome()
-    return
+    routeStore.backHome();
+    return;
   }
-  cloneConversation.value = JSON.parse(JSON.stringify(curConversation.value))
-})
+  cloneConversation.value = JSON.parse(JSON.stringify(curConversation.value));
+});
 function handleRecovery() {
   if (cloneConversation.value && curConversation.value) {
-    curConversation.value = cloneConversation.value
+    curConversation.value = cloneConversation.value;
   }
 }
 
-const avatarChange: UploadEmits['change'] = async (info) => {
-  if (!curConversation.value) return
+const avatarChange: UploadEmits["change"] = async (info) => {
+  if (!curConversation.value) return;
   if (info.file) {
-    curConversation.value.avatar = await getImgBase64(info.file as FileType)
+    curConversation.value.avatar = await getImgBase64(info.file as FileType);
   } else {
-    message.warning(t('pages.preference.chat.messages.uploadFailed'))
+    message.warning(t("pages.preference.chat.messages.uploadFailed"));
   }
-}
+};
 function saveConversation() {
-  if (!curConversation.value) return
+  if (!curConversation.value) return;
   if (!curSeletedProvider.value || (!curSeletedProvider.value.apiKey && !isBoolean(curSeletedProvider.value.isCustom))) {
-    return message.warning(t('pages.preference.chat.messages.configureProvider'))
+    return message.warning(t("pages.preference.chat.messages.configureProvider"));
   }
   if (!curSeletedModel.value)
-    return message.warning(t('pages.preference.chat.messages.selectModel'))
+    return message.warning(t("pages.preference.chat.messages.selectModel"));
   if (!curConversation.value.title.trim())
-    return message.warning(t('pages.preference.chat.messages.fillName'))
-  curConversation.value.provider = curSeletedProvider.value
-  curConversation.value.provider.defaultModel = curSeletedModel.value
-  chatStore.updateConversation(curConversation.value)
-  message.success(t('pages.preference.chat.messages.saveSuccess'))
+    return message.warning(t("pages.preference.chat.messages.fillName"));
+  curConversation.value.provider = curSeletedProvider.value;
+  curConversation.value.provider.defaultModel = curSeletedModel.value;
+  chatStore.updateConversation(curConversation.value);
+  message.success(t("pages.preference.chat.messages.saveSuccess"));
 }
 </script>
 
@@ -225,13 +225,16 @@ function saveConversation() {
               :description="t('pages.preference.chat.hints.modelNameDesc')"
               :title="t('pages.preference.chat.labels.modelName')"
             >
-              <div>
+              <div class="flex items-center gap-2">
+                <div class="mt-2 text-red-5 text-xl">
+                  *
+                </div>
                 <Select
                   v-model:value="curSeletedModel"
                   class="w-80"
                   :options="(curSeletedProvider?.models ?? []).map((item:AiProviderModels) => ({ label: `${item.modelId}`, value: item.modelId }))"
                 />
-                <Popover
+                <!-- <Popover
                   :title="t('pages.preference.chat.labels.customModelTitle')"
                   trigger="click"
                 >
@@ -253,7 +256,7 @@ function saveConversation() {
                   <Button>
                     {{ t('pages.preference.chat.labels.custom') }}
                   </Button>
-                </Popover>
+                </Popover> -->
               </div>
             </ProListItem>
           </div>

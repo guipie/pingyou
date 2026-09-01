@@ -9,7 +9,7 @@ const props = defineProps<{
   cusStyle?: string
 }>();
 const imgUrl = ref(resolveImageUrl(props.url));
-
+const iconUrl = ref(props.icon || (props.url && props.url.startsWith("i-") ? props.url : ""));
 function resolveImageUrl(url?: string): string | null {
   if (!url) return null;
   // /images/xxx.png 或 https://... 等路径直接使用
@@ -44,9 +44,9 @@ function loadError() {
 
 <template>
   <i
-    v-if="icon && icon.startsWith('i-')"
+    v-if="iconUrl && iconUrl.startsWith('i-')"
     class="inline-block h-16 w-16 text-5"
-    :class="icon"
+    :class="iconUrl"
     :style="mergedStyle"
   />
   <Avatar

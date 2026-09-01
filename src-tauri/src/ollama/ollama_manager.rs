@@ -1,5 +1,6 @@
 use futures_util::StreamExt;
 use ollama_rs::Ollama;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
@@ -8,8 +9,57 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::time::{sleep, Duration};
 
-// 远程配置文件地址（发布前可改为官方可信源）
-const CONFIG_URL: &str = "https://hz.hkzh56.com/ollama.json";
+// Ollama 引擎下载配置：优先从后端 /api/ollama/config 拉取，失败时回退到 GitHub 默认值。
+// 三个平台分别对应官方发布产物：windows=.zip、linux=.tgz、mac=Ollama-darwin.zip。
+#[derive(serde::Deserialize, Debug, Clone)]
+#[allow(dead_code)]
+struct OllamaDownloadConfig {
+    windows: String,
+    linux: String,
+    mac: String,
+    #[serde(default, rename = "panelUrl")]
+    panel_url: String,
+}
+
+fn default_ollama_config() -> OllamaDownloadConfig {
+    OllamaDownloadConfig {
+        windows:
+            "https://github.com/ollama/ollama/releases/download/v0.32.3/ollama-windows-amd64.zip"
+                .to_string(),
+        linux:
+            "https://github.com/ollama/ollama/releases/download/v0.32.3/ollama-linux-amd64.tar.zst"
+                .to_string(),
+        mac: "https://github.com/ollama/ollama/releases/download/v0.32.3/ollama-darwin.tgz"
+            .to_string(),
+        panel_url: String::new(),
+    }
+}
+
+/// 从后端拉取 Ollama 下载配置；未传地址或拉取/解析失败时回退到 GitHub 默认值。
+async fn fetch_ollama_config(web_base: Option<&str>) -> OllamaDownloadConfig {
+    let Some(base) = web_base.filter(|s| !s.trim().is_empty()) else {
+        return default_ollama_config();
+    };
+    let url = format!("{}/api/ollama/config", base.trim_end_matches('/'));
+
+    match reqwest::Client::new().get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => match resp.json::<OllamaDownloadConfig>().await {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                log::warn!("[OLLAMA] 解析后端下载配置失败，回退默认: {}", e);
+                default_ollama_config()
+            }
+        },
+        Ok(resp) => {
+            log::warn!("[OLLAMA] 后端下载配置返回 {}，回退默认", resp.status());
+            default_ollama_config()
+        }
+        Err(e) => {
+            log::warn!("[OLLAMA] 拉取后端下载配置失败，回退默认: {}", e);
+            default_ollama_config()
+        }
+    }
+}
 
 // 我们自己拉起的 Ollama 子进程句柄，用于精准关闭（而非杀掉系统上所有同名进程）
 fn engine_child() -> &'static Mutex<Option<Child>> {
@@ -34,28 +84,14 @@ struct DownloadPayload {
     phase: String,
 }
 
-// 严格对应你提供的 JSON 嵌套层级结构
-#[derive(serde::Deserialize, Debug)]
-#[allow(dead_code)]
-struct OllamaPlatforms {
-    windows: String,
-    linux: String,
-    mac: String,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct RemoteConfig {
-    ollama: OllamaPlatforms,
-}
-
 // 根据当前编译平台，动态获取对应的下载直链
-fn select_url_by_platform(config: &RemoteConfig) -> &str {
+fn select_url_by_platform(config: &OllamaDownloadConfig) -> &str {
     #[cfg(target_os = "windows")]
-    return &config.ollama.windows;
+    return &config.windows;
     #[cfg(target_os = "macos")]
-    return &config.ollama.mac;
+    return &config.mac;
     #[cfg(target_os = "linux")]
-    return &config.ollama.linux;
+    return &config.linux;
 }
 
 // 获取本地沙箱内引擎的可执行文件名称
@@ -81,7 +117,10 @@ fn emit_progress(app_handle: &AppHandle, progress: f64, status: String, phase: &
 }
 
 // 在 spawn_blocking 中执行 ZIP 解压，避免阻塞 tokio 异步运行时
-fn extract_zip_blocking(zip_path: std::path::PathBuf, engine_dir: std::path::PathBuf) -> Result<(), String> {
+fn extract_zip_blocking(
+    zip_path: std::path::PathBuf,
+    engine_dir: std::path::PathBuf,
+) -> Result<(), String> {
     let zip_file = std::fs::File::open(&zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(zip_file).map_err(|e| e.to_string())?;
 
@@ -106,6 +145,50 @@ fn extract_zip_blocking(zip_path: std::path::PathBuf, engine_dir: std::path::Pat
     }
     let _ = std::fs::remove_file(zip_path);
     Ok(())
+}
+
+// 在 spawn_blocking 中执行 TGZ（.tar.gz）解压，避免阻塞 tokio 异步运行时。
+// tar crate 的 unpack 自带路径穿越防护。
+fn extract_tgz_blocking(
+    tgz_path: std::path::PathBuf,
+    engine_dir: std::path::PathBuf,
+) -> Result<(), String> {
+    let file = std::fs::File::open(&tgz_path).map_err(|e| e.to_string())?;
+    let decoder = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(decoder);
+    archive
+        .unpack(&engine_dir)
+        .map_err(|e| format!("解压 tgz 失败: {}", e))?;
+    let _ = std::fs::remove_file(tgz_path);
+    Ok(())
+}
+
+// 递归在 engine 目录中定位真正的 ollama 可执行文件。
+// 兼容：裸二进制、zip 解压后的扁平结构、tgz 解压后的 bin/ 目录、mac 的 Ollama.app/Contents/Resources/。
+fn find_ollama_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
+    let direct = dir.join(binary_name);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    fn walk(dir: &Path, binary_name: &str, depth: usize) -> Option<PathBuf> {
+        if depth > 8 {
+            return None;
+        }
+        let entries = std::fs::read_dir(dir).ok()?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.file_name().map(|n| n == binary_name).unwrap_or(false) {
+                return Some(path);
+            }
+            if path.is_dir() {
+                if let Some(found) = walk(&path, binary_name, depth + 1) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+    walk(dir, binary_name, 0)
 }
 
 // ─── 下载循环中的状态检查 ─────────────────────────────────────────
@@ -191,8 +274,11 @@ pub fn is_downloading() -> bool {
 }
 
 // 1. 后台静默拉起内置的 Ollama 环境（若不存在则全自动下载解压）
-#[tauri::command]
-pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
+#[tauri::command(rename_all = "snake_case")]
+pub async fn start_ollama_engine(
+    app_handle: AppHandle,
+    web_base: Option<String>,
+) -> Result<(), String> {
     // 重置取消/暂停标志并标记下载激活
     CANCEL_DOWNLOAD.store(false, Ordering::SeqCst);
     PAUSE_DOWNLOAD.store(false, Ordering::SeqCst);
@@ -229,18 +315,14 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
 
     // 检查本地是否已经下载过引擎组件
     if !engine_path.exists() {
-        emit_progress(&app_handle, 0.0, "正在安全请求云端环境配置...".to_string(), "engine");
+        emit_progress(
+            &app_handle,
+            0.0,
+            "正在安全请求云端环境配置...".to_string(),
+            "engine",
+        );
 
-        let client = reqwest::Client::new();
-        let config = client
-            .get(CONFIG_URL)
-            .send()
-            .await
-            .map_err(|e| format!("无法连接配置服务器: {}", e))?
-            .json::<RemoteConfig>()
-            .await
-            .map_err(|e| format!("解析远程配置失败: {}", e))?;
-
+        let config = fetch_ollama_config(web_base.as_deref()).await;
         let download_url = select_url_by_platform(&config);
 
         if download_url.is_empty() {
@@ -248,12 +330,19 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
         }
 
         let is_zip = download_url.ends_with(".zip");
-        let temp_download_path = if is_zip {
-            engine_dir.join("ollama_temp.zip")
+        let is_tgz = download_url.ends_with(".tgz") || download_url.ends_with(".tar.gz");
+        let is_archive = is_zip || is_tgz;
+        let temp_download_path = if is_archive {
+            engine_dir.join(if is_tgz {
+                "ollama_temp.tgz"
+            } else {
+                "ollama_temp.zip"
+            })
         } else {
             engine_path.clone()
         };
 
+        let client = reqwest::Client::new();
         let response = client
             .get(download_url)
             .send()
@@ -263,7 +352,7 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
         let total_size = match response.content_length() {
             Some(size) if size > 0 => size,
             _ => {
-                if is_zip {
+                if is_archive {
                     1_460_000_000
                 } else {
                     200_000_000
@@ -309,55 +398,67 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
                 tokio::task::yield_now().await;
             }
         }
-        file.flush().await.map_err(|e| format!("刷新硬盘缓存失败: {}", e))?;
+        file.flush()
+            .await
+            .map_err(|e| format!("刷新硬盘缓存失败: {}", e))?;
         drop(file);
 
-        // 如果是 Windows 常见的 ZIP 包，用 spawn_blocking 解压
-        if is_zip {
+        // 解压压缩包（Windows/mac 用 zip，Linux 用 tgz）
+        if is_archive {
             // ★ 解压前检查
             wait_if_paused().await?;
             check_cancelled()?;
 
-            emit_progress(&app_handle, 99.5, "正在解压并深度优化本地 AI 显卡加速环境...".to_string(), "engine");
+            emit_progress(
+                &app_handle,
+                99.5,
+                "正在解压并深度优化本地 AI 显卡加速环境...".to_string(),
+                "engine",
+            );
 
-            let zip_path = temp_download_path.clone();
+            let archive_path = temp_download_path.clone();
             let engine_dir_for_unzip = engine_dir.clone();
-            tokio::task::spawn_blocking(move || extract_zip_blocking(zip_path, engine_dir_for_unzip))
+            if is_tgz {
+                tokio::task::spawn_blocking(move || {
+                    extract_tgz_blocking(archive_path, engine_dir_for_unzip)
+                })
                 .await
                 .map_err(|e| format!("解压任务失败: {}", e))??;
-        }
-
-        // 非 Windows 系统自动修复可执行文件权限
-        #[cfg(not(target_os = "windows"))]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&engine_path)
-                .map_err(|e| e.to_string())?
-                .permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&engine_path, perms).map_err(|e| e.to_string())?;
+            } else {
+                tokio::task::spawn_blocking(move || {
+                    extract_zip_blocking(archive_path, engine_dir_for_unzip)
+                })
+                .await
+                .map_err(|e| format!("解压任务失败: {}", e))??;
+            }
         }
     }
 
-    // 智能检测真实的 ollama 路径（防止官方压缩包解压后带有目录嵌套）
-    let mut real_engine_path = engine_path.clone();
-    if !real_engine_path.exists() {
-        if let Ok(entries) = std::fs::read_dir(&engine_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.join(get_engine_binary_name()).exists() {
-                    real_engine_path = path.join(get_engine_binary_name());
-                    break;
-                }
-            }
-        }
+    // 智能检测真实的 ollama 路径（兼容 zip/tgz/裸二进制/mac .app 的目录嵌套）
+    let real_engine_path = find_ollama_binary(&engine_dir, get_engine_binary_name())
+        .ok_or_else(|| "未找到 ollama 引擎可执行文件，请检查安装包或重新下载".to_string())?;
+
+    // 非 Windows 系统自动修复可执行文件权限
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&real_engine_path)
+            .map_err(|e| e.to_string())?
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&real_engine_path, perms).map_err(|e| e.to_string())?;
     }
 
     // ★ 启动引擎前检查
     wait_if_paused().await?;
     check_cancelled()?;
 
-    emit_progress(&app_handle, 100.0, "内核环境就绪，正在激活大模型通道...".to_string(), "engine");
+    emit_progress(
+        &app_handle,
+        100.0,
+        "内核环境就绪，正在激活大模型通道...".to_string(),
+        "engine",
+    );
 
     let model_dir_str = model_dir.to_string_lossy().to_string();
     log::info!("[OLLAMA] 模型存放绝对路径设置为: {}", model_dir_str);
@@ -381,6 +482,81 @@ pub async fn start_ollama_engine(app_handle: AppHandle) -> Result<(), String> {
     }
 
     tokio::time::sleep(tokio::time::Duration::from_secs(4)).await;
+
+    Ok(())
+}
+
+/// 拖拽导入本地 Ollama 引擎文件（zip/tgz/裸二进制），解压/复制到沙箱 engine 目录。
+/// 用户从网盘下载官方安装包后拖拽进应用，走此命令落盘，随后可直接启动引擎。
+/// 说明：用户拖入的源文件保持不变，仅复制后解压到 engine 目录。
+#[tauri::command(rename_all = "snake_case")]
+pub async fn import_engine_file(app_handle: AppHandle, file_path: String) -> Result<(), String> {
+    let src = PathBuf::from(&file_path);
+    if !src.is_file() {
+        return Err(format!("文件不存在: {}", file_path));
+    }
+
+    let app_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    let engine_dir = app_dir.join("engine");
+
+    tokio::task::spawn_blocking({
+        let engine_dir = engine_dir.clone();
+        move || std::fs::create_dir_all(&engine_dir).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("目录创建任务失败: {}", e))??;
+
+    let lower = file_path.to_lowercase();
+    if lower.ends_with(".zip") || lower.ends_with(".tgz") || lower.ends_with(".tar.gz") {
+        // 复制为临时文件后解压（解压函数会清理临时副本，用户源文件保留）
+        let is_tgz = lower.ends_with(".tgz") || lower.ends_with(".tar.gz");
+        let tmp = engine_dir.join(if is_tgz {
+            "ollama_temp.tgz"
+        } else {
+            "ollama_temp.zip"
+        });
+        tokio::fs::copy(&src, &tmp)
+            .await
+            .map_err(|e| format!("复制文件失败: {}", e))?;
+
+        let engine_dir_for_unzip = engine_dir.clone();
+        if is_tgz {
+            tokio::task::spawn_blocking(move || extract_tgz_blocking(tmp, engine_dir_for_unzip))
+                .await
+                .map_err(|e| format!("解压任务失败: {}", e))??;
+        } else {
+            tokio::task::spawn_blocking(move || extract_zip_blocking(tmp, engine_dir_for_unzip))
+                .await
+                .map_err(|e| format!("解压任务失败: {}", e))??;
+        }
+    } else {
+        // 裸二进制：复制为 engine 目录下的标准名称
+        let dest = engine_dir.join(get_engine_binary_name());
+        tokio::fs::copy(&src, &dest)
+            .await
+            .map_err(|e| format!("复制文件失败: {}", e))?;
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = tokio::fs::metadata(&dest)
+                .await
+                .map_err(|e| e.to_string())?
+                .permissions();
+            perms.set_mode(0o755);
+            tokio::fs::set_permissions(&dest, perms)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+    }
+
+    // 校验导入后能否定位到可执行文件
+    if find_ollama_binary(&engine_dir, get_engine_binary_name()).is_none() {
+        return Err("导入的安装包中未找到 ollama 引擎可执行文件，请确认文件正确".to_string());
+    }
 
     Ok(())
 }
@@ -475,10 +651,7 @@ struct CleanupPayload {
 }
 
 fn emit_cleanup(app_handle: &AppHandle, success: bool, status: String) {
-    if let Err(e) = app_handle.emit(
-        "cleanup-status",
-        CleanupPayload { success, status },
-    ) {
+    if let Err(e) = app_handle.emit("cleanup-status", CleanupPayload { success, status }) {
         log::warn!("发送清理状态事件失败: {}", e);
     }
 }
@@ -536,18 +709,30 @@ pub async fn cleanup_local_models(
     let engine_dir = app_dir.join("engine");
     let model_dir = app_dir.join("models");
 
-    emit_cleanup(&app_handle, false, "正在安全关闭本地 AI 引擎...".to_string());
+    emit_cleanup(
+        &app_handle,
+        false,
+        "正在安全关闭本地 AI 引擎...".to_string(),
+    );
     let _ = stop_ollama_engine().await;
 
     if let Some(name) = model_name {
-        emit_cleanup(&app_handle, false, format!("正在从本地仓库卸载模型: {}...", name));
+        emit_cleanup(
+            &app_handle,
+            false,
+            format!("正在从本地仓库卸载模型: {}...", name),
+        );
         let ollama = Ollama::builder()
             .host("http://127.0.0.1".to_string())
             .port(11435)
             .build();
         let _ = ollama.delete_model(name).await;
     } else {
-        emit_cleanup(&app_handle, false, "正在全量物理粉碎 AI 内核、显卡驱动及模型数据...".to_string());
+        emit_cleanup(
+            &app_handle,
+            false,
+            "正在全量物理粉碎 AI 内核、显卡驱动及模型数据...".to_string(),
+        );
 
         if model_dir.exists() {
             tokio::fs::remove_dir_all(&model_dir)
@@ -566,7 +751,11 @@ pub async fn cleanup_local_models(
         }
     }
 
-    emit_cleanup(&app_handle, true, "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！".to_string());
+    emit_cleanup(
+        &app_handle,
+        true,
+        "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！".to_string(),
+    );
 
     Ok(())
 }

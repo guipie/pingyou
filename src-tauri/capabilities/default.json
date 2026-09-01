@@ -11,6 +11,7 @@
   ],
   "permissions": [
     "core:default",
+    "store:default",
     "http:default",
     {
       "identifier": "http:allow-fetch",
