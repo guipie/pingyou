@@ -10,6 +10,7 @@ import { useI18n } from "vue-i18n";
 
 import type { Model, ModelEngine, ModelMode } from "@/stores/model";
 
+import { WEB_BASE } from "@/config/index.ts";
 import { useCatStore } from "@/stores/cat";
 import { useModelStore } from "@/stores/model";
 import { useRouteSettingStore } from "@/stores/route-setting";
@@ -25,12 +26,7 @@ const uploadShow = ref(false);
 // 屏友商城 API Base
 // --------------------------------------------------------------------------
 const LOAD_MORE_KEY = "__load_more__";
-const WEB_BASE = (() => {
-  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
-  if (env) return env.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://localhost:4000";
-  return "https://py.lm56.top";
-})();
+
 const LOAD_MORE_URL = `${WEB_BASE}/pingyou`;
 
 // --------------------------------------------------------------------------

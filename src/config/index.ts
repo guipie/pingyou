@@ -11,8 +11,10 @@
 
 // 升级服务访问密钥（占位符，发布前由开发者填充）
 // 理想方案：由 Rust 端在 invoke 中注入请求头，避免暴露到前端
-export const UPDATER_ACCESS_KEY = ''
+export const UPDATER_ACCESS_KEY = "";
 
 // Ollama 本地服务地址
-export const OLLAMA_HOST = '127.0.0.1'
-export const OLLAMA_PORT = 11435
+export const OLLAMA_HOST = "127.0.0.1";
+export const OLLAMA_PORT = 11435;
+
+export const WEB_BASE = import.meta.env.DEV ? "http://localhost:4000" : "https://py.lm56.top";

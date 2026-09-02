@@ -8,6 +8,7 @@ import { useI18n } from "vue-i18n";
 
 import UpdateApp from "@/components/update-app/index.vue";
 import { useTray } from "@/composables/useTray";
+import { WEB_BASE } from "@/config/index.ts";
 import { useAppStore } from "@/stores/app";
 import { useGeneralStore } from "@/stores/general";
 import { useModelStore } from "@/stores/model";
@@ -30,14 +31,6 @@ const generalStore = useGeneralStore();
 const modelStore = useModelStore();
 const userStore = useUserStore();
 const appWindow = getCurrentWebviewWindow();
-
-// 屏友商城 Web 地址
-const WEB_BASE = (() => {
-  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
-  if (env) return env.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://localhost:4000";
-  return "https://py.lm56.top";
-})();
 
 /** 打开浏览器跳转到 Web 登录页 */
 function openLogin() {
@@ -111,7 +104,7 @@ const menus = computed(() => [
   },
   {
     index: 3,
-    key: "cat",
+    key: "settings",
     label: t("pages.preference.cat.title"),
     icon: "i-solar:settings-broken",
     component: Settings,
@@ -229,8 +222,9 @@ watch(() => generalStore.appearance.isDark, (value) => {
     <div
       v-for="(item, index) in menus"
       v-show="current === index && !routeSettingStore.curPage"
+      :id="item.key"
       :key="item.key"
-      class="custom-container h-full min-w-0 flex-1 bg-[--ant-color-fill-quaternary] dark:bg-container"
+      class="custom-container relative h-full min-w-0 flex-1 bg-[--ant-color-fill-quaternary] dark:bg-container"
       :class="item.key === 'chat' ? 'overflow-hidden p-0' : 'overflow-auto p-4'"
       data-tauri-drag-region
     >

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Button, Empty, message, Spin, Tag } from "antdv-next";
+import { Button, Empty, Input, message, Select, Spin, Tag } from "antdv-next";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { AIProvider } from "@/stores/shard/provider-shard";
 
+import { WEB_BASE } from "@/config";
 import { useProviderStore } from "@/stores/aiprovider";
 import { useUserStore } from "@/stores/user";
 
@@ -18,23 +19,33 @@ const { t } = useI18n();
 const userStore = useUserStore();
 const providerStore = useProviderStore();
 
-/** 云端模型供应商标识（数据库主键，展示时通过 i18n 映射） */
+/** 云端模型供应商标识 */
 const CLOUD_PROVIDER = "云端模型";
-
 /** 七牛大模型推理 OpenAI 兼容接入点 */
 const QINIU_BASE_URL = "https://api.qnaigc.com/v1/chat/completions";
-/** 七牛可用模型列表（OpenAI 兼容） */
-const QINIU_MODELS_URL = "https://api.qnaigc.com/v1/models";
 
-/** 屏友 Web 后端地址（与 preference/index.vue 保持一致） */
-const WEB_BASE = (() => {
-  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
-  if (env) return env.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://localhost:4000";
-  return "https://py.lm56.top";
-})();
-
-interface CloudModel { id: string, name: string }
+// ---- 模型数据类型 ----
+interface CloudModelInfo {
+  id: string
+  name: string
+  description: string
+  avatar: string
+  hot_tags: string[]
+  features: string[]
+  issuer: { name: string, avatar: string }
+  architecture: {
+    input_modalities: string[]
+    output_modalities: string[]
+    function_calling: { supported: boolean }
+    reasoning: { supported: boolean }
+    schema_output: { supported: boolean }
+  }
+  model_constraints: { context_length: number }
+  support_api_protocols: string[]
+  retirement_at: string
+  release_at: string
+  rank: number
+}
 interface QuotaItem { limitYuan: number }
 interface AiQuotaResponse {
   plan: "free" | "pro" | "team"
@@ -43,26 +54,108 @@ interface AiQuotaResponse {
   quota: { daily: QuotaItem | null, monthly: QuotaItem | null, total: QuotaItem | null } | null
 }
 
+// ---- 状态 ----
 const loading = ref(false);
 const enabling = ref(false);
 const apiKey = ref<string>("");
 const quota = ref<AiQuotaResponse | null>(null);
-const models = ref<CloudModel[]>([]);
+const allModels = ref<CloudModelInfo[]>([]);
 const currentDefault = ref("");
 
-/** 已启用的云端 provider（若有） */
 const cloudProvider = computed(() => providerStore.stateProviders.find(x => x.provider === CLOUD_PROVIDER));
 
+// ---- 筛选 ----
+const searchText = ref("");
+const selectedIssuers = ref<string[]>([]);
+const selectedFeatures = ref<string[]>([]);
+const selectedModality = ref<string>(""); // "" = 全部, "text-only" = 纯文本, "multimodal" = 多模态
+const showRetired = ref(false);
+
+// 从全量模型中提取可选项
+const issuerOptions = computed(() => {
+  const set = new Set<string>();
+  allModels.value.forEach((m) => {
+    if (m.issuer?.name) set.add(m.issuer.name);
+  });
+  return [...set].sort();
+});
+
+const featureOptions = computed(() => {
+  const set = new Set<string>();
+  allModels.value.forEach((m) => {
+    (m.features ?? []).forEach(f => set.add(f));
+  });
+  return [...set].sort();
+});
+
+function isRetired(m: CloudModelInfo) {
+  if (!m.retirement_at) return false;
+  const d = new Date(m.retirement_at).getTime();
+  return d > 0 && d < Date.now();
+}
+
+const filteredModels = computed(() => {
+  let list = allModels.value;
+
+  // 搜索
+  const kw = searchText.value.trim().toLowerCase();
+  if (kw) {
+    list = list.filter(m =>
+      m.id.toLowerCase().includes(kw)
+      || m.name.toLowerCase().includes(kw)
+      || (m.description ?? "").toLowerCase().includes(kw),
+    );
+  }
+
+  // 厂商筛选
+  if (selectedIssuers.value.length) {
+    list = list.filter(m => selectedIssuers.value.includes(m.issuer?.name ?? ""));
+  }
+
+  // 特性筛选（包含所选任意一个即匹配）
+  if (selectedFeatures.value.length) {
+    list = list.filter(m =>
+      selectedFeatures.value.some(f => (m.features ?? []).includes(f)),
+    );
+  }
+
+  // 模态筛选
+  if (selectedModality.value === "text-only") {
+    list = list.filter(m =>
+      (m.architecture?.input_modalities ?? []).length === 1
+      && m.architecture?.input_modalities?.[0] === "text",
+    );
+  } else if (selectedModality.value === "multimodal") {
+    list = list.filter(m =>
+      (m.architecture?.input_modalities ?? []).some(m2 => m2 !== "text"),
+    );
+  }
+
+  // 退役筛选
+  if (!showRetired.value) {
+    list = list.filter(m => !isRetired(m));
+  }
+
+  // 按 rank 升序排序
+  return [...list].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+});
+
+// ---- 方法 ----
 function formatYuan(n: number): string {
   return `¥${Number(n).toFixed(2)}`;
 }
 
-/** 登录：打开浏览器跳转 Web 登录页 */
+function formatContext(len: number): string {
+  if (!len || len <= 0) return "—";
+  if (len >= 1000000) return `${(len / 1000000).toFixed(len % 1000000 ? 1 : 0)}M`;
+  if (len >= 1000) return `${(len / 1000).toFixed(0)}K`;
+  return String(len);
+}
+
 function openLogin() {
   openUrl(`${WEB_BASE}/login?desktop=1`);
 }
 
-/** 拉取当前用户的 key + 额度（复用 /api/ai/quota，一次请求同时拿两份数据） */
 async function loadQuotaAndKey(): Promise<string> {
   const res = await tauriFetch(`${WEB_BASE}/api/ai/quota`, {
     method: "GET",
@@ -75,20 +168,17 @@ async function loadQuotaAndKey(): Promise<string> {
   return data.apiKey;
 }
 
-/** 拉取七牛所有可用模型（OpenAI 兼容 /v1/models） */
+/** 从字典 API 加载模型列表 */
 async function loadModels() {
   if (!userStore.loggedIn) return;
   loading.value = true;
   try {
     if (!apiKey.value) apiKey.value = await loadQuotaAndKey();
 
-    const res = await tauriFetch(QINIU_MODELS_URL, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiKey.value}` },
-    });
+    const res = await tauriFetch(`${WEB_BASE}/api/dictionaries/cloud-models`, { method: "GET" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as { data?: Array<{ id: string }> };
-    models.value = (data.data ?? []).map(m => ({ id: m.id, name: m.id }));
+    const dict = (await res.json()) as { value: { status: boolean, data: CloudModelInfo[] } };
+    allModels.value = dict.value?.data ?? [];
   } catch (err) {
     console.error("[cloud-tab] 拉取模型列表失败：", err);
     message.error(t("pages.preference.provider.cloud.messages.loadModelsFailed"));
@@ -97,8 +187,7 @@ async function loadModels() {
   }
 }
 
-/** 启用某个模型：注册云端 provider，默认模型设为该模型 */
-async function handleUse(model: CloudModel) {
+async function handleUse(model: CloudModelInfo) {
   if (!apiKey.value) {
     message.warning(t("pages.preference.provider.cloud.messages.loginFirst"));
     return;
@@ -115,7 +204,7 @@ async function handleUse(model: CloudModel) {
       isNeedProxy: false,
       apiKey: apiKey.value,
       defaultModel: model.id,
-      models: models.value.map(m => ({ name: m.name, desc: "", modelId: m.id })),
+      models: filteredModels.value.map(m => ({ name: m.name, desc: "", modelId: m.id })),
     };
     providerStore.addProvider(provider);
     currentDefault.value = model.id;
@@ -136,7 +225,6 @@ async function handleUse(model: CloudModel) {
 }
 
 onMounted(() => {
-  // 若已有云端 provider，同步当前默认模型
   if (cloudProvider.value?.defaultModel) {
     currentDefault.value = cloudProvider.value.defaultModel;
     apiKey.value = cloudProvider.value.apiKey ?? "";
@@ -150,7 +238,7 @@ watch(() => userStore.loggedIn, (v) => {
     quota.value = null;
     loadModels();
   } else {
-    models.value = [];
+    allModels.value = [];
     apiKey.value = "";
     quota.value = null;
     currentDefault.value = "";
@@ -160,7 +248,7 @@ watch(() => userStore.loggedIn, (v) => {
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- 未登录：提醒登录卡片 -->
+    <!-- 未登录 -->
     <div
       v-if="!userStore.loggedIn"
       class="flex flex-col items-center justify-center gap-4 b-1 rounded-xl b-dashed py-20 b-border-sec"
@@ -178,7 +266,7 @@ watch(() => userStore.loggedIn, (v) => {
       </Button>
     </div>
 
-    <!-- 已登录：额度 + 全部可用模型 -->
+    <!-- 已登录 -->
     <template v-else>
       <!-- 顶部：标题 + 会员信息 + 额度 + 刷新 -->
       <div class="flex items-center gap-3">
@@ -190,7 +278,6 @@ watch(() => userStore.loggedIn, (v) => {
           </Tag>
         </div>
         <div class="flex-1" />
-        <!-- 到期日期 -->
         <span class="text-3 color-text-quaternary">{{ userStore.user?.planExpiresAt ? new Date(userStore.user.planExpiresAt).toLocaleDateString() : "free" }}</span>
         <Button
           :loading="loading"
@@ -253,6 +340,81 @@ watch(() => userStore.loggedIn, (v) => {
         {{ t('pages.preference.provider.cloud.hints.noKey') }}
       </div>
 
+      <!-- 筛选栏 -->
+      <div class="flex flex-col gap-3 border rounded-xl border-solid p-4 bg-elevated border-border-sec">
+        <div class="flex flex-wrap items-center gap-3">
+          <Input
+            v-model:value="searchText"
+            allow-clear
+            class="!min-w-50 !flex-1"
+            placeholder="搜索模型名称、ID 或描述"
+          >
+            <template #prefix>
+              <i class="i-lucide:search color-text-quaternary" />
+            </template>
+          </Input>
+          <Select
+            v-model:value="selectedModality"
+            allow-clear
+            class="!w-40"
+            :options="[
+              { value: '', label: '全部模态' },
+              { value: 'text-only', label: '纯文本' },
+              { value: 'multimodal', label: '多模态' },
+            ]"
+            placeholder="输入模态"
+          />
+          <label class="flex cursor-pointer items-center gap-1.5 text-3 color-text-secondary">
+            <input
+              v-model="showRetired"
+              class="size-3.5"
+              type="checkbox"
+            >
+            显示已退役
+          </label>
+        </div>
+        <div
+          v-if="issuerOptions.length"
+          class="flex flex-wrap items-center gap-2"
+        >
+          <span class="shrink-0 text-2.5 color-text-quaternary">厂商</span>
+          <Tag
+            v-for="issuer in issuerOptions"
+            :key="issuer"
+            class="cursor-pointer select-none"
+            :color="selectedIssuers.includes(issuer) ? 'blue' : 'default'"
+            @click="selectedIssuers.includes(issuer)
+              ? (selectedIssuers = selectedIssuers.filter(i => i !== issuer))
+              : selectedIssuers.push(issuer)"
+          >
+            {{ issuer }}
+          </Tag>
+        </div>
+        <div
+          v-if="featureOptions.length"
+          class="flex flex-wrap items-center gap-2"
+        >
+          <span class="shrink-0 text-2.5 color-text-quaternary">特性</span>
+          <Tag
+            v-for="feat in featureOptions"
+            :key="feat"
+            class="cursor-pointer select-none"
+            :color="selectedFeatures.includes(feat) ? 'blue' : 'default'"
+            @click="selectedFeatures.includes(feat)
+              ? (selectedFeatures = selectedFeatures.filter(f => f !== feat))
+              : selectedFeatures.push(feat)"
+          >
+            {{ feat }}
+          </Tag>
+        </div>
+        <div class="text-2.5 color-text-quaternary">
+          共 {{ filteredModels.length }} 个模型
+          <span v-if="showRetired && allModels.some(isRetired)">
+            （含 {{ allModels.filter(isRetired).length }} 个已退役）
+          </span>
+        </div>
+      </div>
+
       <!-- 模型列表 -->
       <div
         v-if="loading"
@@ -261,34 +423,112 @@ watch(() => userStore.loggedIn, (v) => {
         <Spin size="large" />
       </div>
       <div
-        v-else-if="models.length === 0"
+        v-else-if="filteredModels.length === 0"
         class="py-16"
       >
-        <Empty :description="t('pages.preference.provider.cloud.hints.noModels')" />
+        <Empty description="没有符合条件的模型" />
       </div>
       <div
         v-else
         class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4"
       >
         <div
-          v-for="model in models"
+          v-for="model in filteredModels"
           :key="model.id"
           class="flex flex-col gap-3 border rounded-xl border-solid p-4 transition-all bg-elevated border-border-sec hover:shadow-md"
-          :class="{ 'b-blue-5! shadow-blue-200/30!': currentDefault === model.id }"
+          :class="{
+            'b-blue-5! shadow-blue-200/30!': currentDefault === model.id,
+            'opacity-50!': isRetired(model),
+          }"
         >
-          <div class="flex items-center gap-2">
-            <div class="bg-blue-50/60 dark:bg-blue-900/20 size-10 flex shrink-0 items-center justify-center rounded-full">
-              <i class="i-lucide:brain text-blue-5 text-lg" />
+          <!-- 头部：图标 + 名称 + 厂商 -->
+          <div class="flex items-start gap-3">
+            <div class="bg-blue-50/60 dark:bg-blue-900/20 size-10 flex shrink-0 items-center justify-center overflow-hidden rounded-full">
+              <img
+                v-if="model.avatar"
+                :alt="model.issuer?.name"
+                class="size-12 object-contain"
+                :src="model.avatar"
+              >
+              <i
+                v-else
+                class="i-lucide:brain text-blue-5 text-lg"
+              />
             </div>
-            <span
-              class="min-w-0 flex-1 truncate text-3.5 font-medium font-mono"
-              :title="model.id"
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span
+                  class="truncate text-3.5 font-medium"
+                  :title="model.id"
+                >{{ model.name }}</span>
+                <Tag
+                  v-if="model.hot_tags?.length"
+                  class="!text-2"
+                  color="volcano"
+                  variant="filled"
+                >
+                  {{ model.hot_tags[0] }}
+                </Tag>
+                <Tag
+                  v-if="isRetired(model)"
+                  class="!text-2"
+                  color="red"
+                >
+                  已退役
+                </Tag>
+              </div>
+              <span class="text-2.5 color-text-quaternary">{{ model.issuer?.name }}</span>
+            </div>
+          </div>
+
+          <!-- 描述 -->
+          <p
+            v-if="model.description"
+            class="line-clamp-2 text-2.5 leading-relaxed color-text-tertiary"
+          >
+            {{ model.description }}
+          </p>
+
+          <!-- 特性标签 -->
+          <div
+            v-if="model.features?.length"
+            class="flex flex-wrap gap-1"
+          >
+            <Tag
+              v-for="feat in model.features"
+              :key="feat"
+              class="!text-2"
+              :color="selectedFeatures.includes(feat) ? 'blue' : 'default'"
+              size="small"
             >
-              {{ model.name }}
+              {{ feat }}
+            </Tag>
+          </div>
+
+          <!-- 底部信息 -->
+          <div class="mt-auto flex items-center gap-3 text-2.5 color-text-quaternary">
+            <span class="flex items-center gap-1">
+              <i class="i-lucide:fold-vertical" />
+              {{ formatContext(model.model_constraints?.context_length ?? 0) }}
+            </span>
+            <span
+              v-if="model.architecture?.input_modalities?.some(m => m !== 'text')"
+              class="flex items-center gap-1"
+            >
+              <i class="i-lucide:image" />
+              {{ model.architecture.input_modalities.filter(m => m !== 'text').join(' / ') }}
+            </span>
+            <span
+              v-if="model.support_api_protocols?.length"
+              class="flex items-center gap-1"
+            >
+              <i class="i-lucide:plug" />
+              {{ model.support_api_protocols.join(' / ') }}
             </span>
           </div>
 
-          <div class="mt-auto flex items-center gap-2">
+          <!-- 操作 -->
+          <div class="flex items-center gap-2 pt-1">
             <div class="flex-1" />
             <Tag
               v-if="currentDefault === model.id"
@@ -298,6 +538,7 @@ watch(() => userStore.loggedIn, (v) => {
               {{ t('pages.preference.provider.cloud.labels.current') }}
             </Tag>
             <Button
+              :disabled="isRetired(model)"
               :loading="enabling"
               size="small"
               type="primary"

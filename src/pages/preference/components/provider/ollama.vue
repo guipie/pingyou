@@ -14,6 +14,8 @@ import { useI18n } from "vue-i18n";
 
 import type { DownloadPayload, HardwareReport, InitStep } from "@/stores/shard/app-shard";
 
+import { WEB_BASE } from "@/config";
+
 const emit = defineEmits<{
   (e: "useLocalModel", payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
 }>();
@@ -88,14 +90,6 @@ const [messageApi, ContextHolder] = AntdMessage.useMessage();
 
 // 引擎服务地址（与 Rust 启动参数配置的端口保持一致）
 const OLLAMA_HOST = "http://127.0.0.1:11435/v1/chat/completions";
-
-/** 屏友 Web 后端地址（与 preference/index.vue 保持一致），用于拉取 Ollama 下载配置 */
-const WEB_BASE = (() => {
-  const env = import.meta.env.VITE_PINGYOU_WEB_BASE as string | undefined;
-  if (env) return env.replace(/\/$/, "");
-  if (import.meta.env.DEV) return "http://localhost:4000";
-  return "https://py.lm56.top";
-})();
 
 const step = ref<InitStep | "completed">("checking");
 const downloadProgress = ref<number>(0);
