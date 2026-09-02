@@ -1,6 +1,6 @@
 [package]
 name = "pingyou"
-version = "1.1.15"
+version = "1.1.16"
 description = "a screen friend app"
 authors = ["guipie"]
 edition = "2021"
