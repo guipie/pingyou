@@ -1,6 +1,5 @@
 # pingyou
-
-![pingyou](https://socialify.git.ci/guipie/pingyou/image?custom_language=Rust&description=1&forks=1&issues=1&language=1&logo=https%3A%2F%2Fgithub.com%2Fguipie%2Fpingyou%2Fblob%2Fmain%2Fpublic%2Faipingyou-dark.png%3Fraw%3Dtrue&name=1&owner=1&pulls=1&stargazers=1&theme=Dark)
+![pingyou](https://socialify.git.ci/guipie/pingyou/image?custom_description=%E8%B7%A8%E5%B9%B3%E5%8F%B0%E4%BA%92%E5%8A%A8AI%E5%B1%8F%E5%B9%95%E5%A5%BD%E5%8F%8B%EF%BC%8C%E4%B8%BA%E6%A1%8C%E9%9D%A2%E5%A2%9E%E6%B7%BB%E4%B9%90%E8%B6%A3%EF%BC%9B+%E4%B8%8D%E6%AD%A2%E6%98%AF%E6%A1%8C%E5%AE%A0%EF%BC%8C%E8%BF%98%E6%98%AF%E4%BD%A0%E7%9A%84%E5%A5%BD%E5%8F%8B%E3%80%82&custom_language=Rust&description=1&font=KoHo&forks=1&issues=1&language=1&logo=https%3A%2F%2Fpy.lm56.top%2Fimages%2Flogo.png&owner=1&pattern=Signal&pulls=1&stargazers=1&theme=Dark)
 
 <div align="center">
   <div>
@@ -89,11 +88,11 @@
   <tbody>
     <tr>
       <td>
-        <a href="https://qm.qq.com/q/AS3gNv2Vzy">
+        <a href="https://qm.qq.com/q/AS3gNv2Vzy](https://qm.qq.com/q/xWjcsbsDq8">
           <picture>
             <img
               alt="QQ群"
-              src="https://github.com/guipie/pingyou/blob/main/public/demo/qq_group.png?raw=true"
+              src="https://github.com/guipie/pingyou/blob/main/demo/qq_group.png?raw=true"
               height="250"
             />
           </picture>
