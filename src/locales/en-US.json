@@ -488,6 +488,11 @@
       "hints": {
         "notFound": "Model master configuration file not found, please ensure the model files are complete."
       }
+    },
+    "model": {
+      "hints": {
+        "loadTimeout": "Model loading timed out ({seconds}s), the switch has been cancelled. Please retry or check the model files."
+      }
     }
   },
   "stores": {

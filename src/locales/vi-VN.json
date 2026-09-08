@@ -453,6 +453,11 @@
       "hints": {
         "notFound": "Không tìm thấy tệp cấu hình chính của mô hình, vui lòng xác nhận các tệp mô hình có đầy đủ không."
       }
+    },
+    "model": {
+      "hints": {
+        "loadTimeout": "Tải mô hình quá thời gian chờ ({seconds} giây), đã hủy lần chuyển đổi này. Vui lòng thử lại hoặc kiểm tra các tệp mô hình."
+      }
     }
   },
   "stores": {

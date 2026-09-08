@@ -453,6 +453,11 @@
       "hints": {
         "notFound": "Arquivo de configuração principal do modelo não encontrado. Verifique se os arquivos do modelo estão completos."
       }
+    },
+    "model": {
+      "hints": {
+        "loadTimeout": "O carregamento do modelo excedeu o tempo limite ({seconds}s) e a troca foi cancelada. Tente novamente ou verifique os arquivos do modelo."
+      }
     }
   },
   "stores": {

@@ -62,6 +62,9 @@ function isModelFile(path: string) {
 interface LoadResult {
   width: number
   height: number
+  /** 与 Live2D 布局字段对齐：3D 模型无透明留白裁剪，恒为 0 */
+  offsetX: number
+  offsetY: number
   motions: Record<string, never[]>
   expressions: never[]
 }
@@ -201,12 +204,14 @@ class Model3d {
     this.scene?.add(this.model);
     this.fitModel();
     this.bindControls();
-    this.resizeModel(DEFAULT_MODEL_SIZE);
+    this.resizeModel();
     this.startLoop();
 
     return {
       width: DEFAULT_MODEL_SIZE.width,
       height: DEFAULT_MODEL_SIZE.height,
+      offsetX: 0,
+      offsetY: 0,
       motions: {},
       expressions: [],
     };
@@ -646,12 +651,22 @@ class Model3d {
     this.renderer.render(this.scene, this.camera);
   }
 
-  public resizeModel(_modelSize?: ModelSize) {
+  /**
+   * 按目标窗口尺寸调整渲染器与相机。
+   * 不传 target 时退回按当前窗口尺寸（innerWidth/innerHeight）处理。
+   * @param target 目标窗口尺寸（物理像素），可选
+   */
+  public resizeModel(target?: ModelSize) {
     if (!this.renderer || !this.camera) return;
 
-    this.camera.aspect = innerWidth / innerHeight;
+    const dpr = devicePixelRatio || 1;
+
+    const width = target ? target.width : innerWidth;
+    const height = target ? target.height : innerHeight;
+
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(innerWidth, innerHeight, false);
+    this.renderer.setSize(width / dpr, height / dpr, false);
   }
 
   public setHandPressed(isLeft = true, pressed = true) {

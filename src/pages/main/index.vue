@@ -31,7 +31,7 @@ import { openAdjacentWindow } from "@/utils/win-manager";
 
 const { startListening } = useDevice();
 const appWindow = getCurrentWebviewWindow();
-const { modelSize, handleLoad, handleDestroy, handleResize, handleKeyChange, setMaxFPS }
+const { modelSize, handleLoad, handleDestroy, handleResize, syncWindowSize, handleKeyChange, setMaxFPS }
   = useModel();
 const catStore = useCatStore();
 const { getBaseMenu, getExitMenu } = useAppMenu();
@@ -45,7 +45,10 @@ onMounted(startListening);
 
 onUnmounted(handleDestroy);
 const debouncedResize = useDebounceFn(async () => {
-  await handleResize();
+  // 先根据实际窗口尺寸反推缩放百分比（用户拖拽场景），再按目标尺寸重新渲染
+  await syncWindowSize();
+
+  handleResize();
 
   resizing.value = false;
 }, 100);
@@ -56,6 +59,9 @@ useEventListener("resize", () => {
   debouncedResize();
 });
 
+// 模型切换序号：仅最近一次切换可以解除"切换中"状态，防止过期加载互相干扰
+let loadToken = 0;
+
 watch(
   () => modelStore.currentModel,
   async (model) => {
@@ -63,12 +69,20 @@ watch(
       modelStore.modelReady = true;
       return;
     }
+
+    const token = ++loadToken;
+
     try {
       await handleLoad();
 
+      // 加载期间又切换了模型，丢弃本次过期结果
+      if (token !== loadToken) return;
+
       const path = join(model.path, "resources", "background.png");
 
-      const existed = await exists(path);
+      const existed = await exists(path).catch(() => false);
+
+      if (token !== loadToken) return;
 
       backgroundImagePath.value = existed ? convertFileSrc(path) : void 0;
 
@@ -88,10 +102,13 @@ watch(
           modelStore.supportKeys[fileName] = join(groupDir, file.name);
         }
       }
-      modelStore.modelReady = true;
     } catch (error) {
       console.error(error);
-      modelStore.modelReady = true;
+    } finally {
+      // 无论成功、失败还是超时，只要仍是最近一次切换，就结束"切换中"状态
+      if (token === loadToken) {
+        modelStore.modelReady = true;
+      }
     }
   },
   { deep: true, immediate: true },
