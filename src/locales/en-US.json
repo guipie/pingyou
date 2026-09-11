@@ -98,7 +98,10 @@
           "modelConfig": "Model Configuration",
           "modelName": "Model Name",
           "modelId": "Model ID",
-          "apiKeyOptional": "API Key (Optional)",
+          "modelType": "Model Capability",
+          "modelTypeText": "Text Chat",
+          "modelTypeVision": "Vision (Images)",
+          "apiKeyOptional": "API Key (optional)",
           "needProxy": "Requires Proxy",
           "providerDesc": "Description (Optional)",
           "addProvider": "Add Provider",
@@ -118,7 +121,16 @@
           "modelDownloading": "Downloading Model",
           "engineDownloading": "Downloading Engine",
           "initializingEngine": "Initializing Local Engine",
-          "downloadPaused": "Download Paused"
+          "downloadPaused": "Download Paused",
+          "availableModels": "Available Models",
+          "install": "Install",
+          "installMore": "Install More Models",
+          "installedLocalModels": "Installed Models",
+          "vram": "VRAM",
+          "fitRecommended": "Recommended",
+          "fitOk": "OK",
+          "fitTight": "Tight",
+          "fitUnsupported": "Unsupported"
         },
         "hints": {
           "openAiCompatible": "Connect any OpenAI-compatible API",
@@ -133,7 +145,12 @@
           "pausedResumeHint": "Download paused. Click \"Resume Download\" to continue.",
           "dragEngineHint": "Drag the Ollama package here, or click to select a file",
           "dragEngineFormats": "Supports .zip / .tgz / .tar.gz packages",
-          "importingEngine": "Importing engine package..."
+          "importingEngine": "Importing engine package...",
+          "cpuCores": "{n} cores",
+          "gpuDetected": "GPU detected:",
+          "selectModelHint": "Filtered by your hardware, click a card to select",
+          "textModelHint": "Text-only chat, cannot receive images.",
+          "visionModelHint": "Supports multimodal image input, usable for pet vision perception (screenshot analysis)."
         },
         "messages": {
           "copied": "Service address copied to clipboard!",
@@ -147,6 +164,8 @@
           "resuming": "Resuming download...",
           "cleanupFailed": "Deep cleanup failed: {err}",
           "stopFailed": "Failed to stop the service: {err}",
+          "modelRemoved": "Model uninstalled",
+          "modelRemoveFailed": "Failed to uninstall model, please retry",
           "importEngineSuccess": "Engine package imported successfully!",
           "importEngineFailed": "Failed to import engine package: {err}",
           "removedProvider": "Removed provider: {provider}",
@@ -165,9 +184,13 @@
             "dailyQuota": "Daily quota",
             "enable": "Enable",
             "enabled": "Enabled",
-            "use": "Use",
+            "use": "Enable",
             "switchTo": "Switch",
-            "current": "Current"
+            "current": "Default",
+            "setDefault": "Set as Default",
+            "disable": "Disable",
+            "uninstall": "Uninstall",
+            "enabledCount": "{n} enabled"
           },
           "hints": {
             "loginToUse": "Sign in to your PingYou account to use the official cloud model",
@@ -179,7 +202,15 @@
             "loginFirst": "Please sign in before enabling the cloud model",
             "loadFailed": "Failed to load cloud quota. Please try again later.",
             "loadModelsFailed": "Failed to load model list. Please try again later.",
-            "enabled": "Cloud model enabled. You can now select it in chat."
+            "enabled": "Cloud model enabled. You can now select it in chat.",
+            "disabled": "Disabled. You can enable another model.",
+            "alreadyEnabled": "This model is already in your enabled list"
+          }
+        },
+        "local": {
+          "desc": "Local Ollama engine, offline and private. Auto-enabled after installation.",
+          "hints": {
+            "noModelInstalled": "Engine ready. Install your first model from the catalog above."
           }
         },
         "dialogs": {
@@ -538,6 +569,35 @@
       "settingNow": "Go to Settings",
       "resetToDefault": "Restore Defaults",
       "back": "Back"
+    }
+  },
+  "local-models": {
+    "qwen05b": {
+      "desc": "Ultra-light text model, runs on 4GB RAM, ideal for low-end machines"
+    },
+    "qwen15b": {
+      "desc": "Lightweight Chinese text model, fast, suited for daily chat"
+    },
+    "qwen7b": {
+      "desc": "Strong Chinese text model, requires 6GB+ VRAM"
+    },
+    "llama32": {
+      "desc": "Meta lightweight text model, great in English, CPU-only capable"
+    },
+    "moondream": {
+      "desc": "Ultra-light vision model, reads screen to detect user activity, fast"
+    },
+    "llava7b": {
+      "desc": "Mainstream vision model, sees images and chats, needs 5GB+ VRAM"
+    },
+    "minicpmv": {
+      "desc": "Strong Chinese vision + OCR, reads screen text precisely, needs 7GB VRAM"
+    },
+    "reason": {
+      "ramInsufficient": "Insufficient memory, cannot run this model",
+      "vramTight": "VRAM tight, partial CPU offload, slower",
+      "cpuFallback": "No GPU or insufficient VRAM, will run on CPU",
+      "vramInsufficient": "Insufficient VRAM, cannot run smoothly"
     }
   }
 }

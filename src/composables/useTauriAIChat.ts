@@ -264,6 +264,14 @@ export function useTauriAIChat() {
       || ""
     );
   });
+  // 当前模型是否为视觉模型（支持多模态看图）。历史数据缺省时按文本处理。
+  const isVisionModel = computed(() => {
+    const mid = resolvedModel.value;
+    if (!mid) return false;
+    const target = provider.value.models?.find(m => m.modelId === mid)
+      ?? provider.value.models?.find(m => m.name === mid);
+    return target?.type === "vision";
+  });
   const isReady = computed(() => {
     return Boolean(
       (provider.value.apiKey?.trim() || isBoolean(provider.value.isCustom))
@@ -364,6 +372,7 @@ export function useTauriAIChat() {
   return {
     provider,
     resolvedModel,
+    isVisionModel,
     modelOptions,
     loading,
     error,

@@ -789,3 +789,107 @@ pub async fn list_local_models() -> Result<Vec<ModelInfo>, String> {
         Err(e) => Err(format!("获取模型列表失败: {}", e)),
     }
 }
+
+/// 本地供应商就绪状态 — 启动时自动调用
+#[derive(serde::Serialize)]
+pub struct LocalProviderStatus {
+    /// Ollama 引擎是否已安装（可执行文件存在）
+    pub installed: bool,
+    /// 引擎是否已在运行（能连接 11435）
+    pub running: bool,
+    /// 已安装的模型（最多 5 个，超过截断只取前 5）
+    pub models: Vec<ModelInfo>,
+    /// 截断提示：当安装模型超过 5 时为 true
+    pub truncated: bool,
+}
+
+/// 启动时自动启动 Ollama + 拉模型列表。
+/// - 未安装 → installed=false, running=false, models=[]
+/// - 已安装但未运行 → 尝试启动引擎后返回
+/// - 已运行 → 直接返回
+#[tauri::command]
+pub async fn ensure_local_provider(app_handle: AppHandle) -> LocalProviderStatus {
+    // 1. 检查引擎是否安装
+    let engine_dir = app_handle
+        .path()
+        .app_data_dir()
+        .unwrap_or_default()
+        .join("engine");
+    let binary = find_ollama_binary(&engine_dir, get_engine_binary_name());
+    let installed = binary.is_some();
+
+    if !installed {
+        // 也检查系统 PATH 里有没有 ollama（用户自己装的）
+        let system_installed = std::process::Command::new(get_engine_binary_name())
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !system_installed {
+            return LocalProviderStatus {
+                installed: false,
+                running: false,
+                models: Vec::new(),
+                truncated: false,
+            };
+        }
+    }
+
+    // 2. 检查引擎是否在运行（尝试 list_local_models）
+    let ollama = Ollama::builder()
+        .host("http://127.0.0.1".to_string())
+        .port(11435)
+        .build();
+
+    let running = ollama.list_local_models().await.is_ok();
+
+    let mut models: Vec<ModelInfo> = Vec::new();
+    let mut truncated = false;
+
+    if running {
+        // 直接拉列表
+        if let Ok(list) = ollama.list_local_models().await {
+            let full: Vec<ModelInfo> = list
+                .into_iter()
+                .map(|m| ModelInfo { name: m.name, size: m.size })
+                .collect();
+            if full.len() > 5 {
+                truncated = true;
+                models = full.into_iter().take(5).collect();
+            } else {
+                models = full;
+            }
+        }
+    } else if installed {
+        // 尝试启动引擎（用用户安装的）
+        if let Some(ref bin) = binary {
+            let mut cmd = std::process::Command::new(bin);
+            cmd.arg("serve")
+                .env("OLLAMA_HOST", "127.0.0.1:11435");
+            let _ = cmd.spawn();
+            // 等 2s 让引擎起来
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            if let Ok(list) = ollama.list_local_models().await {
+                let full: Vec<ModelInfo> = list
+                    .into_iter()
+                    .map(|m| ModelInfo { name: m.name, size: m.size })
+                    .collect();
+                if full.len() > 5 {
+                    truncated = true;
+                    models = full.into_iter().take(5).collect();
+                } else {
+                    models = full;
+                }
+            }
+        }
+    }
+
+    LocalProviderStatus {
+        installed,
+        running,
+        models,
+        truncated,
+    }
+}

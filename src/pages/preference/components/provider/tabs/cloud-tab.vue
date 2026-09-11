@@ -5,26 +5,23 @@ import { Button, Empty, Input, message, Select, Spin, Tag } from "antdv-next";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
-import type { AIProvider } from "@/stores/shard/provider-shard";
+import type { AIProvider, AiProviderModels, ModelCapability } from "@/stores/shard/provider-shard";
 
 import { WEB_BASE } from "@/config";
 import { useProviderStore } from "@/stores/aiprovider";
 import { useUserStore } from "@/stores/user";
 
-const emit = defineEmits<{
-  (e: "useCloudModel", payload: { baseUrl: string, modelName: string, modelId: string, provider: string, apiKey: string }): void
-}>();
-
 const { t } = useI18n();
 const userStore = useUserStore();
 const providerStore = useProviderStore();
 
-/** 云端模型供应商标识 */
+/** 云端模型供应商标识 — 单例 */
 const CLOUD_PROVIDER = "云端模型";
+const CLOUD_VALUE = "cloud-models";
 /** 七牛大模型推理 OpenAI 兼容接入点 */
 const QINIU_BASE_URL = "https://api.qnaigc.com/v1/chat/completions";
 
-// ---- 模型数据类型 ----
+// ---- 模型数据类型（与云端字典 API 对齐） ----
 interface CloudModelInfo {
   id: string
   name: string
@@ -56,22 +53,30 @@ interface AiQuotaResponse {
 
 // ---- 状态 ----
 const loading = ref(false);
-const enabling = ref(false);
 const apiKey = ref<string>("");
 const quota = ref<AiQuotaResponse | null>(null);
 const allModels = ref<CloudModelInfo[]>([]);
-const currentDefault = ref("");
-
-const cloudProvider = computed(() => providerStore.stateProviders.find(x => x.provider === CLOUD_PROVIDER));
 
 // ---- 筛选 ----
 const searchText = ref("");
 const selectedIssuers = ref<string[]>([]);
 const selectedFeatures = ref<string[]>([]);
-const selectedModality = ref<string>(""); // "" = 全部, "text-only" = 纯文本, "multimodal" = 多模态
+const selectedModality = ref<string>(""); // "" 全部 / "text-only" / "multimodal"
 const showRetired = ref(false);
 
-// 从全量模型中提取可选项
+// ---- 云端供应商（从 store 取，单一数据源） ----
+const cloudProvider = computed(() => providerStore.stateProviders.find(x => x.provider === CLOUD_PROVIDER));
+/** 已启用的模型 ID 集合（从 store 派生，保证不漂移） */
+const enabledModelIds = computed(() => {
+  const ids = new Set<string>();
+  cloudProvider.value?.models?.forEach((m) => {
+    if (m.enabled !== false) ids.add(m.modelId);
+  });
+  return ids;
+});
+/** 当前默认模型 ID（从 store 派生） */
+const currentDefault = computed(() => cloudProvider.value?.defaultModel ?? "");
+
 const issuerOptions = computed(() => {
   const set = new Set<string>();
   allModels.value.forEach((m) => {
@@ -79,25 +84,18 @@ const issuerOptions = computed(() => {
   });
   return [...set].sort();
 });
-
 const featureOptions = computed(() => {
   const set = new Set<string>();
-  allModels.value.forEach((m) => {
-    (m.features ?? []).forEach(f => set.add(f));
-  });
+  allModels.value.forEach(m => (m.features ?? []).forEach(f => set.add(f)));
   return [...set].sort();
 });
-
 function isRetired(m: CloudModelInfo) {
   if (!m.retirement_at) return false;
   const d = new Date(m.retirement_at).getTime();
   return d > 0 && d < Date.now();
 }
-
 const filteredModels = computed(() => {
   let list = allModels.value;
-
-  // 搜索
   const kw = searchText.value.trim().toLowerCase();
   if (kw) {
     list = list.filter(m =>
@@ -106,20 +104,12 @@ const filteredModels = computed(() => {
       || (m.description ?? "").toLowerCase().includes(kw),
     );
   }
-
-  // 厂商筛选
   if (selectedIssuers.value.length) {
     list = list.filter(m => selectedIssuers.value.includes(m.issuer?.name ?? ""));
   }
-
-  // 特性筛选（包含所选任意一个即匹配）
   if (selectedFeatures.value.length) {
-    list = list.filter(m =>
-      selectedFeatures.value.some(f => (m.features ?? []).includes(f)),
-    );
+    list = list.filter(m => selectedFeatures.value.some(f => (m.features ?? []).includes(f)));
   }
-
-  // 模态筛选
   if (selectedModality.value === "text-only") {
     list = list.filter(m =>
       (m.architecture?.input_modalities ?? []).length === 1
@@ -130,30 +120,28 @@ const filteredModels = computed(() => {
       (m.architecture?.input_modalities ?? []).some(m2 => m2 !== "text"),
     );
   }
-
-  // 退役筛选
-  if (!showRetired.value) {
-    list = list.filter(m => !isRetired(m));
-  }
-
-  // 按 rank 升序排序
+  if (!showRetired.value) list = list.filter(m => !isRetired(m));
   return [...list].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
 });
 
-// ---- 方法 ----
+// ---- 工具 ----
 function formatYuan(n: number): string {
   return `¥${Number(n).toFixed(2)}`;
 }
-
 function formatContext(len: number): string {
   if (!len || len <= 0) return "—";
   if (len >= 1000000) return `${(len / 1000000).toFixed(len % 1000000 ? 1 : 0)}M`;
   if (len >= 1000) return `${(len / 1000).toFixed(0)}K`;
   return String(len);
 }
-
 function openLogin() {
   openUrl(`${WEB_BASE}/login?desktop=1`);
+}
+
+/** 根据云端模型的 input_modalities 判定能力类型 */
+function inferModelType(m: CloudModelInfo): ModelCapability {
+  const mods = m.architecture?.input_modalities ?? [];
+  return mods.some(x => x !== "text") ? "vision" : "text";
 }
 
 async function loadQuotaAndKey(): Promise<string> {
@@ -168,13 +156,11 @@ async function loadQuotaAndKey(): Promise<string> {
   return data.apiKey;
 }
 
-/** 从字典 API 加载模型列表 */
 async function loadModels() {
   if (!userStore.loggedIn) return;
   loading.value = true;
   try {
     if (!apiKey.value) apiKey.value = await loadQuotaAndKey();
-
     const res = await tauriFetch(`${WEB_BASE}/api/dictionaries/cloud-models`, { method: "GET" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const dict = (await res.json()) as { value: { status: boolean, data: CloudModelInfo[] } };
@@ -187,51 +173,85 @@ async function loadModels() {
   }
 }
 
-async function handleUse(model: CloudModelInfo) {
-  if (!apiKey.value) {
+// ---- 核心：确保云端供应商存在 ----
+function ensureCloudProvider(): AIProvider {
+  let provider = cloudProvider.value;
+  if (provider) return provider;
+  provider = {
+    provider: CLOUD_PROVIDER,
+    value: CLOUD_VALUE,
+    avatar: "i-lucide:cloud",
+    desc: t("pages.preference.provider.cloud.desc"),
+    baseUrl: QINIU_BASE_URL,
+    isCustom: false,
+    isNeedProxy: false,
+    apiKey: apiKey.value,
+    defaultModel: "",
+    models: [],
+  };
+  providerStore.addProvider(provider);
+  return provider;
+}
+
+// ---- 启用模型（追加到 provider.models） ----
+function enableModel(cloudModel: CloudModelInfo) {
+  const provider = ensureCloudProvider();
+  if (!provider.apiKey) {
     message.warning(t("pages.preference.provider.cloud.messages.loginFirst"));
     return;
   }
-  enabling.value = true;
-  try {
-    const provider: AIProvider = {
-      provider: CLOUD_PROVIDER,
-      value: CLOUD_PROVIDER,
-      avatar: "i-lucide:cloud",
-      desc: t("pages.preference.provider.cloud.desc"),
-      baseUrl: QINIU_BASE_URL,
-      isCustom: false,
-      isNeedProxy: false,
-      apiKey: apiKey.value,
-      defaultModel: model.id,
-      models: filteredModels.value.map(m => ({ name: m.name, desc: "", modelId: m.id })),
-    };
-    providerStore.addProvider(provider);
-    currentDefault.value = model.id;
-    message.success(t("pages.preference.provider.cloud.messages.enabled"));
-    emit("useCloudModel", {
-      baseUrl: QINIU_BASE_URL,
-      modelName: model.name,
-      modelId: model.id,
-      provider: CLOUD_PROVIDER,
-      apiKey: apiKey.value,
-    });
-  } catch (err) {
-    console.error("[cloud-tab] 启用模型失败：", err);
-    message.error(String(err));
-  } finally {
-    enabling.value = false;
+  const models = provider.models ? [...provider.models] : [];
+  // 已存在则跳过
+  if (models.some(m => m.modelId === cloudModel.id)) {
+    message.info(t("pages.preference.provider.cloud.messages.alreadyEnabled"));
+    return;
   }
+  const newModel: AiProviderModels = {
+    name: cloudModel.name,
+    modelId: cloudModel.id,
+    desc: cloudModel.description ?? "",
+    type: inferModelType(cloudModel),
+    enabled: true,
+  };
+  models.push(newModel);
+  const updated: AIProvider = {
+    ...provider,
+    models,
+    defaultModel: provider.defaultModel || cloudModel.id, // 第一个启用的自动设为默认
+  };
+  providerStore.updateProvider(updated);
+  message.success(t("pages.preference.provider.cloud.messages.enabled"));
 }
 
+// ---- 停用模型（从 provider.models 移除） ----
+function disableModel(cloudModelId: string) {
+  const provider = cloudProvider.value;
+  if (!provider) return;
+  const models = (provider.models ?? []).filter(m => m.modelId !== cloudModelId);
+  let defaultModel = provider.defaultModel;
+  // 停用时如果是当前默认，自动切到剩余第一个
+  if (defaultModel === cloudModelId) {
+    defaultModel = models[0]?.modelId ?? "";
+  }
+  providerStore.updateProvider({ ...provider, models, defaultModel });
+  message.info(t("pages.preference.provider.cloud.messages.disabled"));
+}
+
+// ---- 设为默认 ----
+function setDefault(cloudModelId: string) {
+  const provider = cloudProvider.value;
+  if (!provider) return;
+  providerStore.updateProvider({ ...provider, defaultModel: cloudModelId });
+}
+
+// ---- 生命周期 ----
 onMounted(() => {
+  // 从已有 provider 恢复 apiKey
   if (cloudProvider.value?.defaultModel) {
-    currentDefault.value = cloudProvider.value.defaultModel;
     apiKey.value = cloudProvider.value.apiKey ?? "";
   }
   loadModels();
 });
-
 watch(() => userStore.loggedIn, (v) => {
   if (v) {
     apiKey.value = "";
@@ -241,7 +261,6 @@ watch(() => userStore.loggedIn, (v) => {
     allModels.value = [];
     apiKey.value = "";
     quota.value = null;
-    currentDefault.value = "";
   }
 });
 </script>
@@ -268,7 +287,7 @@ watch(() => userStore.loggedIn, (v) => {
 
     <!-- 已登录 -->
     <template v-else>
-      <!-- 顶部：标题 + 会员信息 + 额度 + 刷新 -->
+      <!-- 顶部：标题 + 会员信息 + 额度 + 刷新 + 已启用计数 -->
       <div class="flex items-center gap-3">
         <div class="flex items-center justify-center gap-2">
           <i class="i-lucide:cloud-cog text-blue-5 text-lg" />
@@ -278,6 +297,12 @@ watch(() => userStore.loggedIn, (v) => {
           </Tag>
         </div>
         <div class="flex-1" />
+        <span
+          v-if="enabledModelIds.size"
+          class="text-3 font-medium color-text-quaternary"
+        >
+          {{ t('pages.preference.provider.cloud.labels.enabledCount', { n: enabledModelIds.size }) }}
+        </span>
         <span class="text-3 color-text-quaternary">{{ userStore.user?.planExpiresAt ? new Date(userStore.user.planExpiresAt).toLocaleDateString() : "free" }}</span>
         <Button
           :loading="loading"
@@ -441,7 +466,7 @@ watch(() => userStore.loggedIn, (v) => {
             'opacity-50!': isRetired(model),
           }"
         >
-          <!-- 头部：图标 + 名称 + 厂商 -->
+          <!-- 头部 -->
           <div class="flex items-start gap-3">
             <div class="bg-blue-50/60 dark:bg-blue-900/20 size-10 flex shrink-0 items-center justify-center overflow-hidden rounded-full">
               <img
@@ -475,6 +500,14 @@ watch(() => userStore.loggedIn, (v) => {
                   color="red"
                 >
                   已退役
+                </Tag>
+                <Tag
+                  v-if="currentDefault === model.id"
+                  class="!text-2"
+                  color="blue"
+                  variant="filled"
+                >
+                  {{ t('pages.preference.provider.cloud.labels.current') }}
                 </Tag>
               </div>
               <span class="text-2.5 color-text-quaternary">{{ model.issuer?.name }}</span>
@@ -527,25 +560,38 @@ watch(() => userStore.loggedIn, (v) => {
             </span>
           </div>
 
-          <!-- 操作 -->
+          <!-- 操作区 -->
           <div class="flex items-center gap-2 pt-1">
             <div class="flex-1" />
-            <Tag
-              v-if="currentDefault === model.id"
-              color="blue"
-              variant="filled"
-            >
-              {{ t('pages.preference.provider.cloud.labels.current') }}
-            </Tag>
-            <Button
-              :disabled="isRetired(model)"
-              :loading="enabling"
-              size="small"
-              type="primary"
-              @click="handleUse(model)"
-            >
-              {{ currentDefault === model.id ? t('pages.preference.provider.cloud.labels.switchTo') : t('pages.preference.provider.cloud.labels.use') }}
-            </Button>
+            <!-- 未启用：显示"启用" -->
+            <template v-if="!enabledModelIds.has(model.id)">
+              <Button
+                :disabled="isRetired(model)"
+                size="small"
+                type="primary"
+                @click="enableModel(model)"
+              >
+                {{ t('pages.preference.provider.cloud.labels.use') }}
+              </Button>
+            </template>
+            <!-- 已启用：显示"停用"+"设为默认" -->
+            <template v-else>
+              <Button
+                v-if="currentDefault !== model.id"
+                size="small"
+                @click="setDefault(model.id)"
+              >
+                {{ t('pages.preference.provider.cloud.labels.setDefault') }}
+              </Button>
+              <Button
+                danger
+                size="small"
+                type="link"
+                @click="disableModel(model.id)"
+              >
+                {{ t('pages.preference.provider.cloud.labels.disable') }}
+              </Button>
+            </template>
           </div>
         </div>
       </div>

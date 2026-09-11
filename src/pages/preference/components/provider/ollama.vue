@@ -8,22 +8,92 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { message, open } from "@tauri-apps/plugin-dialog";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag } from "antdv-next";
+import { message as AntdMessage, Button, Modal, Progress, Result, Spin, Tag, Tooltip } from "antdv-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { DownloadPayload, HardwareReport, InitStep } from "@/stores/shard/app-shard";
+import type { AIProvider, AiProviderModels, ModelCapability } from "@/stores/shard/provider-shard";
 
+import { useHardwareModels } from "@/composables/useHardwareModels";
 import { WEB_BASE } from "@/config";
-
-const emit = defineEmits<{
-  (e: "useLocalModel", payload: { baseUrl: string, modelName: string, modelId: string, provider: string }): void
-}>();
+import { LOCAL_MODEL_CATALOG } from "@/constants/local-models";
+import { useProviderStore } from "@/stores/aiprovider";
 
 const { t } = useI18n();
+const providerStore = useProviderStore();
 
 /** 本地大模型供应商标识（数据库主键，不可按语言翻译，展示时通过 i18n 映射） */
 const LOCAL_MODEL_PROVIDER = "本地大模型";
+const LOCAL_MODEL_VALUE = "local-ollama";
+const OLLAMA_BASE_URL = "http://127.0.0.1:11435/v1";
+
+/**
+ * 引擎就绪时，将当前已安装模型同步到本地供应商。
+ * 自动创建（首次）或更新（后续）provider，保证单一数据源。
+ * 超过 5 个模型时只同步前 5 个。
+ */
+function updateLocalProvider(models: LocalModel[]) {
+  // 超过 5 个只取前 5（截断）
+  const take = models.slice(0, 5);
+  const providerModels: AiProviderModels[] = take.map((m) => {
+    // 从目录反查能力类型
+    const preset = LOCAL_MODEL_CATALOG.find(p => p.id === m.name);
+    const type: ModelCapability = preset?.type === "vision" ? "vision" : "text";
+    return {
+      name: m.name,
+      modelId: m.name,
+      desc: preset?.descKey ? t(preset.descKey) : "",
+      type,
+      enabled: true,
+    };
+  });
+
+  const existing = providerStore.stateProviders.find(p => p.provider === LOCAL_MODEL_PROVIDER);
+  let defaultModel = providerModels[0]?.modelId ?? "";
+  if (existing?.defaultModel && providerModels.some(m => m.modelId === existing.defaultModel)) {
+    defaultModel = existing.defaultModel; // 保留用户选的默认
+  }
+
+  const provider: AIProvider = {
+    provider: LOCAL_MODEL_PROVIDER,
+    value: LOCAL_MODEL_VALUE,
+    avatar: "i-carbon-cpu",
+    desc: t("pages.preference.provider.local.desc"),
+    baseUrl: OLLAMA_BASE_URL,
+    isCustom: false,
+    isNeedProxy: false,
+    models: providerModels,
+    defaultModel,
+  };
+
+  if (existing) {
+    providerStore.updateProvider(provider);
+  } else {
+    providerStore.addProvider(provider);
+  }
+}
+
+/** 卸载某个本地模型（ollama rm） */
+async function uninstallLocalModel(modelId: string) {
+  try {
+    await invoke<void>("cleanup_local_models", { model_name: modelId });
+    messageApi.success(t("pages.preference.provider.messages.modelRemoved"));
+    // 刷新列表
+    await fetchLocalModels();
+    updateLocalProvider(localModels.value);
+  } catch (err) {
+    console.error("[ollama] 卸载本地模型失败:", err);
+    messageApi.error(t("pages.preference.provider.messages.modelRemoveFailed"));
+  }
+}
+
+/** 设为默认模型 */
+function setLocalDefault(modelId: string) {
+  const existing = providerStore.stateProviders.find(p => p.provider === LOCAL_MODEL_PROVIDER);
+  if (!existing) return;
+  providerStore.updateProvider({ ...existing, defaultModel: modelId });
+}
 
 /**
  * 将 Rust 侧推送的中文状态文本翻译为当前语言。
@@ -114,9 +184,31 @@ const localModels = ref<LocalModel[]>([]);
 
 const hardwareInfo = ref<HardwareReport>({
   total_memory_gb: 0,
+  cpu_cores: 0,
   status: "Unsupported",
   recommend_model: "",
+  gpus: [],
+  max_vram_mb: 0,
 });
+
+// 按硬件过滤模型目录
+const { allModels, installable, hasGpu } = useHardwareModels(hardwareInfo);
+// 当前选中的模型（默认取推荐项，在 onMounted 检测后回填）
+const selectedModelId = ref<string>("");
+
+// 已安装模型名集合（computed，单一数据源）
+const installedModelNames = computed(() => new Set(localModels.value.map(m => m.name)));
+const localProvider = computed(() => providerStore.stateProviders.find(p => p.provider === LOCAL_MODEL_PROVIDER));
+
+// 已安装模型在前面
+const sortModes = computed(() => [...allModels.value].sort(a => installedModelNames.value.has(a.model.id) ? -1 : 1));
+/** 适配档位 → Tag 颜色 + i18n 文案 key */
+const fitMeta: Record<string, { color: string, labelKey: string }> = {
+  recommended: { color: "success", labelKey: "pages.preference.provider.labels.fitRecommended" },
+  ok: { color: "blue", labelKey: "pages.preference.provider.labels.fitOk" },
+  tight: { color: "warning", labelKey: "pages.preference.provider.labels.fitTight" },
+  unsupported: { color: "error", labelKey: "pages.preference.provider.labels.fitUnsupported" },
+};
 
 // ─── 合并进度：引擎 0-50%，模型 50-100%，永不回退 ─────────────
 
@@ -169,13 +261,13 @@ function loadPersistedState(): PersistedDownloadState | null {
 
 // ─── 工具函数 ──────────────────────────────────────────────────────
 
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`;
-}
+// function formatSize(bytes: number): string {
+//   if (bytes === 0) return "0 B";
+//   const k = 1024;
+//   const sizes = ["B", "KB", "MB", "GB", "TB"];
+//   const i = Math.floor(Math.log(bytes) / Math.log(k));
+//   return `${(bytes / k ** i).toFixed(2)} ${sizes[i]}`;
+// }
 
 async function copyHost() {
   try {
@@ -254,6 +346,11 @@ onMounted(async () => {
     const report = await invoke<HardwareReport>("check_hardware");
     hardwareInfo.value = report;
 
+    // 回填选中模型：优先硬件推荐项，否则取首个可安装项
+    selectedModelId.value = report.recommend_model
+      || installable.value[0]?.model.id
+      || "";
+
     if (report.status === "Low" || report.total_memory_gb < 4) {
       step.value = "unsupported";
       clearDownloadState();
@@ -296,13 +393,32 @@ onMounted(async () => {
       return;
     }
 
-    // 正常检测
-    const hasModels = await fetchLocalModels();
-    if (hasModels) {
-      step.value = "completed";
+    // ★ 启动时自动拉起 Ollama + 拉模型列表（引擎启动 = 供应商启用）
+    try {
+      const status = await invoke<{ installed: boolean, running: boolean, models: LocalModel[], truncated: boolean }>("ensure_local_provider");
+      if (status.installed && status.running && status.models.length > 0) {
+        localModels.value = status.models;
+        updateLocalProvider(status.models); // 自动创建本地供应商
+        step.value = "completed";
+      } else if (status.installed && status.running) {
+        // 引擎就绪但还没装模型
+        step.value = "completed"; // 也进入 completed 态，让用户选模型安装
+        localModels.value = [];
+        updateLocalProvider([]);
+      } else {
+        // 未安装或引擎起不来
+        step.value = "ready";
+      }
       clearDownloadState();
-    } else {
-      step.value = "ready";
+    } catch (e) {
+      console.warn("ensure_local_provider 失败，降级手动检测:", e);
+      const hasModels = await fetchLocalModels();
+      if (hasModels) {
+        updateLocalProvider(localModels.value);
+        step.value = "completed";
+      } else {
+        step.value = "ready";
+      }
       clearDownloadState();
     }
   } catch (err) {
@@ -321,7 +437,12 @@ onUnmounted(() => {
 
 // ─── 下载流程 ──────────────────────────────────────────────────────
 
-async function handleInit(): Promise<void> {
+async function handleInit(modelName?: string): Promise<void> {
+  // 优先用传入的模型名，其次用用户选中的，最后用硬件推荐
+  const targetModel = modelName
+    || selectedModelId.value
+    || hardwareInfo.value.recommend_model
+    || "qwen2.5:1.5b";
   step.value = "downloading";
   downloadProgress.value = 0;
   downloadPhase.value = "engine";
@@ -337,7 +458,7 @@ async function handleInit(): Promise<void> {
     await invoke<void>("start_ollama_engine", { web_base: WEB_BASE });
 
     // 2. 下载模型
-    await invoke<void>("download_model", { model_name: hardwareInfo.value.recommend_model });
+    await invoke<void>("download_model", { model_name: targetModel });
 
     // 3. 验证
     downloadStatusText.value = t("pages.preference.provider.status.verifyingModel");
@@ -346,6 +467,7 @@ async function handleInit(): Promise<void> {
     const hasModels = await fetchLocalModels();
 
     if (hasModels) {
+      updateLocalProvider(localModels.value); // ★ 引擎就绪 → 自动同步本地供应商
       messageApi.success(t("pages.preference.provider.messages.deploySuccess"));
       step.value = "completed";
       clearDownloadState();
@@ -360,7 +482,6 @@ async function handleInit(): Promise<void> {
       messageApi.info(t("pages.preference.provider.messages.downloadCancelled"));
     } else {
       message(t("pages.preference.provider.messages.initFailed", { err }));
-      // 下载失败时，若后台配置了网盘兜底地址，引导用户前往下载后拖拽导入
       const panel = await loadPanelUrl();
       if (panel) showPanelFallback(panel);
     }
@@ -431,17 +552,7 @@ async function handleCancel() {
 
 // ─── 使用本地大模型 ────────────────────────────────────────────
 
-function handleUseLocalModel() {
-  const firstModel = localModels.value[0];
-  const modelName = firstModel?.name || hardwareInfo.value.recommend_model || "local-model";
-
-  emit("useLocalModel", {
-    baseUrl: OLLAMA_HOST,
-    modelName,
-    modelId: modelName,
-    provider: LOCAL_MODEL_PROVIDER,
-  });
-}
+// handleUseLocalModel 已废弃：引擎启动 = 供应商自动启用，无需手动"使用"
 
 // ─── 拖拽导入 Ollama 引擎安装包 ──────────────────────────────────
 
@@ -588,7 +699,7 @@ async function stopModels(): Promise<void> {
   <ContextHolder />
   <div class="relative h-full w-full overflow-auto rounded-xl bg-elevated">
     <div class="flex flex-col items-center justify-center gap-6">
-      <div class="m-4 w-full border border-slate-100 rounded-xl p-4">
+      <div class="w-full border border-slate-100 rounded-xl px-4">
         <!-- 状态 1：正在检测 -->
         <div
           v-if="step === 'checking'"
@@ -617,24 +728,34 @@ async function stopModels(): Promise<void> {
           v-else-if="step === 'ready'"
           class="animate-fade-in text-center"
         >
-          <div class="text-blue-600 mx-auto mb-4 h-16 w-16 flex items-center justify-center rounded-full">
-            <div class="i-carbon-cpu text-32px" />
+          <div class="text-blue-600 mx-auto h-16 w-16 flex items-center justify-center rounded-full">
+            <div class="i-solar:cpu-bolt-bold text-32px" />
           </div>
           <h3 class="mb-2 text-18px text-slate-800 font-bold">
             {{ t('pages.preference.provider.hints.environmentReady') }}
           </h3>
-          <p class="mb-6 text-14px text-slate-500 leading-relaxed">
-            {{ t('pages.preference.provider.hints.systemMemory') }} <span class="text-blue-600 font-bold">{{ hardwareInfo.total_memory_gb }}GB</span>。<br>
-            {{ t('pages.preference.provider.hints.recommendModel') }}<br>
-            <span class="mx-auto mt-2 block w-fit px-2 py-0.5 text-12px text-slate-700 font-mono rounded">
-              {{ hardwareInfo.recommend_model }}
-            </span>
+          <!-- 硬件摘要 -->
+          <p class="mb-4 text-14px text-slate-500 leading-relaxed">
+            {{ t('pages.preference.provider.hints.systemMemory') }}
+            <span class="text-blue-600 font-bold">{{ hardwareInfo.total_memory_gb }}GB</span>
+            <span v-if="hardwareInfo.cpu_cores"> · {{ t('pages.preference.provider.hints.cpuCores', { n: hardwareInfo.cpu_cores }) }}</span>
+            <template v-if="hasGpu">
+              <br>
+              {{ t('pages.preference.provider.hints.gpuDetected') }}
+              <span
+                v-for="gpu in hardwareInfo.gpus"
+                :key="gpu.name"
+                class="text-blue-600 font-bold"
+              >{{ gpu.name }} ({{ gpu.vram_mb ? `${Math.round(gpu.vram_mb / 1024)}GB` : '统一内存' }})</span>
+            </template>
           </p>
+
           <Button
             class="w-full rounded-lg"
+            :disabled="!selectedModelId"
             size="large"
             type="primary"
-            @click="handleInit"
+            @click="handleInit()"
           >
             {{ t('pages.preference.provider.labels.oneClickAI') }}
           </Button>
@@ -739,104 +860,200 @@ async function stopModels(): Promise<void> {
           </div>
         </div>
 
-        <!-- 状态 5：引擎已就绪 -->
+        <!-- 状态 5：引擎已就绪 → 统一"可使用模型"列表 -->
         <div
           v-else-if="step === 'completed'"
           class="animate-fade-in"
         >
-          <div class="mb-4 flex items-center gap-2">
+          <!-- 引擎状态条 -->
+          <div
+            v-if="step === 'completed'"
+            class="mb-4 flex items-center gap-2"
+          >
             <Tag
               class="px-2 py-1 text-12px"
               color="success"
             >
               🟢 {{ t('pages.preference.provider.labels.running') }}
             </Tag>
+            <span class="text-2.5 color-text-quaternary">{{ t('pages.preference.provider.local.hints.engineReadyDesc') }}</span>
           </div>
 
-          <div class="mb-6 border border-slate-200 p-4 rounded-lg">
-            <div class="mb-1 text-12px text-slate-500 font-medium">
+          <!-- 引擎操作（仅 completed 态显示） -->
+          <div
+            v-if="step === 'completed'"
+            class="flex flex-wrap justify-between gap-2 border-t py-3 b-border-sec"
+          >
+            <Button
+              size="small"
+              type="link"
+              @click="copyHost"
+            >
               {{ t('pages.preference.provider.labels.ollamaBaseUrl') }}
-            </div>
-            <div class="flex items-center justify-between border px-3 py-2 text-13px text-slate-700 font-mono rounded">
-              <span class="select-text">{{ OLLAMA_HOST }}</span>
+              &nbsp;&nbsp;
+              {{ OLLAMA_HOST }}
+            </Button>
+            <div>
               <Button
+                :loading="isCleaning"
                 size="small"
-                type="link"
-                @click="copyHost"
+                @click="stopModels"
               >
-                {{ t('pages.preference.provider.labels.copy') }}
+                {{ t('pages.preference.provider.labels.stopRunning') }}
+              </Button>
+              &nbsp;&nbsp;
+              <Button
+                danger
+                :loading="isCleaning"
+                size="small"
+                type="primary"
+                @click="cleanupModels"
+              >
+                {{ t('pages.preference.provider.labels.oneClickClean') }}
               </Button>
             </div>
           </div>
-
-          <div>
-            <div class="mb-3 flex items-center justify-between text-14px text-slate-800 font-bold">
-              <span>{{ t('pages.preference.provider.labels.loadedModels') }}</span>
-              <span class="text-12px text-slate-400 font-normal">{{ t('pages.preference.provider.labels.usableForChat') }}</span>
+          <!-- 可使用模型：统一列表，已安装/未安装混合显示 -->
+          <div class="mb-4 text-left">
+            <div class="mb-2 flex items-center justify-between text-14px text-slate-800 font-bold">
+              <span>{{ t('pages.preference.provider.labels.availableModels') }}</span>
+              <span class="text-12px text-slate-400 font-normal">{{ t('pages.preference.provider.hints.selectModelHint') }}</span>
             </div>
-
-            <div class="flex flex-col gap-2">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div
-                v-for="model in localModels"
-                :key="model.name"
-                class="bg-blue-50/50 border-blue-100 flex items-center justify-between border p-3 rounded-lg"
+                v-for="item in sortModes"
+                :key="item.model.id"
+                class="relative flex flex-col cursor-pointer gap-2 b-1 rounded-xl b-solid p-3 text-left transition-all"
+                :class="[
+                  localProvider?.defaultModel === item.model.id ? 'b-blue-400 bg-blue-50/60' : '',
+                  item.level === 'unsupported' ? 'opacity-50 cursor-not-allowed b-slate-200' : 'b-slate-200 hover:border-blue-300',
+                ]"
               >
-                <div class="flex items-center gap-2 overflow-hidden">
-                  <div class="i-carbon-machine-learning-model text-blue-600 shrink-0 text-18px" />
-                  <span
-                    class="select-text truncate text-13px text-slate-700 font-bold font-mono"
-                    :title="model.name"
-                  >
-                    {{ model.name }}
-                  </span>
+                <!-- 头部：名称 + 适配标签 + 已安装标记 -->
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0 flex items-center gap-1.5">
+                    <div
+                      class="shrink-0 text-16px"
+                      :class="item.model.type === 'vision' ? 'i-carbon-view' : 'i-carbon-chat'"
+                    />
+                    <span class="truncate text-13px text-slate-800 font-bold font-mono">{{ item.model.name }}</span>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-1">
+                    <!-- 已安装标记 -->
+                    <Tag
+                      v-if="installedModelNames.has(item.model.id)"
+                      class="!text-4"
+                      color="success"
+                    >
+                      {{ t('pages.preference.provider.local.labels.installed') }}
+                    </Tag>
+                    <!-- 当前默认 -->
+                    <Tag
+                      v-if="localProvider?.defaultModel === item.model.id"
+                      class="!text-2"
+                      color="blue"
+                      variant="filled"
+                    >
+                      {{ t('pages.preference.provider.cloud.labels.current') }}
+                    </Tag>
+                    <!-- 适配档位 -->
+                    <Tag
+                      class="!text-2"
+                      :color="fitMeta[item.level].color"
+                    >
+                      {{ t(fitMeta[item.level].labelKey) }}
+                    </Tag>
+                  </div>
                 </div>
-                <span
-                  v-if="model.size"
-                  class="ml-2 shrink-0 text-11px text-slate-400 font-mono"
+
+                <!-- 描述 -->
+                <div class="line-clamp-2 text-2.5 leading-relaxed color-text-tertiary">
+                  {{ t(item.model.descKey) }}
+                </div>
+
+                <!-- 底部：大小 + 显存 + 标签 -->
+                <div class="flex items-center gap-1.5 text-2.5 text-slate-400">
+                  <span class="font-mono">{{ item.model.size_gb }}GB</span>
+                  <span>·</span>
+                  <span v-if="item.model.vram_mb">{{ Math.round(item.model.vram_mb / 1024) }}GB {{ t('pages.preference.provider.labels.vram') }}</span>
+                  <span v-else>CPU</span>
+                  <div class="flex-1" />
+                  <Tag
+                    v-for="tag in item.model.tags"
+                    :key="tag"
+                    class="!text-2"
+                  >
+                    {{ tag }}
+                  </Tag>
+                </div>
+
+                <!-- 操作区：已安装 vs 未安装 -->
+                <div
+                  v-if="installedModelNames.has(item.model.id)"
+                  class="flex items-center gap-1 pt-1"
+                  @click.stop
                 >
-                  {{ formatSize(model.size) }}
-                </span>
-                <Button
-                  size="small"
-                  type="link"
-                  @click="writeText(model.name)"
+                  <Button
+                    danger
+                    :loading="isCleaning"
+                    size="small"
+                    @click="uninstallLocalModel(item.model.id)"
+                  >
+                    {{ t('pages.preference.provider.cloud.labels.uninstall') }}
+                  </Button>
+                  <!-- 已安装：复制 / 设为默认 / 停用 -->
+                  <div class="flex-1" />
+                  <Button
+                    v-if="localProvider?.defaultModel !== item.model.id"
+                    size="small"
+                    type="link"
+                    @click="setLocalDefault(item.model.id)"
+                  >
+                    {{ t('pages.preference.provider.cloud.labels.setDefault') }}
+                  </Button>
+                  <Button
+                    size="small"
+                    type="link"
+                    @click="writeText(item.model.id)"
+                  >
+                    {{ t('pages.preference.provider.labels.copy') }}
+                  </Button>
+                </div>
+                <div
+                  v-else
+                  class="flex items-center gap-1 pt-1"
+                  @click.stop
                 >
-                  {{ t('pages.preference.provider.labels.copy') }}
-                </Button>
+                  <!-- 未安装：安装按钮 -->
+                  <div class="flex-1" />
+                  <Button
+                    v-if="item.level !== 'unsupported'"
+
+                    size="small"
+                    type="primary"
+                    @click="handleInit(item.model.id)"
+                  >
+                    {{ t('pages.preference.provider.labels.install') }}
+                  </Button>
+                  <Tooltip
+                    v-else
+                    :title="t(item.reasonKey || '')"
+                  >
+                    <div class="i-carbon-close text-12px text-slate-400" />
+                  </Tooltip>
+                </div>
+
+                <!-- 不支持原因 tooltip -->
+                <Tooltip
+                  v-if="item.reasonKey"
+                  class="absolute right-2 top-2"
+                  :title="t(item.reasonKey)"
+                >
+                  <div class="i-carbon-warning text-12px text-slate-400" />
+                </Tooltip>
               </div>
             </div>
           </div>
-        </div>
-        <div
-          class="flex flex-wrap justify-end gap-2"
-        >
-          <Button
-            v-if="step === 'completed'"
-            size="small"
-            type="primary"
-            @click="handleUseLocalModel"
-          >
-            {{ t('pages.preference.provider.labels.useLocalModel') }}
-          </Button>
-          <Button
-            v-if="step === 'completed'"
-            :loading="isCleaning"
-            size="small"
-            type="primary"
-            @click="stopModels"
-          >
-            {{ t('pages.preference.provider.labels.stopRunning') }}
-          </Button>
-          <Button
-            v-if="step === 'completed'"
-            danger
-            :loading="isCleaning"
-            size="small"
-            type="primary"
-            @click="cleanupModels"
-          >
-            {{ t('pages.preference.provider.labels.oneClickClean') }}
-          </Button>
         </div>
       </div>
     </div>

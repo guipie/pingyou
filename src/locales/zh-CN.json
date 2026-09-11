@@ -44,7 +44,7 @@
           "send": "发送"
         },
         "hints": {
-          "enableChatDesc": "启用后，可以和桌宠聊天。API Key 会保存在本机配置中。",
+          "enableChatDesc": "启用后，可以和屏友聊天。API Key 会保存在本机配置中。",
           "openAiCompatibleDesc": "大多数供应商使用 OpenAI-compatible 接口，Anthropic 会自动走 Claude Messages 接口。",
           "baseUrlDesc": "如果使用代理、兼容网关或私有部署，可以修改这里。",
           "modelNameDesc": "优先使用这里的模型；留空时会使用供应商默认模型。",
@@ -85,7 +85,8 @@
           "cloudTab": "云端模型",
           "customTab": "自定义第三方",
           "localTab": "本地模型",
-          "addCustomModel": "添加自定义模型",
+          "addCustomModel": "添加自定义供应商",
+          "addCustomProvider": "添加自定义供应商",
           "addLocalModel": "添加本地大模型",
           "custom": "自定义",
           "configured": "已配置",
@@ -98,6 +99,9 @@
           "modelConfig": "大模型配置",
           "modelName": "模型名称",
           "modelId": "模型ID",
+          "modelType": "模型能力",
+          "modelTypeText": "文本对话",
+          "modelTypeVision": "视觉（看图）",
           "apiKeyOptional": "API Key（可选）",
           "needProxy": "需要代理",
           "providerDesc": "描述（可选）",
@@ -118,7 +122,16 @@
           "modelDownloading": "模型下载中",
           "engineDownloading": "引擎下载中",
           "initializingEngine": "正在初始化本地引擎",
-          "downloadPaused": "下载已暂停"
+          "downloadPaused": "下载已暂停",
+          "availableModels": "可选模型",
+          "install": "安装",
+          "installMore": "安装更多模型",
+          "installedLocalModels": "已安装模型",
+          "vram": "显存",
+          "fitRecommended": "推荐",
+          "fitOk": "可装",
+          "fitTight": "勉强",
+          "fitUnsupported": "不支持"
         },
         "hints": {
           "openAiCompatible": "接入任意 OpenAI 兼容接口",
@@ -133,7 +146,13 @@
           "pausedResumeHint": "下载已暂停，点击\"继续下载\"恢复",
           "dragEngineHint": "若网络问题开启失败，可手动下载后拖拽安装包到此处",
           "dragEngineFormats": "支持 .zip / .tgz / .tar.gz 安装包",
-          "importingEngine": "正在导入引擎安装包..."
+          "importingEngine": "正在导入引擎安装包...",
+          "cpuCores": "{n} 核",
+          "gpuDetected": "检测到显卡：",
+          "selectModelHint": "根据你的硬件过滤，点击卡片选择",
+          "noModelConfigured": "暂无已配置模型，点击右侧按钮添加",
+          "textModelHint": "仅支持纯文本对话，不可接收图片。",
+          "visionModelHint": "支持多模态看图，可用于屏友视觉感知（截屏分析）。"
         },
         "messages": {
           "copied": "服务地址已成功复制到剪贴板！",
@@ -147,6 +166,8 @@
           "resuming": "继续下载中...",
           "cleanupFailed": "深度清理失败: {err}",
           "stopFailed": "服务停止失败: {err}",
+          "modelRemoved": "模型已卸载",
+          "modelRemoveFailed": "卸载模型失败，请稍后重试",
           "importEngineSuccess": "引擎安装包导入成功！",
           "importEngineFailed": "引擎安装包导入失败：{err}",
           "removedProvider": "已移除供应商：{provider}",
@@ -165,9 +186,13 @@
             "dailyQuota": "每日额度",
             "enable": "一键启用",
             "enabled": "已启用",
-            "use": "使用",
+            "use": "启用",
             "switchTo": "切换",
-            "current": "当前"
+            "current": "当前默认",
+            "setDefault": "设为默认",
+            "disable": "停用",
+            "uninstall": "卸载",
+            "enabledCount": "已启用 {n} 个"
           },
           "hints": {
             "loginToUse": "登录屏友账号即可使用官方云端大模型",
@@ -179,7 +204,19 @@
             "loginFirst": "请先登录后再启用云端模型",
             "loadFailed": "获取云端额度失败，请稍后重试",
             "loadModelsFailed": "获取可用模型列表失败，请稍后重试",
-            "enabled": "云端模型已启用，可在对话中选择使用"
+            "enabled": "云端模型已启用，可在对话中选择使用",
+            "disabled": "已停用，可重新启用其他模型",
+            "alreadyEnabled": "该模型已在启用列表中"
+          }
+        },
+        "local": {
+          "desc": "本地 Ollama 引擎，离线运行不收集数据，安装后自动作为供应商启用",
+          "labels": {
+            "installed": "已安装"
+          },
+          "hints": {
+            "noModelInstalled": "引擎已就绪，去上方可选模型区安装第一个模型吧",
+            "engineReadyDesc": "Ollama 引擎已启动，已安装模型自动作为本地供应商可用"
           }
         },
         "dialogs": {
@@ -209,6 +246,7 @@
           "noProvider": "未获取到供应商",
           "fillComplete": "请填写完整",
           "modelIdExists": "该模型ID已存在，请更换",
+          "modelRequired": "请至少添加一个模型",
           "providerNameRequired": "请输入供应商名称",
           "providerValueRequired": "请输入供应商标识",
           "baseUrlRequired": "请输入 Base URL",
@@ -243,12 +281,15 @@
             "modelId": "输入模型ID,用于调用模型"
           },
           "hints": {
-            "addModel": "在供应商官网查询发布的模型"
+            "addModel": "在供应商官网查询发布的模型",
+            "editModel": "编辑模型配置"
           },
           "buttons": {
-            "add": "添加",
-            "confirmAdd": "确定添加",
-            "cancel": "取消"
+            "add": "添加模型",
+            "confirmAdd": "确定",
+            "cancel": "取消",
+            "edit": "编辑",
+            "remove": "移除"
           }
         },
         "status": {
@@ -542,6 +583,35 @@
     "tips": {
       "clear": "确定要清空吗？",
       "delete": "确定要删除吗？"
+    }
+  },
+  "local-models": {
+    "qwen05b": {
+      "desc": "极速轻量文本模型，4GB 内存即可跑，适合低配机器"
+    },
+    "qwen15b": {
+      "desc": "轻量中文文本模型，速度快，适合日常对话"
+    },
+    "qwen7b": {
+      "desc": "中文能力强的文本模型，需 6GB+ 显存"
+    },
+    "llama32": {
+      "desc": "Meta 轻量文本模型，英文表现佳，可纯 CPU 跑"
+    },
+    "moondream": {
+      "desc": "超轻量视觉模型，看屏识别用户行为，速度快"
+    },
+    "llava7b": {
+      "desc": "主流视觉模型，能看图能聊天，需 5GB+ 显存"
+    },
+    "minicpmv": {
+      "desc": "中文视觉 + OCR 强，能精读屏幕文字，需 7GB 显存"
+    },
+    "reason": {
+      "ramInsufficient": "内存不足，无法运行此模型",
+      "vramTight": "显存略紧，部分会走 CPU，速度稍慢",
+      "cpuFallback": "无独显或显存不足，将走 CPU 兜底运行",
+      "vramInsufficient": "显存不足，无法流畅运行"
     }
   }
 }

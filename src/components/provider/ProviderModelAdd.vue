@@ -1,35 +1,43 @@
 <script setup lang="ts">
-import { PlusCircleOutlined } from '@antdv-next/icons'
-import { Button, Form, FormItem, Input, message, Modal, TextArea } from 'antdv-next'
-import { reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { PlusCircleOutlined } from "@antdv-next/icons";
+import { Button, Form, FormItem, Input, message, Modal, Radio, TextArea } from "antdv-next";
+import { reactive, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
-import type { AIProvider } from '@/stores/shard/provider-shard'
+import type { AIProvider, ModelCapability } from "@/stores/shard/provider-shard";
 
-import { useProviderStore } from '@/stores/aiprovider'
+import { useProviderStore } from "@/stores/aiprovider";
 
 const props = defineProps<{
   provider: AIProvider
-}>()
-const emits = defineEmits(['modelSaved'])
-const providerStore = useProviderStore()
-const { t } = useI18n()
+}>();
+const emits = defineEmits(["modelSaved"]);
+const providerStore = useProviderStore();
+const { t } = useI18n();
 const model = reactive({
-  name: '',
-  modelId: '',
-  desc: '',
-})
-const open = ref(false)
+  name: "",
+  modelId: "",
+  desc: "",
+  type: "text" as ModelCapability,
+});
+const open = ref(false);
 function handleOk() {
   if (!model.name || !model.modelId)
-    return message.warning(t('pages.preference.provider.errors.fillComplete'))
-  // 校验 modelId 在当前供应商下唯一，避免 v-for key 冲突与 Select 值冲突
-  const exists = props.provider.models?.some(m => m.modelId === model.modelId)
+    return message.warning(t("pages.preference.provider.errors.fillComplete"));
+  const exists = props.provider.models?.some(m => m.modelId === model.modelId);
   if (exists)
-    return message.warning(t('pages.preference.provider.errors.modelIdExists'))
-  providerStore.updateProviderModels(props.provider.provider, JSON.parse(JSON.stringify(model)))
-  open.value = false
-  emits('modelSaved', JSON.parse(JSON.stringify(model)))
+    return message.warning(t("pages.preference.provider.errors.modelIdExists"));
+  providerStore.updateProviderModels(props.provider.provider, JSON.parse(JSON.stringify(model)));
+  open.value = false;
+  emits("modelSaved", JSON.parse(JSON.stringify(model)));
+}
+function handleOpen() {
+  // 重置表单
+  model.name = "";
+  model.modelId = "";
+  model.desc = "";
+  model.type = "text";
+  open.value = true;
 }
 </script>
 
@@ -37,7 +45,7 @@ function handleOk() {
   <div>
     <Button
       type="dashed"
-      @click="open = true"
+      @click="handleOpen"
     >
       {{ t('pages.preference.provider.modelDialog.buttons.add') }}
       <template #icon>
@@ -94,6 +102,19 @@ function handleOk() {
           name="desc"
         >
           <TextArea v-model:value="model.desc" />
+        </FormItem>
+        <FormItem
+          :label="t('pages.preference.provider.labels.modelType')"
+          name="type"
+        >
+          <Radio.Group v-model:value="model.type">
+            <Radio value="text">
+              {{ t('pages.preference.provider.labels.modelTypeText') }}
+            </Radio>
+            <Radio value="vision">
+              {{ t('pages.preference.provider.labels.modelTypeVision') }}
+            </Radio>
+          </Radio.Group>
         </FormItem>
       </Form>
     </Modal>

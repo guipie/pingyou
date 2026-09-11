@@ -79,6 +79,7 @@ pub fn run() {
             ollama::ollama_manager::stop_ollama_engine,
             ollama::ollama_manager::cleanup_local_models,
             ollama::ollama_manager::list_local_models,
+            ollama::ollama_manager::ensure_local_provider,
             // apiKey 加密/解密
             utils::crypto::encrypt_string,
             utils::crypto::decrypt_string,

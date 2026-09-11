@@ -2,7 +2,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { remove } from "@tauri-apps/plugin-fs";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Card, Masonry, message, Popconfirm, Progress, Tag } from "antdv-next";
 import { nanoid } from "nanoid";
 import { onMounted, onUnmounted, reactive, ref } from "vue";
@@ -138,13 +138,13 @@ async function handleDelete(item: Model) {
   }
 }
 
-async function handleOpenFolder(path: string) {
-  try {
-    await openPath(path);
-  } catch (error) {
-    message.error(String(error));
-  }
-}
+// async function handleOpenFolder(path: string) {
+//   try {
+//     await openPath(path);
+//   } catch (error) {
+//     message.error(String(error));
+//   }
+// }
 
 // 核心：导入模型（deep-link 触发 & 本地 HTTP 触发都走这里）
 // --------------------------------------------------------------------------
@@ -518,10 +518,10 @@ onUnmounted(() => {
                 @click.stop="openBehaviorModal = true"
               />
 
-              <i
+              <!-- <i
                 class="i-lucide:folder-open"
                 @click.stop="handleOpenFolder(data.path)"
-              />
+              /> -->
 
               <template v-if="!data.isPreset">
                 <Popconfirm
@@ -536,6 +536,10 @@ onUnmounted(() => {
                   />
                 </Popconfirm>
               </template>
+              <i
+                class="i-solar:chat-round-dots-linear"
+              />
+              <i class="i-solar:settings-broken" />
             </template>
           </Card>
 
@@ -565,8 +569,6 @@ onUnmounted(() => {
                 :class="{ 'text-success': data.id === modelStore.currentModel?.id }"
               />
 
-              <i class="i-lucide:play" />
-
               <template v-if="!data.isPreset">
                 <Popconfirm
                   :description="$t('pages.preference.model.hints.deleteModel')"
@@ -580,6 +582,10 @@ onUnmounted(() => {
                   />
                 </Popconfirm>
               </template>
+              <i
+                class="i-solar:chat-round-dots-linear"
+              />
+              <i class="i-solar:settings-broken" />
             </template>
           </Card>
         </template>

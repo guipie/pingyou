@@ -79,7 +79,6 @@ onUnmounted(() => {
 watch(() => generalStore.appearance.language, () => {
   appWindow.setTitle(t("pages.preference.title"));
 }, { immediate: true });
-
 const menus = computed(() => [
   {
     index: 0,

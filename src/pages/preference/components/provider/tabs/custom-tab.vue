@@ -18,8 +18,8 @@ import Setting from "../components/setting.vue";
 const providerStore = useProviderStore();
 const { t } = useI18n();
 
-/** 云端/本地 provider 归各自 Tab 管理，此处仅展示第三方供应商 */
-const EXCLUDED_PROVIDERS = new Set(["云端模型", "本地大模型"]);
+/** 云端/本地 provider 归各自 Tab 管理，此处仅展示自定义第三方供应商 */
+const EXCLUDED_PROVIDERS = new Set(["云端模型", "本地大模型", "local-ollama"]);
 
 /** 供应商显示名称：优先使用 i18n 映射，找不到则回退数据库中的名称 */
 function providerDisplayName(provider: AIProvider) {

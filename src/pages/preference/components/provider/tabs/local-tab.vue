@@ -5,10 +5,8 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
 import PyAvatar from "@/components/py-avatar.vue";
-import { RoutersName } from "@/router/roters";
 import { useProviderStore } from "@/stores/aiprovider.ts";
 import { isBoolean } from "@/utils/is.ts";
-import { openNewWindow } from "@/utils/win-manager";
 
 import Ollama from "../ollama.vue";
 
@@ -16,21 +14,13 @@ const { t } = useI18n();
 
 const providerStore = useProviderStore();
 const providers = computed(() => providerStore.stateProviders.filter(p => p.provider === "本地大模型"));
-/** "使用本地大模型"按钮回调：打开预填了 Ollama 地址和模型名的添加窗口 */
-function handleUseLocalModel(payload: { baseUrl: string, modelName: string, modelId: string, provider: string }) {
-  const query = `?baseUrl=${encodeURIComponent(payload.baseUrl)}&modelId=${encodeURIComponent(payload.modelId)}&modelName=${encodeURIComponent(payload.modelName)}&provider=${encodeURIComponent(payload.provider)}&isLocal=true`;
-  openNewWindow(RoutersName.ProviderAdd, {
-    isForeCreate: true,
-    title: t("pages.preference.provider.labels.addLocalModel"),
-    query,
-  });
-}
+// 本地模型启用逻辑已移入 ollama.vue：引擎启动 = 供应商自动启用，无需手动触发
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
     <!-- 本地大模型（Ollama）默认现有逻辑 -->
-    <Ollama @use-local-model="handleUseLocalModel" />
+    <Ollama />
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
       <div
@@ -62,7 +52,7 @@ function handleUseLocalModel(payload: { baseUrl: string, modelName: string, mode
 
         <!-- 描述 -->
         <div class="line-clamp-2 min-h-10 text-3 leading-relaxed color-text-tertiary">
-          {{ provider.desc }}
+          {{ provider.desc }}11
         </div>
 
         <!-- 模型标签 -->
@@ -87,7 +77,6 @@ function handleUseLocalModel(payload: { baseUrl: string, modelName: string, mode
           <div class="flex-1" />
 
           <Popconfirm
-            v-if="provider.isCustom"
             :description="t('pages.preference.provider.dialogs.removeConfirm')"
             placement="topRight"
             :title="t('pages.preference.provider.labels.removeProvider')"
