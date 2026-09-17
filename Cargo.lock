@@ -4069,6 +4069,7 @@ dependencies = [
  "gilrs",
  "log",
  "ollama-rs",
+ "rand 0.8.7",
  "rdev",
  "reqwest 0.13.4",
  "serde",

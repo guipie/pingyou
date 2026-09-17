@@ -52,7 +52,7 @@ const providers = computed(() => providerStore.stateProviders.filter(p => p.prov
 
         <!-- 描述 -->
         <div class="line-clamp-2 min-h-10 text-3 leading-relaxed color-text-tertiary">
-          {{ provider.desc }}11
+          {{ provider.desc }}
         </div>
 
         <!-- 模型标签 -->

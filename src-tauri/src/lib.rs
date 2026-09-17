@@ -54,6 +54,12 @@ pub fn run() {
             //   - GET /import-model?id=xxx 直接触发模型下载（不依赖 pingyou:// 协议）
             spawn_local_http_server(&app_handle);
 
+            // 启动本地模型鉴权网关（http://127.0.0.1:11435）：
+            //   - 只监听回环地址 → 局域网不可达
+            //   - 校验 Authorization: Bearer <apiKey> 后，原样透传到引擎 127.0.0.1:11436
+            //   - Ollama 自身没有任何鉴权，这一层是唯一的 apiKey 校验点
+            ollama::gateway::spawn_gateway(&app_handle);
+
             // 启动时一次性修复 custom-models 目录权限（解决 Windows ERROR_ACCESS_DENIED / os error 5）
             // 目录从 APPDATA 迁移到了 <EXEDIR>/assets/custom-models（dev 下=target/debug/assets/custom-models）
             if let Ok(root_dir) = ensure_custom_models_dir() {
@@ -80,6 +86,9 @@ pub fn run() {
             ollama::ollama_manager::cleanup_local_models,
             ollama::ollama_manager::list_local_models,
             ollama::ollama_manager::ensure_local_provider,
+            // 本地模型网关 apiKey
+            ollama::gateway::get_local_api_key,
+            ollama::gateway::regenerate_local_api_key,
             // apiKey 加密/解密
             utils::crypto::encrypt_string,
             utils::crypto::decrypt_string,
@@ -152,6 +161,10 @@ pub fn run() {
         #[cfg(target_os = "macos")]
         tauri::RunEvent::Reopen { .. } => {
             show_preference_window(app_handle);
+        }
+        // 退出时同步回收引擎子进程，避免留下占着端口的孤儿 ollama.exe
+        tauri::RunEvent::Exit => {
+            ollama::ollama_manager::shutdown_engine_blocking();
         }
         _ => {
             let _ = app_handle;

@@ -11,13 +11,20 @@
       "hints": {
         "sendFailed": "发送失败，{error}",
         "sendFailedTitle": "消息发送提示",
-        "dragWindow": "拖动窗口"
+        "dragWindow": "拖动窗口",
+        "close": "关闭"
       },
       "placeholders": {
-        "input": "按Enter发送给屏友，按Esc关闭窗口，拖动图标可移动窗口"
+        "input": "按Enter发送给屏友，按Esc关闭窗口，拖动图标可移动窗口",
+        "inputTo": "对 {name} 说点什么…（Enter 发送）"
       },
       "status": {
-        "thinking": "屏友思考中..."
+        "thinking": "屏友思考中...",
+        "answering": "正在回答…",
+        "failed": "回答失败",
+        "done": "已回复",
+        "idle": "输入消息开始聊天",
+        "petFallback": "屏友"
       }
     },
     "preference": {
@@ -41,7 +48,13 @@
           "voice": "语音",
           "startRecognition": "开始识别",
           "thinking": "思考中",
-          "send": "发送"
+          "send": "发送",
+          "copy": "复制",
+          "stop": "停止生成",
+          "vision": "支持看图",
+          "sendFailed": "发送失败",
+          "imageDescription": "图片识别结果",
+          "describingImage": "正在识别图片"
         },
         "hints": {
           "enableChatDesc": "启用后，可以和屏友聊天。API Key 会保存在本机配置中。",
@@ -49,14 +62,17 @@
           "baseUrlDesc": "如果使用代理、兼容网关或私有部署，可以修改这里。",
           "modelNameDesc": "优先使用这里的模型；留空时会使用供应商默认模型。",
           "enableChatFirst": "请先启用聊天，并在供应商设置中填写 API Key、Base URL 和模型。",
-          "chooseProviderModel": "请选择配置供应商和模型。"
+          "chooseProviderModel": "请选择配置供应商和模型。",
+          "pasteImage": "可直接粘贴截图"
         },
         "placeholders": {
           "search": "搜索",
           "petName": "屏友名称",
           "selectProvider": "请选择模型供应商",
           "model": "模型",
-          "persona": "告诉模型应该如何扮演你的屏友"
+          "persona": "告诉模型应该如何扮演你的屏友",
+          "input": "输入消息，Enter 发送，Shift + Enter 换行",
+          "inputVision": "输入消息或粘贴图片，Enter 发送"
         },
         "status": {
           "noTitle": "无标题",
@@ -72,7 +88,12 @@
           "saveSuccess": "保存成功",
           "selectImage": "请选择图片文件。",
           "webviewNotSupportVoice": "当前 WebView 不支持语音识别。",
-          "voiceRecognitionFailed": "语音识别失败。"
+          "voiceRecognitionFailed": "语音识别失败。",
+          "modelImageUnsupported": "该供应商下没有可用的视觉模型，无法识别图片。",
+          "imageTooLarge": "图片过大（上限 {limit}MB），请压缩后再上传。",
+          "copied": "已复制",
+          "copyFailed": "复制失败",
+          "configureModelFirst": "请先配置该会话的模型，再开始聊天。"
         },
         "buttons": {
           "save": "保存"
@@ -113,6 +134,9 @@
           "loadedModels": "已加载的本地模型",
           "usableForChat": "可直接用于对话",
           "ollamaBaseUrl": "Ollama API 基础地址 (Base URL):",
+          "modelDir": "Ollama 模型目录（Model Dir）:",
+          "localApiKey": "本地网关 API Key：",
+          "regenerateKey": "重置",
           "copy": "复制",
           "oneClickClean": "一键彻底清除",
           "stopRunning": "停止运行",
@@ -131,7 +155,9 @@
           "fitRecommended": "推荐",
           "fitOk": "可装",
           "fitTight": "勉强",
-          "fitUnsupported": "不支持"
+          "fitUnsupported": "不支持",
+          "retry": "重试",
+          "dismiss": "忽略"
         },
         "hints": {
           "openAiCompatible": "接入任意 OpenAI 兼容接口",
@@ -173,11 +199,14 @@
           "removedProvider": "已移除供应商：{provider}",
           "addedCustomProvider": "已添加自定义供应商：{provider}",
           "defaultCustomDesc": "自定义供应商",
-          "cloudEnabled": "云端模型已启用：{provider}"
+          "cloudEnabled": "云端模型已启用：{provider}",
+          "modelInstalled": "模型安装成功，已加入本地供应商",
+          "keyRegenerated": "API Key 已重置",
+          "keyRegenerateFailed": "重置 API Key 失败：{err}"
         },
         "cloud": {
           "title": "云端模型",
-          "desc": "使用屏友官方云端大模型，登录后即可直连七牛算力，额度由会员套餐自动管理",
+          "desc": "使用屏友官方云端大模型，登录后即可直连云端算力，额度由会员套餐自动管理",
           "labels": {
             "login": "登录后使用",
             "quota": "当前额度",
@@ -212,11 +241,21 @@
         "local": {
           "desc": "本地 Ollama 引擎，离线运行不收集数据，安装后自动作为供应商启用",
           "labels": {
-            "installed": "已安装"
+            "installed": "已安装",
+            "engineError": "本地 AI 引擎启动失败"
           },
           "hints": {
             "noModelInstalled": "引擎已就绪，去上方可选模型区安装第一个模型吧",
-            "engineReadyDesc": "Ollama 引擎已启动，已安装模型自动作为本地供应商可用"
+            "engineReadyDesc": "Ollama 引擎已启动，已安装模型自动作为本地供应商可用",
+            "modelDirHint": "模型权重的实际存放位置；若列表显示与磁盘不一致，可点击复制后核对",
+            "localApiKeyHint": "本地模型只监听 127.0.0.1，局域网内其它设备无法访问；此 Key 用于校验本机调用，重置后旧 Key 立即失效",
+            "engineAbsentDesc": "首次使用会自动下载引擎组件；此后每次启动屏友都会自动拉起本地引擎与已下载模型"
+          },
+          "errors": {
+            "engineStartFailed": "请检查网络连通性或安全软件拦截后重试",
+            "engineStartTimeout": "本地 AI 引擎启动超时，请稍后重试",
+            "gatewayUnavailable": "本地模型网关（127.0.0.1:11435）未就绪，可能被其它程序占用。请关闭占用该端口的程序后重启屏友。",
+            "modelNotFoundAfterInstall": "安装流程已结束，但本地仓库中仍未找到模型 [{name}]，请重试"
           }
         },
         "dialogs": {
@@ -235,6 +274,8 @@
           "confirmStop": "确认停止",
           "cleanupSuccessTitle": "空间深度清理成功",
           "cleanupSuccessContent": "所有本地大模型缓存文件已被安全、干净地物理移除。",
+          "regenerateKeyTitle": "重置 API Key？",
+          "regenerateKeyContent": "重置后旧 Key 立即失效，已用旧 Key 配置的外部客户端需要同步更新。",
           "stopSuccessTitle": "服务停止成功",
           "stopSuccessContent": "所有本地大模型服务已被停止。",
           "downloadFailedTitle": "下载失败",
@@ -307,7 +348,9 @@
           "stoppingEngine": "正在安全关闭本地 AI 引擎...",
           "uninstallingModel": "正在从本地仓库卸载模型: {name}...",
           "shreddingData": "正在全量物理粉碎 AI 内核、显卡驱动及模型数据...",
-          "cleanupComplete": "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！"
+          "cleanupComplete": "1.8GB 本地 AI 组件及模型已全部彻底移除，空间已完美释放！",
+          "preparingEngine": "正在启动本地引擎...",
+          "resumingInstall": "正在继续安装..."
         }
       },
       "cat": {
@@ -391,7 +434,9 @@
         "title": "商店",
         "labels": {
           "deleteModel": "删除模型",
-          "tips": "选择一个屏友吧，可以切换哦。"
+          "tips": "选择一个屏友吧，可以切换哦。",
+          "chat": "和这只屏友聊天",
+          "chatSettings": "会话设置"
         },
         "hints": {
           "deleteSuccess": "删除成功",
@@ -504,8 +549,13 @@
         "selectConversation": "请选择一个会话",
         "modelUnavailable": "当前模型服务暂时不可用，请更换其他模型后重试",
         "rateLimited": "请求过于频繁，请稍后重试",
-        "quotaExceeded": "云端额度不足，请开通会员或联系客服"
-      }
+        "quotaExceeded": "云端额度不足，请开通会员或联系客服",
+        "modelNotVision": "当前模型不支持看图，请切换到视觉模型或移除图片。",
+        "imageDescribeFailed": "图片识别失败，请重试。"
+      },
+      "imageDescribePrompt": "你是图像识别助手。请客观、完整地描述用户提供的图片：主体、场景、画面中的文字、颜色与关键细节。只输出描述本身，不要寒暄、不要反问、不要推荐后续操作。",
+      "imageContextPrefix": "【用户上传了一张图片，其内容描述如下】",
+      "imageOnlyPrompt": "请描述这张图片。"
     },
     "useTauriAiChatCommand": {
       "labels": {

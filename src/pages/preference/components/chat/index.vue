@@ -1,39 +1,39 @@
 <script setup lang="ts">
-import { ClearOutlined, PlusOutlined } from '@antdv-next/icons'
-import { Button, Dropdown, Input, Popconfirm } from 'antdv-next'
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ClearOutlined, PlusOutlined } from "@antdv-next/icons";
+import { Button, Dropdown, Input, Popconfirm } from "antdv-next";
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 
-import PyAvatar from '@/components/py-avatar.vue'
-import { useTauriAIChatCommand } from '@/composables/useTauriAiChatCommand'
-import { ContainerRouters } from '@/router/roters'
-import { useChatStore } from '@/stores/aichat'
-import { useRouteSettingStore } from '@/stores/route-setting'
-import { formatSmartTime } from '@/utils/dateutils'
+import PyAvatar from "@/components/py-avatar.vue";
+import { useTauriAIChatCommand } from "@/composables/useTauriAiChatCommand";
+import { ContainerRouters } from "@/router/roters";
+import { useChatStore } from "@/stores/aichat";
+import { useRouteSettingStore } from "@/stores/route-setting";
+import { formatSmartTime } from "@/utils/dateutils";
 
-import ChatArea from './components/chat-area.vue'
-import ChatMsg from './components/chat-msg.vue'
+import ChatArea from "./components/chat-area.vue";
+import ChatMsg from "./components/chat-msg.vue";
 
-const routeSettingStore = useRouteSettingStore()
-const chatStore = useChatStore()
-const { t } = useI18n()
+const routeSettingStore = useRouteSettingStore();
+const chatStore = useChatStore();
+const { t } = useI18n();
 // 按照置顶，时间倒序排列
 // 按照置顶优先，同状态下按时间倒序排列
 const conversations = computed(() => {
   // 使用副本避免在 computed 中直接修改 store 中的数组
   return [...chatStore.conversations].sort((a, b) => {
-    const isPinnedA = a.options?.isPinned ?? false
-    const isPinnedB = b.options?.isPinned ?? false
+    const isPinnedA = a.options?.isPinned ?? false;
+    const isPinnedB = b.options?.isPinned ?? false;
     // 1. 如果置顶状态不同，置顶的(true)排在前面
     if (isPinnedA !== isPinnedB) {
-      return isPinnedA ? -1 : 1
+      return isPinnedA ? -1 : 1;
     }
     // 2. 如果置顶状态相同（都置顶或都不置顶），按时间倒序排列（新的在前）
-    return b.timestamp - a.timestamp
-  })
-})
+    return b.timestamp - a.timestamp;
+  });
+});
 
-const curConversation = computed(() => chatStore.currentConversation)
+const curConversation = computed(() => chatStore.currentConversation);
 </script>
 
 <template>
@@ -222,10 +222,15 @@ const curConversation = computed(() => chatStore.currentConversation)
 
 :global(:root) {
   --chat-user-bubble: #95ec69;
+
+  /* 屏友气泡底色。尖角与小气泡共用同一个变量，
+     否则尖角颜色会和气泡本体对不上（旧实现就踩了这个坑）。 */
+  --chat-pet-bubble: var(--ant-color-bg-container);
 }
 
 :global(.dark) {
   --chat-user-bubble: #2f8d46;
+  --chat-pet-bubble: var(--ant-color-bg-elevated);
 }
 
 :global(.dark) .wechat-bubble-user {

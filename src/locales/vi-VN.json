@@ -11,13 +11,20 @@
       "hints": {
         "sendFailed": "Gửi thất bại, {error}",
         "sendFailedTitle": "Thông báo gửi tin nhắn",
-        "dragWindow": "Kéo cửa sổ"
+        "dragWindow": "Kéo cửa sổ",
+        "close": "Đóng"
       },
       "placeholders": {
-        "input": "Nhấn Enter để gửi cho thú cưng, nhấn Esc để đóng cửa sổ, kéo biểu tượng để di chuyển cửa sổ"
+        "input": "Nhấn Enter để gửi cho thú cưng, nhấn Esc để đóng cửa sổ, kéo biểu tượng để di chuyển cửa sổ",
+        "inputTo": "Nói gì đó với {name}… (Enter để gửi)"
       },
       "status": {
-        "thinking": "Thú cưng đang suy nghĩ..."
+        "thinking": "Thú cưng đang suy nghĩ...",
+        "answering": "Đang trả lời…",
+        "failed": "Trả lời thất bại",
+        "done": "Đã trả lời",
+        "idle": "Nhập tin nhắn để bắt đầu trò chuyện",
+        "petFallback": "Pingyou"
       }
     },
     "preference": {
@@ -41,7 +48,13 @@
           "voice": "Giọng nói",
           "startRecognition": "Bắt đầu nhận dạng",
           "thinking": "Đang suy nghĩ",
-          "send": "Gửi"
+          "send": "Gửi",
+          "copy": "Sao chép",
+          "stop": "Dừng tạo",
+          "vision": "Thị giác",
+          "sendFailed": "Gửi thất bại",
+          "imageDescription": "Kết quả nhận diện ảnh",
+          "describingImage": "Đang nhận diện ảnh"
         },
         "hints": {
           "enableChatDesc": "Khi bật, bạn có thể trò chuyện với thú cưng trên màn hình. API Key được lưu cục bộ.",
@@ -49,14 +62,17 @@
           "baseUrlDesc": "Bạn có thể sửa ở đây nếu dùng proxy, cổng tương thích hoặc triển khai riêng.",
           "modelNameDesc": "Ưu tiên dùng mô hình đặt ở đây; nếu để trống sẽ dùng mô hình mặc định của nhà cung cấp.",
           "enableChatFirst": "Hãy bật trò chuyện và điền API Key, Base URL cùng mô hình trong cài đặt nhà cung cấp.",
-          "chooseProviderModel": "Vui lòng chọn nhà cung cấp và mô hình."
+          "chooseProviderModel": "Vui lòng chọn nhà cung cấp và mô hình.",
+          "pasteImage": "Dán ảnh chụp màn hình"
         },
         "placeholders": {
           "search": "Tìm kiếm",
           "petName": "Tên thú cưng",
           "selectProvider": "Chọn nhà cung cấp mô hình",
           "model": "Mô hình",
-          "persona": "Mô tả cho mô hình biết cách đóng vai thú cưng của bạn"
+          "persona": "Mô tả cho mô hình biết cách đóng vai thú cưng của bạn",
+          "input": "Nhập tin nhắn · Enter để gửi · Shift + Enter để xuống dòng",
+          "inputVision": "Nhập tin nhắn hoặc dán ảnh · Enter để gửi"
         },
         "status": {
           "noTitle": "Không có tiêu đề",
@@ -72,7 +88,12 @@
           "saveSuccess": "Đã lưu thành công",
           "selectImage": "Vui lòng chọn tệp hình ảnh.",
           "webviewNotSupportVoice": "WebView hiện tại không hỗ trợ nhận dạng giọng nói.",
-          "voiceRecognitionFailed": "Nhận dạng giọng nói thất bại."
+          "voiceRecognitionFailed": "Nhận dạng giọng nói thất bại.",
+          "modelImageUnsupported": "Nhà cung cấp này không có mô hình thị giác, nên không thể nhận diện hình ảnh.",
+          "imageTooLarge": "Ảnh quá lớn (tối đa {limit}MB). Vui lòng nén ảnh rồi thử lại.",
+          "copied": "Đã sao chép",
+          "copyFailed": "Sao chép thất bại",
+          "configureModelFirst": "Vui lòng cấu hình mô hình cho cuộc trò chuyện này trước khi trò chuyện."
         },
         "buttons": {
           "save": "Lưu"
@@ -106,6 +127,9 @@
           "loadedModels": "Mô hình cục bộ đã tải",
           "usableForChat": "Sẵn sàng để trò chuyện",
           "ollamaBaseUrl": "Địa chỉ cơ sở API Ollama (Base URL):",
+          "modelDir": "Thư mục mô hình Ollama",
+          "localApiKey": "Khóa API của gateway cục bộ:",
+          "regenerateKey": "Đặt lại",
           "copy": "Sao chép",
           "oneClickClean": "Dọn sạch hoàn toàn",
           "stopRunning": "Dừng chạy",
@@ -115,7 +139,9 @@
           "modelDownloading": "Đang tải mô hình",
           "engineDownloading": "Đang tải engine",
           "initializingEngine": "Đang khởi tạo engine cục bộ",
-          "downloadPaused": "Đã tạm dừng tải"
+          "downloadPaused": "Đã tạm dừng tải",
+          "retry": "Thử lại",
+          "dismiss": "Bỏ qua"
         },
         "hints": {
           "openAiCompatible": "Kết nối mọi API tương thích OpenAI",
@@ -148,7 +174,10 @@
           "importEngineFailed": "Nhập gói engine thất bại: {err}",
           "removedProvider": "Đã xóa nhà cung cấp: {provider}",
           "addedCustomProvider": "Đã thêm nhà cung cấp tùy chỉnh: {provider}",
-          "defaultCustomDesc": "Nhà cung cấp tùy chỉnh"
+          "defaultCustomDesc": "Nhà cung cấp tùy chỉnh",
+          "modelInstalled": "Đã cài đặt mô hình và thêm vào nhà cung cấp cục bộ",
+          "keyRegenerated": "Đã đặt lại khóa API",
+          "keyRegenerateFailed": "Đặt lại khóa API thất bại: {err}"
         },
         "dialogs": {
           "removeConfirm": "Bạn chắc chắn muốn xóa nhà cung cấp này?",
@@ -166,6 +195,8 @@
           "confirmStop": "Dừng",
           "cleanupSuccessTitle": "Dọn sạch thành công",
           "cleanupSuccessContent": "Tất cả tệp bộ nhớ đệm mô hình cục bộ đã được xóa vật lý an toàn và sạch sẽ.",
+          "regenerateKeyTitle": "Đặt lại khóa API?",
+          "regenerateKeyContent": "Khóa cũ sẽ hết hiệu lực ngay lập tức, vì vậy mọi ứng dụng bên ngoài đã cấu hình khóa cũ cần được cập nhật.",
           "stopSuccessTitle": "Đã dừng dịch vụ",
           "stopSuccessContent": "Tất cả dịch vụ mô hình cục bộ đã được dừng.",
           "downloadFailedTitle": "Tải xuống thất bại",
@@ -234,7 +265,25 @@
           "stoppingEngine": "Đang đóng an toàn engine AI cục bộ...",
           "uninstallingModel": "Đang gỡ mô hình khỏi kho cục bộ: {name}...",
           "shreddingData": "Đang xóa vật lý toàn bộ lõi AI, driver GPU và dữ liệu mô hình...",
-          "cleanupComplete": "Đã xóa hoàn toàn 1.8GB thành phần AI và mô hình cục bộ. Dung lượng đã được giải phóng hoàn toàn!"
+          "cleanupComplete": "Đã xóa hoàn toàn 1.8GB thành phần AI và mô hình cục bộ. Dung lượng đã được giải phóng hoàn toàn!",
+          "preparingEngine": "Đang khởi động công cụ cục bộ...",
+          "resumingInstall": "Đang tiếp tục cài đặt..."
+        },
+        "local": {
+          "labels": {
+            "engineError": "Không khởi động được công cụ AI cục bộ"
+          },
+          "hints": {
+            "engineAbsentDesc": "Thành phần công cụ sẽ được tải xuống ở lần sử dụng đầu tiên; sau đó mỗi lần mở Pingyou sẽ tự động khởi động công cụ cục bộ và các mô hình đã tải",
+            "modelDirHint": "Nơi lưu trữ thực tế của trọng số mô hình — nhấp để sao chép và kiểm tra",
+            "localApiKeyHint": "Mô hình cục bộ chỉ lắng nghe trên 127.0.0.1 nên không thiết bị nào khác trong mạng LAN truy cập được. Khóa này bảo vệ các lời gọi trên máy này; sau khi đặt lại, khóa cũ hết hiệu lực ngay lập tức."
+          },
+          "errors": {
+            "engineStartFailed": "Vui lòng kiểm tra kết nối mạng hoặc phần mềm bảo mật đang chặn rồi thử lại",
+            "engineStartTimeout": "Khởi động công cụ AI cục bộ quá thời gian, vui lòng thử lại sau",
+            "gatewayUnavailable": "Gateway mô hình cục bộ (127.0.0.1:11435) chưa sẵn sàng — có thể một chương trình khác đang dùng cổng này. Hãy đóng chương trình đó và khởi động lại Pingyou.",
+            "modelNotFoundAfterInstall": "Quá trình cài đặt đã kết thúc nhưng vẫn không tìm thấy mô hình [{name}] trong kho cục bộ. Vui lòng thử lại."
+          }
         }
       },
       "cat": {
@@ -318,7 +367,9 @@
         "title": "Mô hình",
         "labels": {
           "deleteModel": "Xóa mô hình",
-          "tips": "Chọn một người bạn đồng hành để chuyển đổi nhé."
+          "tips": "Chọn một người bạn đồng hành để chuyển đổi nhé.",
+          "chat": "Trò chuyện với Pingyou này",
+          "chatSettings": "Cài đặt cuộc trò chuyện"
         },
         "hints": {
           "deleteSuccess": "Xóa thành công",
@@ -428,8 +479,13 @@
         "inputMessageRequired": "Vui lòng nhập tin nhắn để gửi",
         "createConversationFailed": "Tạo hội thoại thất bại",
         "configureModelFirst": "Vui lòng cấu hình mô hình trước",
-        "selectConversation": "Vui lòng chọn một hội thoại"
-      }
+        "selectConversation": "Vui lòng chọn một hội thoại",
+        "modelNotVision": "Mô hình hiện tại không hỗ trợ hình ảnh. Hãy chuyển sang mô hình thị giác hoặc xoá ảnh.",
+        "imageDescribeFailed": "Nhận diện ảnh thất bại, vui lòng thử lại."
+      },
+      "imageDescribePrompt": "Bạn là trợ lý mô tả hình ảnh. Hãy mô tả một cách khách quan và đầy đủ hình ảnh người dùng gửi: chủ thể, bối cảnh, chữ trong ảnh, màu sắc và các chi tiết quan trọng. Chỉ xuất ra phần mô tả - không chào hỏi, không đặt câu hỏi, không gợi ý thêm.",
+      "imageContextPrefix": "[Người dùng đã gửi một hình ảnh. Nội dung được mô tả bên dưới]",
+      "imageOnlyPrompt": "Hãy mô tả hình ảnh này."
     },
     "useTauriAiChatCommand": {
       "labels": {

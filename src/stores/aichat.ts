@@ -13,6 +13,12 @@ import { addConversationDb, initConversations } from "./shard/chat-shard";
 export const useChatStore = defineStore("chat", () => {
   const conversations = ref<TauriAIConversation[]>([]);
   const currentConversation = ref<TauriAIConversation | null>(null);
+  /**
+   * 悬浮输入窗（winchat）当前对话的会话 id。
+   * 从屏友卡片的聊天按钮进入时会被设为该屏友的模型 id，因此每只屏友拥有独立会话；
+   * 为空时回退到「当前台上屏友」，保持旧的快捷键行为不变。
+   */
+  const activeChatId = ref("");
   // 防止 initStore 被并发调用导致数据重复/丢失
   let initPromise: Promise<void> | null = null;
 
@@ -51,6 +57,44 @@ export const useChatStore = defineStore("chat", () => {
     if (exist) return exist;
     const con = await addConversationDb(undefined, id);
     conversations.value.push(con);
+    return con;
+  };
+  /**
+   * 按 id 取会话：内存里没有就回数据库捞一次。
+   *
+   * conversations 已不再参与跨窗口同步（见文件末尾 store 选项），
+   * 所以别的窗口（winchat / winmsg）很可能没加载过某个会话。
+   * 这种情况必须从库里补齐，**绝不能走 addConversation** —— 那会走
+   * `INSERT OR REPLACE`，用默认标题/默认模型把已有会话原地覆盖掉。
+   */
+  const loadConversation = async (id: string) => {
+    const exist = conversations.value.find(item => item.id === id);
+    if (exist) return exist;
+    const fromDb = await ConversationRepo.getConversationById(id);
+    if (fromDb) {
+      conversations.value.push(fromDb);
+      return fromDb;
+    }
+    return undefined;
+  };
+  /**
+   * 确保某只屏友（以模型 id 为会话 id）拥有自己的会话。
+   * 已存在则顺带刷新头像（换了立绘时同步），否则新建并写入屏友头像。
+   */
+  const ensureModelConversation = async (modelId: string, avatar?: string) => {
+    const exist = await loadConversation(modelId);
+    if (exist) {
+      if (avatar && exist.avatar !== avatar) {
+        exist.avatar = avatar;
+        updateConversation(exist);
+      }
+      return exist;
+    }
+    const con = await addConversation(modelId);
+    if (con && avatar) {
+      con.avatar = avatar;
+      updateConversation(con);
+    }
     return con;
   };
   const delConversation = async (id: string) => {
@@ -138,5 +182,21 @@ export const useChatStore = defineStore("chat", () => {
     }
     ChatMsgRepo.deleteMessage(conversationId);
   };
-  return { currentConversation, conversations, initStore, delConversation, addConversation, addChatMsg, updateConversation, clearChatMessages: clearChatMsg, pinConversation, setCurrentConversation, setConversationProvider };
+  return { activeChatId, currentConversation, conversations, initStore, delConversation, addConversation, ensureModelConversation, loadConversation, addChatMsg, updateConversation, clearChatMessages: clearChatMsg, pinConversation, setCurrentConversation, setConversationProvider };
+}, {
+  /**
+   * conversations 是「数据库承载」的数据集，不能参与 tauri-store 的跨窗口状态同步。
+   *
+   * @tauri-store/pinia 默认 sync=true，会把整个 $state 做「最后写入者获胜」的同步；
+   * 更糟的是 BaseStore.processChangeQueue 在 patchSelf 前会 unwatch、之后才 watch，
+   * 所以一旦被别的窗口用旧列表覆盖，本地不会再把正确状态顶回去 —— 回滚会「粘住」。
+   * 表现就是：右键删除会话后左栏还留着，刷新（重新读库）才消失。
+   *
+   * 把 conversations 排除掉后：每个窗口各自从数据库加载列表，删除即时生效；
+   * 而 activeChatId / currentConversation 仍然同步，悬浮输入窗照旧知道在跟谁说话。
+   */
+  tauri: {
+    filterKeys: ["conversations"],
+    filterKeysStrategy: "omit",
+  },
 });

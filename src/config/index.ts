@@ -13,7 +13,8 @@
 // 理想方案：由 Rust 端在 invoke 中注入请求头，避免暴露到前端
 export const UPDATER_ACCESS_KEY = "";
 
-// Ollama 本地服务地址
+// 本地模型网关地址（Rust 侧鉴权网关监听此处；Ollama 引擎本身在 11436，仅回环可达）
+// 客户端访问必须携带 apiKey，key 见设置页「本地模型」页，或用 get_local_api_key 命令获取
 export const OLLAMA_HOST = "127.0.0.1";
 export const OLLAMA_PORT = 11435;
 

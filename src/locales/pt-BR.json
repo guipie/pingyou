@@ -11,13 +11,20 @@
       "hints": {
         "sendFailed": "Falha ao enviar, {error}",
         "sendFailedTitle": "Aviso de envio de mensagem",
-        "dragWindow": "Arrastar Janela"
+        "dragWindow": "Arrastar Janela",
+        "close": "Fechar"
       },
       "placeholders": {
-        "input": "Pressione Enter para enviar ao pet, Esc para fechar a janela, arraste o ícone para mover a janela"
+        "input": "Pressione Enter para enviar ao pet, Esc para fechar a janela, arraste o ícone para mover a janela",
+        "inputTo": "Fale algo para {name}… (Enter para enviar)"
       },
       "status": {
-        "thinking": "Seu pet está pensando..."
+        "thinking": "Seu pet está pensando...",
+        "answering": "Respondendo…",
+        "failed": "Falha na resposta",
+        "done": "Respondido",
+        "idle": "Digite uma mensagem para começar",
+        "petFallback": "Pingyou"
       }
     },
     "preference": {
@@ -41,7 +48,13 @@
           "voice": "Voz",
           "startRecognition": "Iniciar Reconhecimento",
           "thinking": "Pensando",
-          "send": "Enviar"
+          "send": "Enviar",
+          "copy": "Copiar",
+          "stop": "Parar geração",
+          "vision": "Visão",
+          "sendFailed": "Falha ao enviar",
+          "imageDescription": "Análise da imagem",
+          "describingImage": "Analisando imagem"
         },
         "hints": {
           "enableChatDesc": "Quando ativado, você pode conversar com o pet de mesa. A API Key é armazenada localmente.",
@@ -49,14 +62,17 @@
           "baseUrlDesc": "Você pode modificar aqui se usar proxy, gateway compatível ou implantação privada.",
           "modelNameDesc": "O modelo definido aqui é preferido; se vazio, o modelo padrão do provedor é usado.",
           "enableChatFirst": "Ative o bate-papo e preencha a API Key, o Base URL e o modelo nas configurações do provedor.",
-          "chooseProviderModel": "Configure um provedor e um modelo."
+          "chooseProviderModel": "Configure um provedor e um modelo.",
+          "pasteImage": "Cole uma captura de tela"
         },
         "placeholders": {
           "search": "Pesquisar",
           "petName": "Nome do Pet",
           "selectProvider": "Selecione um provedor de modelo",
           "model": "Modelo",
-          "persona": "Diga ao modelo como ele deve atuar como seu pet"
+          "persona": "Diga ao modelo como ele deve atuar como seu pet",
+          "input": "Digite uma mensagem · Enter para enviar · Shift + Enter para nova linha",
+          "inputVision": "Digite uma mensagem ou cole uma imagem · Enter para enviar"
         },
         "status": {
           "noTitle": "Sem título",
@@ -72,7 +88,12 @@
           "saveSuccess": "Salvo com sucesso",
           "selectImage": "Selecione um arquivo de imagem.",
           "webviewNotSupportVoice": "O WebView atual não suporta reconhecimento de voz.",
-          "voiceRecognitionFailed": "Falha no reconhecimento de voz."
+          "voiceRecognitionFailed": "Falha no reconhecimento de voz.",
+          "modelImageUnsupported": "Este provedor não tem modelo de visão disponível, então imagens não podem ser reconhecidas.",
+          "imageTooLarge": "A imagem é muito grande (máx. {limit}MB). Comprima e tente novamente.",
+          "copied": "Copiado",
+          "copyFailed": "Falha ao copiar",
+          "configureModelFirst": "Configure um modelo para esta conversa antes de conversar."
         },
         "buttons": {
           "save": "Salvar"
@@ -106,6 +127,9 @@
           "loadedModels": "Modelos Locais Carregados",
           "usableForChat": "Pronto para conversar",
           "ollamaBaseUrl": "URL Base da API Ollama (Base URL):",
+          "modelDir": "Diretório de modelos do Ollama",
+          "localApiKey": "Chave de API do gateway local:",
+          "regenerateKey": "Redefinir",
           "copy": "Copiar",
           "oneClickClean": "Limpeza Profunda",
           "stopRunning": "Parar Execução",
@@ -115,7 +139,9 @@
           "modelDownloading": "Baixando Modelo",
           "engineDownloading": "Baixando Motor",
           "initializingEngine": "Inicializando Motor Local",
-          "downloadPaused": "Download Pausado"
+          "downloadPaused": "Download Pausado",
+          "retry": "Tentar novamente",
+          "dismiss": "Ignorar"
         },
         "hints": {
           "openAiCompatible": "Conecte qualquer API compatível com OpenAI",
@@ -148,7 +174,10 @@
           "importEngineFailed": "Falha ao importar o pacote do motor: {err}",
           "removedProvider": "Provedor removido: {provider}",
           "addedCustomProvider": "Provedor personalizado adicionado: {provider}",
-          "defaultCustomDesc": "Provedor Personalizado"
+          "defaultCustomDesc": "Provedor Personalizado",
+          "modelInstalled": "Modelo instalado e adicionado ao provedor local",
+          "keyRegenerated": "Chave de API redefinida",
+          "keyRegenerateFailed": "Falha ao redefinir a chave de API: {err}"
         },
         "dialogs": {
           "removeConfirm": "Tem certeza de que deseja remover este provedor?",
@@ -166,6 +195,8 @@
           "confirmStop": "Parar",
           "cleanupSuccessTitle": "Limpeza Profunda Bem-sucedida",
           "cleanupSuccessContent": "Todos os arquivos de cache de modelos locais foram removidos com segurança e totalmente.",
+          "regenerateKeyTitle": "Redefinir a chave de API?",
+          "regenerateKeyContent": "A chave antiga deixa de funcionar imediatamente, então qualquer cliente externo configurado com ela precisa ser atualizado.",
           "stopSuccessTitle": "Serviço Parado",
           "stopSuccessContent": "Todos os serviços de modelo local foram interrompidos.",
           "downloadFailedTitle": "Falha no Download",
@@ -234,7 +265,25 @@
           "stoppingEngine": "Desligando com segurança o motor de IA local...",
           "uninstallingModel": "Desinstalando modelo do repositório local: {name}...",
           "shreddingData": "Destruindo fisicamente o kernel de IA, driver GPU e dados do modelo...",
-          "cleanupComplete": "1.8GB de componentes de IA e modelos locais foram totalmente removidos. Espaço totalmente liberado!"
+          "cleanupComplete": "1.8GB de componentes de IA e modelos locais foram totalmente removidos. Espaço totalmente liberado!",
+          "preparingEngine": "Iniciando o mecanismo local...",
+          "resumingInstall": "Retomando a instalação..."
+        },
+        "local": {
+          "labels": {
+            "engineError": "Falha ao iniciar o mecanismo de IA local"
+          },
+          "hints": {
+            "engineAbsentDesc": "O componente do mecanismo é baixado no primeiro uso; depois disso o Pingyou inicia automaticamente o mecanismo local e os modelos instalados a cada abertura",
+            "modelDirHint": "Onde os pesos dos modelos são realmente armazenados — clique para copiar e conferir",
+            "localApiKeyHint": "O modelo local escuta apenas em 127.0.0.1, portanto nenhum outro dispositivo da rede local consegue acessá-lo. Esta chave protege as chamadas locais; ao redefini-la, a chave antiga deixa de funcionar imediatamente."
+          },
+          "errors": {
+            "engineStartFailed": "Verifique sua conexão de rede ou software de segurança bloqueando e tente novamente",
+            "engineStartTimeout": "Tempo esgotado ao iniciar o mecanismo de IA local, tente novamente mais tarde",
+            "gatewayUnavailable": "O gateway de modelo local (127.0.0.1:11435) não está pronto — outro programa pode estar usando essa porta. Feche-o e reinicie o Pingyou.",
+            "modelNotFoundAfterInstall": "A instalação terminou, mas o modelo [{name}] ainda não está no repositório local. Tente novamente."
+          }
         }
       },
       "cat": {
@@ -318,7 +367,9 @@
         "title": "Modelo",
         "labels": {
           "deleteModel": "Excluir modelo",
-          "tips": "Escolha um companheiro para alternar."
+          "tips": "Escolha um companheiro para alternar.",
+          "chat": "Conversar com este Pingyou",
+          "chatSettings": "Configurações da conversa"
         },
         "hints": {
           "deleteSuccess": "Excluído com sucesso",
@@ -428,8 +479,13 @@
         "inputMessageRequired": "Digite uma mensagem para enviar",
         "createConversationFailed": "Falha ao criar a conversa",
         "configureModelFirst": "Configure um modelo primeiro",
-        "selectConversation": "Selecione uma conversa"
-      }
+        "selectConversation": "Selecione uma conversa",
+        "modelNotVision": "O modelo atual não aceita imagens. Mude para um modelo com visão ou remova a imagem.",
+        "imageDescribeFailed": "Falha ao analisar a imagem, tente novamente."
+      },
+      "imageDescribePrompt": "Você é um assistente de descrição de imagens. Descreva de forma objetiva e completa a imagem enviada pelo usuário: o assunto, a cena, textos visíveis, cores e detalhes importantes. Responda apenas com a descrição - sem saudações, perguntas ou sugestões.",
+      "imageContextPrefix": "[O usuário enviou uma imagem. A descrição do conteúdo está abaixo]",
+      "imageOnlyPrompt": "Descreva esta imagem."
     },
     "useTauriAiChatCommand": {
       "labels": {

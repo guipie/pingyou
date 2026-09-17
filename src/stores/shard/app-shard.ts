@@ -22,6 +22,11 @@ export interface DownloadPayload {
   status: string
   /** 下载阶段: "engine" | "model"，前端据此合并进度避免刷新跳动 */
   phase: string
+  /**
+   * 该进度所属的模型名；引擎组件阶段为空字符串。
+   * 前端按这个字段把进度派发到对应的模型卡片（见 composables/useOllamaEngine.ts）。
+   */
+  model?: string
 }
 
 // 定义当前 UI 视图的步骤状态

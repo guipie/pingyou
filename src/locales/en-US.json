@@ -11,13 +11,20 @@
       "hints": {
         "sendFailed": "Failed to send, {error}",
         "sendFailedTitle": "Message Send Notice",
-        "dragWindow": "Drag Window"
+        "dragWindow": "Drag Window",
+        "close": "Close"
       },
       "placeholders": {
-        "input": "Press Enter to send to the pet, press Esc to close the window, drag the icon to move the window"
+        "input": "Press Enter to send to the pet, press Esc to close the window, drag the icon to move the window",
+        "inputTo": "Say something to {name}… (Enter to send)"
       },
       "status": {
-        "thinking": "Your pet is thinking..."
+        "thinking": "Your pet is thinking...",
+        "answering": "Replying…",
+        "failed": "Failed to reply",
+        "done": "Replied",
+        "idle": "Type a message to start chatting",
+        "petFallback": "Pingyou"
       }
     },
     "preference": {
@@ -41,7 +48,13 @@
           "voice": "Voice",
           "startRecognition": "Start Recognition",
           "thinking": "Thinking",
-          "send": "Send"
+          "send": "Send",
+          "copy": "Copy",
+          "stop": "Stop generating",
+          "vision": "Vision",
+          "sendFailed": "Failed to send",
+          "imageDescription": "Image analysis",
+          "describingImage": "Analyzing image"
         },
         "hints": {
           "enableChatDesc": "When enabled, you can chat with the desktop pet. The API key is stored locally.",
@@ -49,20 +62,23 @@
           "baseUrlDesc": "You can modify this if you use a proxy, compatible gateway, or a private deployment.",
           "modelNameDesc": "The model set here is preferred; if left empty, the provider default model is used.",
           "enableChatFirst": "Enable chat first and fill in the API Key, Base URL, and model in the provider settings.",
-          "chooseProviderModel": "Please configure a provider and a model."
+          "chooseProviderModel": "Please configure a provider and a model.",
+          "pasteImage": "Paste a screenshot"
         },
         "placeholders": {
           "search": "Search",
           "petName": "Pet Name",
           "selectProvider": "Select a model provider",
           "model": "Model",
-          "persona": "Tell the model how it should act as your pet"
+          "persona": "Tell the model how it should act as your pet",
+          "input": "Type a message · Enter to send · Shift + Enter for a new line",
+          "inputVision": "Type a message or paste an image · Enter to send"
         },
         "status": {
           "noTitle": "Untitled",
           "emptyChat": "Select a pet on the left to start chatting",
           "configured": "Configured",
-          "unconfigured": "Not Configured"
+          "unconfigured": "Not Configured "
         },
         "messages": {
           "uploadFailed": "Upload failed",
@@ -72,7 +88,12 @@
           "saveSuccess": "Saved successfully",
           "selectImage": "Please select an image file.",
           "webviewNotSupportVoice": "The current WebView does not support speech recognition.",
-          "voiceRecognitionFailed": "Speech recognition failed."
+          "voiceRecognitionFailed": "Speech recognition failed.",
+          "modelImageUnsupported": "This provider has no vision model available, so images cannot be recognized.",
+          "imageTooLarge": "The image is too large (max {limit}MB). Compress it and try again.",
+          "copied": "Copied",
+          "copyFailed": "Copy failed",
+          "configureModelFirst": "Please configure a model for this conversation before chatting."
         },
         "buttons": {
           "save": "Save"
@@ -112,6 +133,9 @@
           "loadedModels": "Loaded Local Models",
           "usableForChat": "Ready for chat",
           "ollamaBaseUrl": "Ollama API Base URL:",
+          "modelDir": "Ollama model directory",
+          "localApiKey": "Local gateway API key:",
+          "regenerateKey": "Reset",
           "copy": "Copy",
           "oneClickClean": "One-click Deep Clean",
           "stopRunning": "Stop Running",
@@ -130,7 +154,9 @@
           "fitRecommended": "Recommended",
           "fitOk": "OK",
           "fitTight": "Tight",
-          "fitUnsupported": "Unsupported"
+          "fitUnsupported": "Unsupported",
+          "retry": "Retry",
+          "dismiss": "Dismiss"
         },
         "hints": {
           "openAiCompatible": "Connect any OpenAI-compatible API",
@@ -171,7 +197,10 @@
           "removedProvider": "Removed provider: {provider}",
           "addedCustomProvider": "Custom provider added: {provider}",
           "defaultCustomDesc": "Custom Provider",
-          "cloudEnabled": "Cloud model enabled: {provider}"
+          "cloudEnabled": "Cloud model enabled: {provider}",
+          "modelInstalled": "Model installed and added to the local provider",
+          "keyRegenerated": "API key reset",
+          "keyRegenerateFailed": "Failed to reset API key: {err}"
         },
         "cloud": {
           "title": "Cloud Model",
@@ -210,7 +239,19 @@
         "local": {
           "desc": "Local Ollama engine, offline and private. Auto-enabled after installation.",
           "hints": {
-            "noModelInstalled": "Engine ready. Install your first model from the catalog above."
+            "noModelInstalled": "Engine ready. Install your first model from the catalog above.",
+            "engineAbsentDesc": "The engine component is downloaded on first use; afterwards Pingyou restarts the local engine and your installed models automatically on every launch",
+            "modelDirHint": "Where model weights are actually stored — click to copy and verify",
+            "localApiKeyHint": "The local model only listens on 127.0.0.1, so no other device on the LAN can reach it. This key guards local calls; resetting it invalidates the old key immediately."
+          },
+          "labels": {
+            "engineError": "Local AI engine failed to start"
+          },
+          "errors": {
+            "engineStartFailed": "Check your network connection or security software blocking, then retry",
+            "engineStartTimeout": "Timed out starting the local AI engine, please retry later",
+            "gatewayUnavailable": "The local model gateway (127.0.0.1:11435) is not ready — another program may be using that port. Close it and restart Pingyou.",
+            "modelNotFoundAfterInstall": "The install finished, but model [{name}] is still missing from the local repository. Please retry."
           }
         },
         "dialogs": {
@@ -229,6 +270,8 @@
           "confirmStop": "Stop",
           "cleanupSuccessTitle": "Deep Cleanup Successful",
           "cleanupSuccessContent": "All local model cache files have been safely and completely removed.",
+          "regenerateKeyTitle": "Reset API key?",
+          "regenerateKeyContent": "The old key stops working immediately, so any external client configured with it must be updated.",
           "stopSuccessTitle": "Service Stopped",
           "stopSuccessContent": "All local model services have been stopped.",
           "downloadFailedTitle": "Download Failed",
@@ -297,7 +340,9 @@
           "stoppingEngine": "Safely shutting down the local AI engine...",
           "uninstallingModel": "Uninstalling model from local repository: {name}...",
           "shreddingData": "Physically shredding the AI kernel, GPU driver, and model data...",
-          "cleanupComplete": "1.8GB of local AI components and models have been completely removed. Space fully released!"
+          "cleanupComplete": "1.8GB of local AI components and models have been completely removed. Space fully released!",
+          "preparingEngine": "Starting local engine...",
+          "resumingInstall": "Resuming installation..."
         }
       },
       "cat": {
@@ -381,7 +426,9 @@
         "title": "Model",
         "labels": {
           "deleteModel": "Delete Model",
-          "tips": "Pick a companion pet — you can switch anytime."
+          "tips": "Pick a companion pet — you can switch anytime.",
+          "chat": "Chat with this Pingyou",
+          "chatSettings": "Conversation settings"
         },
         "hints": {
           "deleteSuccess": "Deleted Successfully",
@@ -494,8 +541,13 @@
         "selectConversation": "Please select a conversation",
         "modelUnavailable": "The selected model is temporarily unavailable. Please switch to another model and retry.",
         "rateLimited": "Too many requests. Please try again later.",
-        "quotaExceeded": "Cloud quota exceeded. Please upgrade your plan or contact support."
-      }
+        "quotaExceeded": "Cloud quota exceeded. Please upgrade your plan or contact support.",
+        "modelNotVision": "The current model does not support images. Switch to a vision model or remove the image.",
+        "imageDescribeFailed": "Failed to analyze the image, please try again."
+      },
+      "imageDescribePrompt": "You are an image description assistant. Objectively and thoroughly describe the image the user provides: the subject, the scene, any visible text, colors and key details. Output only the description - no greetings, no questions, no follow-up suggestions.",
+      "imageContextPrefix": "[The user uploaded an image. Its content is described below]",
+      "imageOnlyPrompt": "Please describe this image."
     },
     "useTauriAiChatCommand": {
       "labels": {

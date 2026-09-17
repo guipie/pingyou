@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { CopyOutlined } from "@antdv-next/icons";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { message, Tooltip } from "antdv-next";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import VueMarkdown from "vue-markdown-render";
 
 import PyAvatar from "@/components/py-avatar.vue";
+import TypingDots from "@/components/typing-dots.vue";
+import { useTauriAIChat } from "@/composables/useTauriAIChat";
 import { useChatStore } from "@/stores/aichat";
 
+const { t } = useI18n();
 const chatContainerRef = ref<HTMLElement | null>(null);
 // 状态：标记用户是否手动滚动过（偏离底部）
 const isUserScrolled = ref(false);
@@ -12,6 +19,16 @@ const isUserScrolled = ref(false);
 const SCROLL_THRESHOLD = 1;
 const chatStore = useChatStore();
 const curConversation = computed(() => chatStore.currentConversation);
+const chatLoading = computed(() => useTauriAIChat().loading.value);
+
+const messages = computed(() => curConversation.value?.messages ?? []);
+/** 最后一条消息仍在等待/生成回答 —— 用来决定是否渲染「思考中」气泡与光标 */
+const pendingIndex = computed(() => {
+  if (!chatLoading.value || messages.value.length === 0) return -1;
+  const last = messages.value[messages.value.length - 1];
+  // 只对「用户发出、尚无答案」的那条挂思考态
+  return last && last.role === "user" && !last.answer ? messages.value.length - 1 : -1;
+});
 
 // 修复后的 scrollToBottom 函数
 function scrollToBottom() {
@@ -57,6 +74,16 @@ function handleScroll() {
   }
 }
 
+async function handleCopy(text?: string) {
+  if (!text) return;
+  try {
+    await writeText(text);
+    message.success(t("pages.preference.chat.messages.copied"));
+  } catch {
+    message.error(t("pages.preference.chat.messages.copyFailed"));
+  }
+}
+
 // 初始化时确保滚动到底部
 onMounted(async () => {
 });
@@ -74,24 +101,43 @@ defineExpose({
 <template>
   <div
     ref="chatContainerRef"
-    class="chat-container mx-auto h-full max-w-260 flex flex-col gap-5 overflow-y-auto"
+    class="chat-container mx-auto h-full max-w-260 flex flex-col gap-6 overflow-y-auto"
     @scroll="handleScroll"
   >
     <div
-      v-for="(item, index) in curConversation?.messages"
+      v-for="(item, index) in messages"
       :key="item.id"
-      class="flex flex-col gap-2"
+      class="flex flex-col gap-3"
     >
+      <!-- ---------- 用户提问 ---------- -->
       <div
         :id="`question${index}`"
-        class="flex justify-end gap-3"
+        class="group flex justify-end gap-3"
       >
-        <!-- 需要复制 -->
-
-        <div
-          class="wechat-bubble wechat-bubble-user max-w-[62%] select-text whitespace-pre-wrap px-3.5 py-2.5 text-3.5 leading-6 shadow-sm"
-        >
-          {{ item.question }}
+        <div class="flex flex-col items-end gap-1">
+          <div class="wechat-bubble wechat-bubble-user select-text px-3.5 py-2.5 text-3.5 leading-6 shadow-sm">
+            <img
+              v-if="item.file?.dataUrl"
+              alt="attachment"
+              class="mb-2 max-h-60 max-w-full cursor-pointer object-cover rounded-lg"
+              :src="item.file.dataUrl"
+            >
+            <div
+              v-if="item.question"
+              class="whitespace-pre-wrap"
+            >
+              {{ item.question }}
+            </div>
+          </div>
+          <Tooltip :title="t('pages.preference.chat.labels.copy')">
+            <button
+              class="chat-copy-button opacity-0 transition-opacity group-hover:opacity-100"
+              type="button"
+              @click="handleCopy(item.question)"
+            >
+              <CopyOutlined />
+            </button>
+          </Tooltip>
         </div>
         <div>
           <PyAvatar
@@ -101,9 +147,10 @@ defineExpose({
         </div>
       </div>
 
+      <!-- ---------- 屏友回答 ---------- -->
       <div
         :id="`answer${index}`"
-        class="flex justify-start gap-3"
+        class="group flex justify-start gap-3"
       >
         <div class="h-46px w-46px rounded-lg">
           <PyAvatar
@@ -112,12 +159,59 @@ defineExpose({
             :url="curConversation?.avatar"
           />
         </div>
+
+        <!-- 等待首个字：思考中占位，避免长时间空白 -->
         <div
-          class="wechat-bubble wechat-bubble-pet mb-20px max-w-[70%] select-text whitespace-pre-wrap bg-[--ant-color-fill-quaternary] px-2.5 pt-3.5 text-3.5 leading-6 shadow-sm"
+          v-if="pendingIndex === index"
+          class="wechat-bubble wechat-bubble-pet h-10 flex items-center bg-[--chat-pet-bubble] px-4 shadow-sm"
         >
+          <TypingDots :label="t('pages.preference.chat.labels.thinking')" />
+        </div>
+
+        <!-- 请求出错：就地展示原因，不要把错误吞掉 -->
+        <div
+          v-else-if="item.error"
+          class="wechat-bubble wechat-bubble-error max-w-[70%] select-text px-3.5 py-2.5 text-3.5 leading-6"
+        >
+          <div class="mb-1 flex items-center gap-1.5 font-medium">
+            <i class="i-lucide:circle-alert" />
+            {{ t('pages.preference.chat.labels.sendFailed') }}
+          </div>
+          <div class="whitespace-pre-wrap break-words opacity-90">
+            {{ item.error }}
+          </div>
+        </div>
+
+        <div
+          v-else
+          class="wechat-bubble wechat-bubble-pet mb-20px max-w-[70%] min-w-0 select-text bg-[--chat-pet-bubble] px-3.5 py-3 text-3.5 leading-6 shadow-sm"
+        >
+          <!-- 两段式链路：视觉模型对图片的描述。默认折叠，点开才看，不抢正文的注意力 -->
+          <details
+            v-if="item.imageDescription"
+            class="chat-image-note"
+          >
+            <summary class="chat-image-note-summary">
+              <i class="i-lucide:scan-eye" />
+              <span>{{ t('pages.preference.chat.labels.imageDescription') }}</span>
+              <span
+                v-if="item.visionModel"
+                class="chat-image-note-model"
+              >
+                {{ item.visionModel }}
+              </span>
+            </summary>
+            <div class="chat-image-note-body">
+              {{ item.imageDescription }}
+            </div>
+          </details>
           <VueMarkdown
-            class="max-h-2000 overflow-auto"
+            class="chat-markdown"
             :source="item.answer ?? ''"
+          />
+          <span
+            v-if="chatLoading && index === messages.length - 1"
+            class="chat-caret"
           />
         </div>
       </div>
@@ -165,7 +259,7 @@ defineExpose({
 
 .wechat-bubble {
   position: relative;
-  border-radius: 4px;
+  border-radius: 10px;
   word-break: break-word;
 }
 
@@ -182,22 +276,186 @@ defineExpose({
 
 .wechat-bubble-pet::before {
   left: -6px;
-  border-right: 6px solid var(--ant-color-bg-container);
+  border-right: 6px solid var(--chat-pet-bubble);
 }
 
 .wechat-bubble-user::after {
   right: -6px;
   border-left: 6px solid var(--chat-user-bubble);
 }
+
 .wechat-bubble-user {
   color: #1f2a1f;
   background: var(--chat-user-bubble);
 }
-.wechat-bubble-pet :deep(p) {
-  margin-bottom: 0; /* 移除默认上下边距，防止气泡内间距过大 */
 
-  /* 你可以在这里添加其他样式，例如： */
-  /* line-height: 1.6; */
-  /* color: #333; */
+/* 出错气泡：用错误色系，和正常回答一眼区分 */
+.wechat-bubble-error {
+  color: var(--ant-color-error-text);
+  border: 1px solid var(--ant-color-error-border);
+  background: var(--ant-color-error-bg);
+}
+
+/* 图片识别提示：折叠态只占一行，展开后是一段说明 */
+.chat-image-note {
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--ant-color-text-secondary);
+  background: var(--ant-color-fill-quaternary);
+  border-radius: 8px;
+}
+
+.chat-image-note-summary {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.chat-image-note-summary::-webkit-details-marker {
+  display: none;
+}
+
+.chat-image-note-model {
+  padding: 0 6px;
+  font-size: 11px;
+  color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+  border-radius: 9999px;
+}
+
+.chat-image-note-body {
+  padding-top: 6px;
+  margin-top: 6px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-top: 1px dashed var(--ant-color-border-secondary);
+}
+
+.chat-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--ant-color-text-tertiary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+}
+
+.chat-copy-button:hover {
+  color: var(--ant-color-primary);
+  background: var(--ant-color-fill-tertiary);
+}
+
+/* 流式输出时的光标 */
+.chat-caret {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--ant-color-primary);
+  border-radius: 1px;
+  animation: chat-caret-blink 1s steps(2, start) infinite;
+}
+
+@keyframes chat-caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Markdown 排版：气泡内不要出现浏览器默认的大边距 */
+.chat-markdown :deep(> :first-child) {
+  margin-top: 0;
+}
+
+.chat-markdown :deep(> :last-child) {
+  margin-bottom: 0;
+}
+
+.chat-markdown :deep(p) {
+  margin: 0 0 8px;
+  line-height: 1.7;
+}
+
+.chat-markdown :deep(h1),
+.chat-markdown :deep(h2),
+.chat-markdown :deep(h3),
+.chat-markdown :deep(h4) {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.chat-markdown :deep(ul),
+.chat-markdown :deep(ol) {
+  padding-left: 1.25em;
+  margin: 0 0 8px;
+  list-style: revert;
+}
+
+.chat-markdown :deep(li) {
+  margin: 2px 0;
+}
+
+.chat-markdown :deep(code) {
+  padding: 1px 5px;
+  font-size: 0.875em;
+  background: var(--ant-color-fill-secondary);
+  border-radius: 4px;
+}
+
+.chat-markdown :deep(pre) {
+  padding: 10px 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  background: var(--ant-color-fill-secondary);
+  border-radius: 8px;
+}
+
+.chat-markdown :deep(pre code) {
+  padding: 0;
+  background: transparent;
+}
+
+.chat-markdown :deep(blockquote) {
+  padding-left: 10px;
+  margin: 8px 0;
+  color: var(--ant-color-text-secondary);
+  border-left: 3px solid var(--ant-color-border);
+}
+
+.chat-markdown :deep(table) {
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.chat-markdown :deep(th),
+.chat-markdown :deep(td) {
+  padding: 4px 8px;
+  border: 1px solid var(--ant-color-border-secondary);
+}
+
+.chat-markdown :deep(th) {
+  background: var(--ant-color-fill-tertiary);
+}
+
+.chat-markdown :deep(a) {
+  color: var(--ant-color-primary);
+}
+
+.chat-markdown :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
 }
 </style>

@@ -11,13 +11,20 @@
       "hints": {
         "sendFailed": "發送失敗，{error}",
         "sendFailedTitle": "訊息發送提示",
-        "dragWindow": "拖曳視窗"
+        "dragWindow": "拖曳視窗",
+        "close": "關閉"
       },
       "placeholders": {
-        "input": "按 Enter 發送給屏友，按 Esc 關閉視窗，拖曳圖示可移動視窗"
+        "input": "按 Enter 發送給屏友，按 Esc 關閉視窗，拖曳圖示可移動視窗",
+        "inputTo": "對 {name} 說點什麼…（Enter 傳送）"
       },
       "status": {
-        "thinking": "屏友思考中…"
+        "thinking": "屏友思考中…",
+        "answering": "正在回答…",
+        "failed": "回答失敗",
+        "done": "已回覆",
+        "idle": "輸入訊息開始聊天",
+        "petFallback": "屏友"
       }
     },
     "preference": {
@@ -41,7 +48,13 @@
           "voice": "語音",
           "startRecognition": "開始辨識",
           "thinking": "思考中",
-          "send": "發送"
+          "send": "發送",
+          "copy": "複製",
+          "stop": "停止生成",
+          "vision": "支援看圖",
+          "sendFailed": "傳送失敗",
+          "imageDescription": "圖片辨識結果",
+          "describingImage": "正在辨識圖片"
         },
         "hints": {
           "enableChatDesc": "啟用後，可以和桌寵聊天。API Key 會儲存在本機設定中。",
@@ -49,14 +62,17 @@
           "baseUrlDesc": "如果使用代理、相容閘道或私有部署，可以修改這裡。",
           "modelNameDesc": "優先使用這裡的模型；留空時會使用供應商預設模型。",
           "enableChatFirst": "請先啟用聊天，並在供應商設定中填寫 API Key、Base URL 和模型。",
-          "chooseProviderModel": "請選擇配置供應商和模型。"
+          "chooseProviderModel": "請選擇配置供應商和模型。",
+          "pasteImage": "可直接貼上截圖"
         },
         "placeholders": {
           "search": "搜尋",
           "petName": "屏友名稱",
           "selectProvider": "請選擇模型供應商",
           "model": "模型",
-          "persona": "告訴模型應該如何扮演你的屏友"
+          "persona": "告訴模型應該如何扮演你的屏友",
+          "input": "輸入訊息，Enter 傳送，Shift + Enter 換行",
+          "inputVision": "輸入訊息或貼上圖片，Enter 傳送"
         },
         "status": {
           "noTitle": "無標題",
@@ -72,7 +88,12 @@
           "saveSuccess": "儲存成功",
           "selectImage": "請選擇圖片檔案。",
           "webviewNotSupportVoice": "目前 WebView 不支援語音辨識。",
-          "voiceRecognitionFailed": "語音辨識失敗。"
+          "voiceRecognitionFailed": "語音辨識失敗。",
+          "modelImageUnsupported": "此供應商下沒有可用的視覺模型，無法辨識圖片。",
+          "imageTooLarge": "圖片過大（上限 {limit}MB），請壓縮後再上傳。",
+          "copied": "已複製",
+          "copyFailed": "複製失敗",
+          "configureModelFirst": "請先設定此會話的模型，再開始聊天。"
         },
         "buttons": {
           "save": "儲存"
@@ -106,6 +127,9 @@
           "loadedModels": "已載入的本機模型",
           "usableForChat": "可直接用於對話",
           "ollamaBaseUrl": "Ollama API 基礎位址 (Base URL)：",
+          "modelDir": "Ollama 模型目錄（Model Dir）",
+          "localApiKey": "本地閘道 API Key：",
+          "regenerateKey": "重置",
           "copy": "複製",
           "oneClickClean": "一鍵徹底清除",
           "stopRunning": "停止執行",
@@ -115,7 +139,9 @@
           "modelDownloading": "模型下載中",
           "engineDownloading": "引擎下載中",
           "initializingEngine": "正在初始化本機引擎",
-          "downloadPaused": "下載已暫停"
+          "downloadPaused": "下載已暫停",
+          "retry": "重試",
+          "dismiss": "忽略"
         },
         "hints": {
           "openAiCompatible": "接入任意 OpenAI 相容介面",
@@ -148,7 +174,10 @@
           "importEngineFailed": "引擎安裝包匯入失敗：{err}",
           "removedProvider": "已移除供應商：{provider}",
           "addedCustomProvider": "已新增自訂供應商：{provider}",
-          "defaultCustomDesc": "自訂供應商"
+          "defaultCustomDesc": "自訂供應商",
+          "modelInstalled": "模型安裝成功，已加入本地供應商",
+          "keyRegenerated": "API Key 已重置",
+          "keyRegenerateFailed": "重置 API Key 失敗：{err}"
         },
         "dialogs": {
           "removeConfirm": "確定要移除該供應商嗎？",
@@ -166,6 +195,8 @@
           "confirmStop": "確認停止",
           "cleanupSuccessTitle": "空間深度清理成功",
           "cleanupSuccessContent": "所有本機大模型快取檔案已被安全、乾淨地實體移除。",
+          "regenerateKeyTitle": "重置 API Key？",
+          "regenerateKeyContent": "重置後舊 Key 立即失效，已用舊 Key 設定的外部用戶端需同步更新。",
           "stopSuccessTitle": "服務停止成功",
           "stopSuccessContent": "所有本機大模型服務已停止。",
           "downloadFailedTitle": "下載失敗",
@@ -234,7 +265,25 @@
           "stoppingEngine": "正在安全關閉本機 AI 引擎…",
           "uninstallingModel": "正在從本機存放區解除安裝模型：{name}…",
           "shreddingData": "正在全量物理粉碎 AI 核心、顯示卡驅動及模型資料…",
-          "cleanupComplete": "1.8GB 本機 AI 元件及模型已全部徹底移除，空間已完美釋放！"
+          "cleanupComplete": "1.8GB 本機 AI 元件及模型已全部徹底移除，空間已完美釋放！",
+          "preparingEngine": "正在啟動本地引擎...",
+          "resumingInstall": "正在繼續安裝..."
+        },
+        "local": {
+          "labels": {
+            "engineError": "本地 AI 引擎啟動失敗"
+          },
+          "hints": {
+            "engineAbsentDesc": "首次使用會自動下載引擎元件；此後每次啟動屏友都會自動拉起本地引擎與已下載模型",
+            "modelDirHint": "模型權重的實際存放位置；若清單顯示與磁碟不一致，可點擊複製後核對",
+            "localApiKeyHint": "本地模型只監聽 127.0.0.1，區域網路內其他裝置無法存取；此 Key 用於驗證本機呼叫，重置後舊 Key 立即失效"
+          },
+          "errors": {
+            "engineStartFailed": "請檢查網路連線或安全軟體攔截後重試",
+            "engineStartTimeout": "本地 AI 引擎啟動逾時，請稍後重試",
+            "gatewayUnavailable": "本地模型閘道（127.0.0.1:11435）未就緒，可能被其他程式占用。請關閉占用該埠的程式後重新啟動屏友。",
+            "modelNotFoundAfterInstall": "安裝流程已結束，但本地倉庫中仍未找到模型 [{name}]，請重試"
+          }
         }
       },
       "cat": {
@@ -318,7 +367,9 @@
         "title": "模型管理",
         "labels": {
           "deleteModel": "刪除模型",
-          "tips": "選擇一個屏友吧，可以切換哦。"
+          "tips": "選擇一個屏友吧，可以切換哦。",
+          "chat": "和這隻屏友聊天",
+          "chatSettings": "會話設定"
         },
         "hints": {
           "deleteSuccess": "刪除成功",
@@ -428,8 +479,13 @@
         "inputMessageRequired": "請輸入發送訊息",
         "createConversationFailed": "建立會話失敗",
         "configureModelFirst": "請先設定好模型",
-        "selectConversation": "請選擇一個會話"
-      }
+        "selectConversation": "請選擇一個會話",
+        "modelNotVision": "目前模型不支援看圖，請切換到視覺模型或移除圖片。",
+        "imageDescribeFailed": "圖片辨識失敗，請重試。"
+      },
+      "imageDescribePrompt": "你是圖像辨識助手。請客觀、完整地描述使用者提供的圖片：主體、場景、畫面中的文字、顏色與關鍵細節。只輸出描述本身，不要寒暄、不要反問、不要推薦後續操作。",
+      "imageContextPrefix": "【使用者上傳了一張圖片，其內容描述如下】",
+      "imageOnlyPrompt": "請描述這張圖片。"
     },
     "useTauriAiChatCommand": {
       "labels": {

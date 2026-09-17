@@ -10,7 +10,9 @@ import { useI18n } from "vue-i18n";
 
 import type { Model, ModelEngine, ModelMode } from "@/stores/model";
 
+import { usePingyouChat } from "@/composables/usePingyouChat";
 import { WEB_BASE } from "@/config/index.ts";
+import { useChatStore } from "@/stores/aichat";
 import { useCatStore } from "@/stores/cat";
 import { useModelStore } from "@/stores/model";
 import { useRouteSettingStore } from "@/stores/route-setting";
@@ -22,6 +24,7 @@ import Preview3d from "./components/preview-3d/index.vue";
 import Upload from "./components/upload/index.vue";
 
 const uploadShow = ref(false);
+const { openChat, openChatSettings } = usePingyouChat();
 // --------------------------------------------------------------------------
 // 屏友商城 API Base
 // --------------------------------------------------------------------------
@@ -121,6 +124,26 @@ function handleToggle(nextModel: Model) {
   if (modelStore.currentModel?.id === nextModel.id) return;
   modelStore.modelReady = false;
   modelStore.currentModel = nextModel;
+  // 换台上屏友 = 换聊天对象，清掉卡片聊天按钮指定的目标，避免悬浮输入窗还对着上一只说话
+  useChatStore().activeChatId = "";
+}
+
+/** 卡片上的聊天按钮：切换台上屏友 + 打开它的专属会话 + 弹出悬浮输入窗 */
+async function handleOpenChat(item: Model) {
+  try {
+    await openChat(item);
+  } catch (error) {
+    message.error(String(error));
+  }
+}
+
+/** 卡片上的设置按钮：打开该屏友的会话设置（会话名称 / 模型 / 人格） */
+async function handleOpenChatSettings(item: Model) {
+  try {
+    await openChatSettings(item);
+  } catch (error) {
+    message.error(String(error));
+  }
 }
 
 async function handleDelete(item: Model) {
@@ -161,7 +184,7 @@ async function handleDeepLink(url: string) {
 
     // 拉取模型元信息
     const res = await fetch(`${WEB_BASE}/api/models/${remoteId}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) return message.error(`HTTP ${res.status}`);
     const model = (await res.json()) as {
       id: number
       name: string
@@ -509,7 +532,16 @@ onUnmounted(() => {
                 class="i-lucide:circle-check"
                 :class="{ 'text-success': data.id === modelStore.currentModel?.id }"
               />
-
+              <i
+                class="i-solar:chat-round-dots-linear cursor-pointer transition-colors duration-150 hover:text-[#07c160]"
+                :title="t('pages.preference.model.labels.chat')"
+                @click.stop="handleOpenChat(data)"
+              />
+              <i
+                class="i-solar:settings-broken cursor-pointer transition-colors duration-150 hover:text-[#07c160]"
+                :title="t('pages.preference.model.labels.chatSettings')"
+                @click.stop="handleOpenChatSettings(data)"
+              />
               <i
                 v-if="
                   catStore.model.behavior && modelStore.currentModel?.id === data.id
@@ -536,10 +568,6 @@ onUnmounted(() => {
                   />
                 </Popconfirm>
               </template>
-              <i
-                class="i-solar:chat-round-dots-linear"
-              />
-              <i class="i-solar:settings-broken" />
             </template>
           </Card>
 
@@ -568,7 +596,16 @@ onUnmounted(() => {
                 class="i-lucide:circle-check"
                 :class="{ 'text-success': data.id === modelStore.currentModel?.id }"
               />
-
+              <i
+                class="i-solar:chat-round-dots-linear cursor-pointer transition-colors duration-150 hover:text-[#07c160]"
+                :title="t('pages.preference.model.labels.chat')"
+                @click.stop="handleOpenChat(data)"
+              />
+              <i
+                class="i-solar:settings-broken cursor-pointer transition-colors duration-150 hover:text-[#07c160]"
+                :title="t('pages.preference.model.labels.chatSettings')"
+                @click.stop="handleOpenChatSettings(data)"
+              />
               <template v-if="!data.isPreset">
                 <Popconfirm
                   :description="$t('pages.preference.model.hints.deleteModel')"
@@ -582,10 +619,6 @@ onUnmounted(() => {
                   />
                 </Popconfirm>
               </template>
-              <i
-                class="i-solar:chat-round-dots-linear"
-              />
-              <i class="i-solar:settings-broken" />
             </template>
           </Card>
         </template>

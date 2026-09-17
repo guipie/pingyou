@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PlusCircleOutlined } from "@antdv-next/icons";
-import { Button, Form, FormItem, Input, message, Modal, Radio, TextArea } from "antdv-next";
+import { Button, Form, FormItem, Input, message, Modal, Radio, RadioGroup, TextArea } from "antdv-next";
 import { reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -107,14 +107,14 @@ function handleOpen() {
           :label="t('pages.preference.provider.labels.modelType')"
           name="type"
         >
-          <Radio.Group v-model:value="model.type">
+          <RadioGroup v-model:value="model.type">
             <Radio value="text">
               {{ t('pages.preference.provider.labels.modelTypeText') }}
             </Radio>
             <Radio value="vision">
               {{ t('pages.preference.provider.labels.modelTypeVision') }}
             </Radio>
-          </Radio.Group>
+          </RadioGroup>
         </FormItem>
       </Form>
     </Modal>
