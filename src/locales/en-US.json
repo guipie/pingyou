@@ -47,6 +47,9 @@
           "file": "File",
           "voice": "Voice",
           "startRecognition": "Start Recognition",
+          "listening": "Listening",
+          "preparingVoice": "Preparing voice",
+          "stopRecognition": "Stop recognition",
           "thinking": "Thinking",
           "send": "Send",
           "copy": "Copy",
@@ -54,7 +57,8 @@
           "vision": "Vision",
           "sendFailed": "Failed to send",
           "imageDescription": "Image analysis",
-          "describingImage": "Analyzing image"
+          "describingImage": "Analyzing image",
+          "downloadingVoiceModel": "Downloading voice model"
         },
         "hints": {
           "enableChatDesc": "When enabled, you can chat with the desktop pet. The API key is stored locally.",
@@ -63,7 +67,9 @@
           "modelNameDesc": "The model set here is preferred; if left empty, the provider default model is used.",
           "enableChatFirst": "Enable chat first and fill in the API Key, Base URL, and model in the provider settings.",
           "chooseProviderModel": "Please configure a provider and a model.",
-          "pasteImage": "Paste a screenshot"
+          "pasteImage": "Paste a screenshot",
+          "voiceListening": "Listening… text appears as you speak. Click the mic again to stop.",
+          "voiceTapToStop": "Click again to stop"
         },
         "placeholders": {
           "search": "Search",

@@ -60,8 +60,8 @@ const statusText = computed(() => {
     <div class="flex items-center justify-between gap-2">
       <div class="min-w-0 flex items-center gap-1.5">
         <div
-          class="shrink-0 text-16px"
-          :class="item.model.type === 'vision' ? 'i-carbon-view' : 'i-carbon-chat'"
+          class="shrink-0 text-14px"
+          :class="item.model.type === 'vision' ? 'i-solar:eye-linear  text-purple-5' : 'i-solar:chat-line-bold text-blue-5'"
         />
         <span class="truncate text-13px text-slate-800 font-bold font-mono">{{ item.model.name }}</span>
       </div>
@@ -164,7 +164,7 @@ const statusText = computed(() => {
       class="flex flex-col gap-1.5 border-t pt-2 b-border-sec"
     >
       <div class="flex items-start gap-1">
-        <div class="i-carbon-warning-alt text-red-500 mt-0.5 shrink-0 text-12px" />
+        <div class="i-solar:shield-warning-bold text-red-500 mt-0.5 shrink-0 text-15px" />
         <span class="text-red-500 line-clamp-3 break-all text-2.5">{{ job.error }}</span>
       </div>
       <div class="flex items-center gap-2">
@@ -228,12 +228,12 @@ const statusText = computed(() => {
         >
           {{ t('pages.preference.provider.labels.install') }}
         </Button>
-        <Tooltip
+        <!-- <Tooltip
           v-else
           :title="t(item.reasonKey || '')"
         >
-          <div class="i-carbon-close text-12px text-slate-400" />
-        </Tooltip>
+          <div class="i-solar:close-circle-bold text-12px text-slate-400" />
+        </Tooltip> -->
       </div>
     </template>
 
@@ -243,7 +243,12 @@ const statusText = computed(() => {
       class="absolute right-2 top-2"
       :title="t(item.reasonKey)"
     >
-      <div class="i-carbon-warning text-12px text-slate-400" />
+      <div class="flex">
+        <div class="i-solar:shield-warning-bold text-15px text-warning" />
+        <div class="line-clamp-3 break-all text-2.5 text-warning">
+          {{ t(item.reasonKey) }}
+        </div>
+      </div>
     </Tooltip>
   </div>
 </template>

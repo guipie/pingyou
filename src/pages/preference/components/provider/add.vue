@@ -2,7 +2,7 @@
 import type { UploadEmits, UploadProps } from "antdv-next";
 
 import { PlusCircleOutlined } from "@antdv-next/icons";
-import { Button, Form, FormItem, Input, message, Modal, Radio, Switch, Tag, TextArea, Upload } from "antdv-next";
+import { Button, Form, FormItem, Input, message, Modal, Radio, RadioGroup, Switch, Tag, TextArea, Upload } from "antdv-next";
 import { onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -346,7 +346,7 @@ const avatarChange: UploadEmits["change"] = async (info) => {
               <div class="min-w-0 flex items-center gap-2">
                 <div
                   class="shrink-0 text-14px"
-                  :class="m.type === 'vision' ? 'i-carbon-view text-purple-5' : 'i-carbon-chat text-blue-5'"
+                  :class="m.type === 'vision' ? 'i-solar:eye-linear text-purple-5' : 'i-solar:chat-line-bold text-blue-5'"
                 />
                 <span class="truncate text-13px text-slate-700 font-medium">{{ m.name }}</span>
                 <span class="truncate text-11px text-slate-400 font-mono">{{ m.modelId }}</span>
@@ -486,14 +486,14 @@ const avatarChange: UploadEmits["change"] = async (info) => {
           :label="t('pages.preference.provider.labels.modelType')"
           name="type"
         >
-          <Radio.Group v-model:value="modelModalForm.type">
+          <RadioGroup v-model:value="modelModalForm.type">
             <Radio value="text">
               {{ t('pages.preference.provider.labels.modelTypeText') }}
             </Radio>
             <Radio value="vision">
               {{ t('pages.preference.provider.labels.modelTypeVision') }}
             </Radio>
-          </Radio.Group>
+          </RadioGroup>
         </FormItem>
       </Form>
     </Modal>

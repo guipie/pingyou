@@ -118,7 +118,7 @@ const hardware = ref<HardwareReport>({
   total_memory_gb: 0,
   cpu_cores: 0,
   status: "Unsupported",
-  recommend_model: "",
+  recommend_model: "qwen2.5:0.5b",
   gpus: [],
   max_vram_mb: 0,
 });

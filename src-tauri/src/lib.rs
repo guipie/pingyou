@@ -1,6 +1,7 @@
 mod core;
 mod ollama;
 mod utils;
+mod voice;
 
 use core::{
     device::start_device_listening,
@@ -34,6 +35,17 @@ pub fn run() {
                 .ok_or_else(|| format!("设置窗口 [{}] 未找到", PREFERENCE_WINDOW_LABEL))?;
 
             setup::default(&app_handle, main_window.clone(), preference_window.clone());
+
+            // 语音输入会话状态（同一时刻至多一个监听）
+            app.manage(voice::VoiceState::default());
+
+            // WebView2 默认拒绝麦克风权限（wry 只放行剪贴板），不处理会导致
+            // 语音识别（webkitSpeechRecognition）启动即报 not-allowed。
+            // 对每个 webview 追加一个仅放行 MICROPHONE 的权限处理器。
+            for (_, win) in app.webview_windows() {
+                utils::webview_mic::allow_microphone(&win);
+            }
+
             // 当启动带参数 --dev 时，才打开开发者工具
             let args: Vec<String> = std::env::args().collect();
             if args.contains(&"--pydev".to_string()) {
@@ -97,7 +109,10 @@ pub fn run() {
             download_model_file,
             utils::model_download::resolve_custom_models_dir,
             extract_local_zip,
-            copy_model_file
+            copy_model_file,
+            // 语音输入（Rust 原生流式识别）
+            voice::voice_start,
+            voice::voice_stop
         ])
         .plugin(tauri_plugin_store::Builder::default().build())
         // .plugin(tauri_plugin_shell::init()) // Tauri v2 必备插件

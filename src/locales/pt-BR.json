@@ -47,6 +47,9 @@
           "file": "Arquivo",
           "voice": "Voz",
           "startRecognition": "Iniciar Reconhecimento",
+          "listening": "Ouvindo",
+          "preparingVoice": "Preparando voz",
+          "stopRecognition": "Parar reconhecimento",
           "thinking": "Pensando",
           "send": "Enviar",
           "copy": "Copiar",
@@ -54,7 +57,8 @@
           "vision": "Visão",
           "sendFailed": "Falha ao enviar",
           "imageDescription": "Análise da imagem",
-          "describingImage": "Analisando imagem"
+          "describingImage": "Analisando imagem",
+          "downloadingVoiceModel": "Baixando modelo de voz"
         },
         "hints": {
           "enableChatDesc": "Quando ativado, você pode conversar com o pet de mesa. A API Key é armazenada localmente.",
@@ -63,7 +67,9 @@
           "modelNameDesc": "O modelo definido aqui é preferido; se vazio, o modelo padrão do provedor é usado.",
           "enableChatFirst": "Ative o bate-papo e preencha a API Key, o Base URL e o modelo nas configurações do provedor.",
           "chooseProviderModel": "Configure um provedor e um modelo.",
-          "pasteImage": "Cole uma captura de tela"
+          "pasteImage": "Cole uma captura de tela",
+          "voiceListening": "Ouvindo… o texto aparece enquanto você fala. Clique no microfone novamente para parar.",
+          "voiceTapToStop": "Clique novamente para parar"
         },
         "placeholders": {
           "search": "Pesquisar",

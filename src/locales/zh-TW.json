@@ -47,6 +47,9 @@
           "file": "檔案",
           "voice": "語音",
           "startRecognition": "開始辨識",
+          "listening": "正在聆聽",
+          "preparingVoice": "語音準備中",
+          "stopRecognition": "結束辨識",
           "thinking": "思考中",
           "send": "發送",
           "copy": "複製",
@@ -54,7 +57,8 @@
           "vision": "支援看圖",
           "sendFailed": "傳送失敗",
           "imageDescription": "圖片辨識結果",
-          "describingImage": "正在辨識圖片"
+          "describingImage": "正在辨識圖片",
+          "downloadingVoiceModel": "語音模型下載中"
         },
         "hints": {
           "enableChatDesc": "啟用後，可以和桌寵聊天。API Key 會儲存在本機設定中。",
@@ -63,7 +67,9 @@
           "modelNameDesc": "優先使用這裡的模型；留空時會使用供應商預設模型。",
           "enableChatFirst": "請先啟用聊天，並在供應商設定中填寫 API Key、Base URL 和模型。",
           "chooseProviderModel": "請選擇配置供應商和模型。",
-          "pasteImage": "可直接貼上截圖"
+          "pasteImage": "可直接貼上截圖",
+          "voiceListening": "正在聆聽，說完會自動上屏；再次點擊麥克風結束。",
+          "voiceTapToStop": "再次點擊結束"
         },
         "placeholders": {
           "search": "搜尋",

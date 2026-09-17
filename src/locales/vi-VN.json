@@ -47,6 +47,9 @@
           "file": "Tệp",
           "voice": "Giọng nói",
           "startRecognition": "Bắt đầu nhận dạng",
+          "listening": "Đang nghe",
+          "preparingVoice": "Đang chuẩn bị giọng nói",
+          "stopRecognition": "Dừng nhận dạng",
           "thinking": "Đang suy nghĩ",
           "send": "Gửi",
           "copy": "Sao chép",
@@ -54,7 +57,8 @@
           "vision": "Thị giác",
           "sendFailed": "Gửi thất bại",
           "imageDescription": "Kết quả nhận diện ảnh",
-          "describingImage": "Đang nhận diện ảnh"
+          "describingImage": "Đang nhận diện ảnh",
+          "downloadingVoiceModel": "Đang tải mô hình giọng nói"
         },
         "hints": {
           "enableChatDesc": "Khi bật, bạn có thể trò chuyện với thú cưng trên màn hình. API Key được lưu cục bộ.",
@@ -63,7 +67,9 @@
           "modelNameDesc": "Ưu tiên dùng mô hình đặt ở đây; nếu để trống sẽ dùng mô hình mặc định của nhà cung cấp.",
           "enableChatFirst": "Hãy bật trò chuyện và điền API Key, Base URL cùng mô hình trong cài đặt nhà cung cấp.",
           "chooseProviderModel": "Vui lòng chọn nhà cung cấp và mô hình.",
-          "pasteImage": "Dán ảnh chụp màn hình"
+          "pasteImage": "Dán ảnh chụp màn hình",
+          "voiceListening": "Đang nghe… văn bản sẽ hiện ra khi bạn nói. Nhấn lại vào micrô để dừng.",
+          "voiceTapToStop": "Nhấn lại để dừng"
         },
         "placeholders": {
           "search": "Tìm kiếm",

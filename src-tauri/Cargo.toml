@@ -79,9 +79,17 @@ base64 = "0.22"
 log = "0.4"
 # 本地模型网关的 apiKey 生成（CSPRNG）
 rand = "0.8"
+# 语音输入（Rust 原生，替代 WebView2 SpeechRecognition）：
+# cpal 采集 + sherpa-onnx 流式识别（Windows 自动下载预编译静态库，无需 cmake）
+cpal = "0.15"
+sherpa-onnx = "1.13.8"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 tauri-nspanel.workspace = true
+
+# WebView2 权限处理（麦克风放行，供 Web Speech API 使用），版本与 wry 对齐
+[target."cfg(windows)".dependencies]
+webview2-com = "0.38.2"
 
 [features]
 cargo-clippy = []

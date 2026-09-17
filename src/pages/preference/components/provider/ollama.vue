@@ -63,7 +63,7 @@ const sortedModels = computed(() =>
 
 /** 一键开启时优先安装的模型：硬件推荐 → 首个可安装 */
 const recommendedModelId = computed(() =>
-  hardware.value.recommend_model || installable.value[0]?.model.id || "",
+  hardware.value.recommend_model || installable.value[0]?.model.id || "qwen2.5:0.5b",
 );
 
 const [messageApi, ContextHolder] = AntdMessage.useMessage();
@@ -174,15 +174,15 @@ async function copyHost() {
 }
 
 /** 复制引擎实际使用的模型目录（便于用户核对模型到底装在哪） */
-async function copyModelDir() {
-  if (!modelDir.value) return;
-  try {
-    await writeText(modelDir.value);
-    messageApi.success(t("pages.preference.provider.messages.copied"));
-  } catch {
-    messageApi.error(t("pages.preference.provider.messages.copyFailed"));
-  }
-}
+// async function copyModelDir() {
+//   if (!modelDir.value) return;
+//   try {
+//     await writeText(modelDir.value);
+//     messageApi.success(t("pages.preference.provider.messages.copied"));
+//   } catch {
+//     messageApi.error(t("pages.preference.provider.messages.copyFailed"));
+//   }
+// }
 
 // ─── 本地网关 apiKey ───────────────────────────────────────────────
 
@@ -640,8 +640,14 @@ onUnmounted(() => {
                 &nbsp;&nbsp;
                 {{ OLLAMA_HOST }}
               </Button>
+              <span
+                v-if="modelDir"
+                class="pl-2 text-11px color-text-quaternary"
+              >
+                {{ t('pages.preference.provider.local.hints.ollamaBaseUrlHint') }}
+              </span>
               <!-- 模型目录：让"装到哪去了 / 为什么显示未安装"这类问题可以直接核对 -->
-              <Button
+              <!-- <Button
                 v-if="modelDir"
                 class="max-w-full"
                 size="small"
@@ -659,7 +665,7 @@ onUnmounted(() => {
                 class="pl-2 text-11px color-text-quaternary"
               >
                 {{ t('pages.preference.provider.local.hints.modelDirHint') }}
-              </span>
+              </span> -->
 
               <!-- 网关 apiKey：客户端访问本地模型必须携带，否则 401 -->
               <div class="mt-2 max-w-full flex flex-col gap-1 b-1 b-dashed px-2 py-1.5 b-border-sec rounded-lg">

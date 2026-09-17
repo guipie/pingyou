@@ -47,6 +47,9 @@
           "file": "文件",
           "voice": "语音",
           "startRecognition": "开始识别",
+          "listening": "正在聆听",
+          "preparingVoice": "语音准备中",
+          "stopRecognition": "结束识别",
           "thinking": "思考中",
           "send": "发送",
           "copy": "复制",
@@ -54,7 +57,8 @@
           "vision": "支持看图",
           "sendFailed": "发送失败",
           "imageDescription": "图片识别结果",
-          "describingImage": "正在识别图片"
+          "describingImage": "正在识别图片",
+          "downloadingVoiceModel": "语音模型下载中"
         },
         "hints": {
           "enableChatDesc": "启用后，可以和屏友聊天。API Key 会保存在本机配置中。",
@@ -63,7 +67,9 @@
           "modelNameDesc": "优先使用这里的模型；留空时会使用供应商默认模型。",
           "enableChatFirst": "请先启用聊天，并在供应商设置中填写 API Key、Base URL 和模型。",
           "chooseProviderModel": "请选择配置供应商和模型。",
-          "pasteImage": "可直接粘贴截图"
+          "pasteImage": "可直接粘贴截图",
+          "voiceListening": "正在聆听，说完会自动上屏；再次点击麦克风结束。",
+          "voiceTapToStop": "再次点击结束"
         },
         "placeholders": {
           "search": "搜索",
@@ -133,8 +139,8 @@
           "running": "本地大模型服务运行中",
           "loadedModels": "已加载的本地模型",
           "usableForChat": "可直接用于对话",
-          "ollamaBaseUrl": "Ollama API 基础地址 (Base URL):",
-          "modelDir": "Ollama 模型目录（Model Dir）:",
+          "ollamaBaseUrl": "本地API 基础地址 (Base URL):",
+          "modelDir": "本地模型目录（Model Dir）:",
           "localApiKey": "本地网关 API Key：",
           "regenerateKey": "重置",
           "copy": "复制",
@@ -239,14 +245,15 @@
           }
         },
         "local": {
-          "desc": "本地 Ollama 引擎，离线运行不收集数据，安装后自动作为供应商启用",
+          "desc": "本地 AI 引擎，离线运行不收集数据，安装后自动作为供应商启用",
           "labels": {
             "installed": "已安装",
             "engineError": "本地 AI 引擎启动失败"
           },
           "hints": {
             "noModelInstalled": "引擎已就绪，去上方可选模型区安装第一个模型吧",
-            "engineReadyDesc": "Ollama 引擎已启动，已安装模型自动作为本地供应商可用",
+            "engineReadyDesc": "本地引擎已启动，已安装模型自动作为本地供应商可用",
+            "ollamaBaseUrlHint": "可点击复制后，发送给局域网内其他用户使用",
             "modelDirHint": "模型权重的实际存放位置；若列表显示与磁盘不一致，可点击复制后核对",
             "localApiKeyHint": "本地模型只监听 127.0.0.1，局域网内其它设备无法访问；此 Key 用于校验本机调用，重置后旧 Key 立即失效",
             "engineAbsentDesc": "首次使用会自动下载引擎组件；此后每次启动屏友都会自动拉起本地引擎与已下载模型"

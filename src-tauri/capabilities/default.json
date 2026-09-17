@@ -68,7 +68,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-start-dragging",
     "core:window:allow-set-size",
-    "core:window:deny-internal-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-ignore-cursor-events",
     "core:window:allow-set-decorations",
