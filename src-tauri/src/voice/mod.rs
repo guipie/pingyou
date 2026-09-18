@@ -107,7 +107,7 @@ fn blocking_session(app: AppHandle, stop: Arc<AtomicBool>) -> Result<(), String>
     let config = device
         .default_input_config()
         .map_err(|e| format!("读取麦克风配置失败: {e}"))?;
-    let src_rate = config.sample_rate().0;
+    let src_rate = config.sample_rate();
     let channels = config.channels().max(1) as usize;
     let buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -116,7 +116,7 @@ fn blocking_session(app: AppHandle, stop: Arc<AtomicBool>) -> Result<(), String>
         cpal::SampleFormat::F32 => {
             let buf = buffer.clone();
             device.build_input_stream(
-                &config.config(),
+                config.config(),
                 move |data: &[f32], _| push_mono(&mut lock(&buf), data, channels, f32::from),
                 err_fn,
                 None,
@@ -125,7 +125,7 @@ fn blocking_session(app: AppHandle, stop: Arc<AtomicBool>) -> Result<(), String>
         cpal::SampleFormat::I16 => {
             let buf = buffer.clone();
             device.build_input_stream(
-                &config.config(),
+                config.config(),
                 move |data: &[i16], _| push_mono(&mut lock(&buf), data, channels, |s| s as f32 / 32768.0),
                 err_fn,
                 None,

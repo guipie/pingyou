@@ -1,0 +1,73 @@
+[package]
+authors = ["Nicolas Patry <patry.nicolas@protonmail.com>"]
+edition = "2018"
+name = "rdev"
+version = "0.5.0-2"
+
+categories = ["development-tools::testing", "api-bindings", "hardware-support"]
+description = "Listen and send keyboard and mouse events on Windows, Linux and MacOS."
+documentation = "https://docs.rs/rdev/"
+homepage = "https://github.com/Narsil/rdev"
+keywords = ["input", "mouse", "testing", "keyboard", "automation"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Narsil/rdev"
+
+[dependencies]
+enum-map = "2.4.0"
+lazy_static = "1.4"
+serde = {version = "1.0", features = ["derive"], optional = true}
+strum = "0.24.1"
+strum_macros = "0.24"
+widestring = "1.0.2"
+log = "0.4"
+
+[features]
+serialize = ["serde"]
+# unstable_grab = ["evdev-rs", "epoll", "inotify"]
+# unstable_wayland = ["uinput"]
+
+# NOTE(vendored): 上游代码自带 15 条 rustc 告警（12 条 unreachable pattern + 2 条 static mut 引用）。
+# 作为 git 依赖时 cargo 会自动加 --cap-lints allow 屏蔽掉；改成 path 依赖后屏蔽失效，
+# 这里用 lints 表显式压掉，避免污染本项目的构建输出。
+[lints.rust]
+unreachable_patterns = "allow"
+static_mut_refs = "allow"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.24.0"
+core-foundation = {version = "0.9.3"}
+core-foundation-sys = {version = "0.8.3"}
+core-graphics = {version = "0.22.3", features = ["highsierra"]}
+dispatch = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+epoll = {version = "4.1.0"}
+# evdev-rs = {version = "0.6.0"}
+inotify = {version = "0.10.0", default-features = false}
+libc = "0.2"
+x11 = {version = "2.18", features = ["xlib", "xrecord", "xinput"]}
+mio = {version = "0.8.4", features = ["os-poll", "os-ext"]}
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = {version = "0.3", features = ["winuser", "errhandlingapi", "processthreadsapi"]}
+
+# NOTE(vendored): 上游的 [dev-dependencies] 已移除。本项目只把 rdev 当普通依赖使用，
+# 不跑它的测试/示例；保留这些 dev-deps 会把 serial_test 等包牵连进 Cargo.lock。
+
+[[example]]
+name = "serialize"
+required-features = ["serialize"]
+
+# [[example]]
+# name = "grab"
+# required-features = ["unstable_grab"]
+
+[[example]]
+name = "tokio_channel"
+required-features = ["unstable_grab"]
+
+[[test]]
+name = "grab"
+path = "tests/grab.rs"
+required-features = ["unstable_grab"]

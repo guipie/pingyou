@@ -1,6 +1,7 @@
-use aes_gcm::aead::{Aead, KeyInit, OsRng};
+use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::{Engine as _, engine::general_purpose};
+use rand::Rng;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -34,10 +35,9 @@ fn get_or_create_key(app: &AppHandle) -> Result<[u8; 32], String> {
         log::warn!("密钥文件长度异常，将重新生成");
     }
 
-    // 生成新密钥
+    // 生成新密钥（`rand::rng` 是以 OS 熵为种子的 CSPRNG）
     let mut key = [0u8; 32];
-    use aes_gcm::aead::rand_core::RngCore;
-    OsRng.fill_bytes(&mut key);
+    rand::rng().fill_bytes(&mut key);
 
     // 写入文件（限制权限：仅当前用户可读写）
     let mut file = fs::File::create(&path).map_err(|e| format!("创建密钥文件失败: {}", e))?;
@@ -70,17 +70,15 @@ fn encrypt_internal(app: &AppHandle, plaintext: &str) -> Result<String, String> 
     }
 
     let key_bytes = get_or_create_key(app)?;
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(key_bytes));
 
     // 生成 12 字节随机 nonce
     let mut nonce_bytes = [0u8; 12];
-    use aes_gcm::aead::rand_core::RngCore;
-    OsRng.fill_bytes(&mut nonce_bytes);
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    rand::rng().fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from(nonce_bytes);
 
     let ciphertext = cipher
-        .encrypt(nonce, plaintext.as_bytes())
+        .encrypt(&nonce, plaintext.as_bytes())
         .map_err(|e| format!("加密失败: {}", e))?;
 
     // 合并 nonce + ciphertext 后 Base64 编码
@@ -114,12 +112,15 @@ fn decrypt_internal(app: &AppHandle, ciphertext: &str) -> Result<String, String>
     }
 
     let key_bytes = get_or_create_key(app)?;
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(key_bytes));
 
-    let nonce = Nonce::from_slice(&combined[..12]);
+    // 前 12 字节为 nonce，长度已在上方校验过
+    let nonce_bytes: [u8; 12] = combined[..12]
+        .try_into()
+        .map_err(|_| "nonce 长度不合法".to_string())?;
+    let nonce = Nonce::from(nonce_bytes);
     let plaintext = cipher
-        .decrypt(nonce, &combined[12..])
+        .decrypt(&nonce, &combined[12..])
         .map_err(|e| format!("解密失败: {}", e))?;
 
     String::from_utf8(plaintext).map_err(|e| format!("UTF-8 解码失败: {}", e))

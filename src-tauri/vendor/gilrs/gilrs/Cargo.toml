@@ -1,0 +1,43 @@
+[package]
+name = "gilrs"
+version = "0.11.0"
+authors = ["Arvamer <arvamer@gmail.com>"]
+license = "Apache-2.0/MIT"
+exclude = ["controller.svg"]
+description = "Game Input Library for Rust"
+documentation = "https://docs.rs/gilrs/"
+repository = "https://gitlab.com/gilrs-project/gilrs"
+readme = "../README.md"
+keywords = ["gamepad", "joystick", "input"]
+categories = ["game-engines"]
+edition = "2021"
+rust-version = "1.80.0"
+
+[badges]
+gitlab = { repository = "gilrs-project/gilrs" }
+
+[dependencies]
+vec_map = "0.8"
+uuid = "1.0.0"
+log = "0.4.1"
+fnv = "1.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
+gilrs-core = { path = "../gilrs-core", version = "0.6.0", default-features = false }
+
+# NOTE(vendored): 上游的 [dev-dependencies]（eframe / egui_plot / env_logger / web-sys 等）已移除。
+# 本项目只把 gilrs 当普通依赖使用，保留它们会把 egui、winit 等一大票包牵连进 Cargo.lock。
+
+[package.metadata.docs.rs]
+features = ["serde-serialize"]
+
+[features]
+default = ["xinput"]
+serde-serialize = ["serde", "gilrs-core/serde-serialize"]
+xinput = ["gilrs-core/xinput"]
+wgi = ["gilrs-core/wgi"]
+
+# NOTE(vendored): 上游 gamepad.rs 有一条 mismatched_lifetime_syntaxes 告警。
+# 作为 git 依赖时 cargo 会自动加 --cap-lints allow 屏蔽掉；改成 path 依赖后屏蔽失效，
+# 这里用 lints 表显式压掉，避免污染本项目的构建输出。
+[lints.rust]
+mismatched_lifetime_syntaxes = "allow"

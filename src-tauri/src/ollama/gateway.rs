@@ -39,8 +39,8 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
-use rand::distributions::Alphanumeric;
-use rand::Rng;
+use rand::distr::Alphanumeric;
+use rand::RngExt;
 use tauri::{AppHandle, Manager};
 
 use super::ollama_manager::{kill_port_owner, ENGINE_PORT, GATEWAY_PORT};
@@ -104,9 +104,9 @@ pub fn is_gateway_ready() -> bool {
     gateway_ready_flag().load(std::sync::atomic::Ordering::SeqCst)
 }
 
-/// 生成一个高强度随机 apiKey（`rand::thread_rng` 是以 OS 熵为种子的 CSPRNG）
+/// 生成一个高强度随机 apiKey（`rand::rng` 是以 OS 熵为种子的 CSPRNG）
 fn generate_api_key() -> String {
-    let random: String = rand::thread_rng()
+    let random: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(KEY_RANDOM_LEN)
         .map(char::from)

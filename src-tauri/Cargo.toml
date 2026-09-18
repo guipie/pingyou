@@ -45,7 +45,7 @@ tauri-plugin-http = { version = "2", default-features = false, features = [
 # 下载large model
 reqwest = { version = "0.13.4", features = ["stream"] }
 tokio = { version = "1.0", features = ["full", "fs"] }
-zip = "2.0"                                             # 用于 Windows 解压 zip 包
+zip = "8.0"                                             # 用于 Windows 解压 zip 包
 tar = "0.4"                                             # 用于 Linux 解压 tgz 包
 flate2 = "1"                                            # 用于 gzip 解压（.tgz = .tar.gz）
 
@@ -55,10 +55,10 @@ tauri-plugin-admin-status.workspace = true
 tauri-plugin-os = "2"
 tauri-plugin-process = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-pinia = "3"
+tauri-plugin-pinia = "5"
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
-tauri-plugin-prevent-default = "1"
+tauri-plugin-prevent-default = "5"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-macos-permissions = "2"
@@ -69,19 +69,22 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-locale = "2"
 tauri-plugin-deep-link = "2"
-rdev = { git = "https://github.com/kunkunsh/rdev" }
-gilrs = { git = "https://github.com/ayangweb/gilrs", default-features = false, features = [
+# 以下两个依赖已内置到 src-tauri/vendor/，不再从 GitHub 拉取（上游仓库被删除也能正常构建）：
+#   rdev  上游 https://github.com/kunkunsh/rdev  @ cb9a29e19668a52e4e67d8a0ca6739c1807f8d3f (0.5.0-2)
+#   gilrs 上游 https://github.com/ayangweb/gilrs @ f6cecd62943ebbaf3905318e5c71130c9cc4d516 (0.11.0 / gilrs-core 0.6.4)
+rdev = { path = "vendor/rdev" }
+gilrs = { path = "vendor/gilrs/gilrs", default-features = false, features = [
   "xinput",
 ] }
 futures-util = "0.3.33"
-aes-gcm = "0.10"
-base64 = "0.22"
+aes-gcm = "0.11.1"
+base64 = "0.23.1"
 log = "0.4"
 # 本地模型网关的 apiKey 生成（CSPRNG）
-rand = "0.8"
+rand = "0.10.2"
 # 语音输入（Rust 原生，替代 WebView2 SpeechRecognition）：
 # cpal 采集 + sherpa-onnx 流式识别（Windows 自动下载预编译静态库，无需 cmake）
-cpal = "0.15"
+cpal = "0.18.2"
 sherpa-onnx = "1.13.8"
 
 [target."cfg(target_os = \"macos\")".dependencies]

@@ -103,7 +103,6 @@
     "pinia:default",
     "log:default",
     "updater:default",
-    "prevent-default:default",
     "autostart:default",
     "macos-permissions:default",
     "dialog:default",

@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
 members = [ "src-tauri" ]
+# 内置（vendored）的第三方源码：只作为 path 依赖参与编译，
+# 不作为 workspace 成员，避免它们的 dev-dependencies 污染本项目 Cargo.lock。
+exclude = [
+  "src-tauri/vendor",
+  "src-tauri/vendor/*",
+  "src-tauri/vendor/**",
+]
 
 [profile.release]
 strip = true
